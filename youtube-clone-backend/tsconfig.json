@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {        
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "rootDir": ".",
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,  // If you're using JSON files
+    "allowJs": true, 
+    "esModuleInterop": true,  // This ensures that CommonJS modules like express can be imported using `import` syntax
+    "module": "commonjs",  // Use CommonJS module resolution
+    "target": "es6"
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules"]
+}
