@@ -9,7 +9,10 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:4200', // Only allow requests from Angular client
+}));
+
 app.use(express.json());
 console.log('googleAuth typeof:', typeof googleAuth);
 console.log('googleAuth:', googleAuth);
