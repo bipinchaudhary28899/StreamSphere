@@ -1,0 +1,12 @@
+.host {
+    width: 200px;
+    border-right: 1px solid #ddd;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    background-color: #fff;
+}
+mat-list-item {
+    cursor: pointer;
+
+}

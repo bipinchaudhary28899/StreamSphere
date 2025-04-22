@@ -1,0 +1,9 @@
+<div *ngIf="video">
+    <h2>{{ video.title }}</h2>
+    <video width="100%" height="auto" controls>
+      <source [src]="video.videoUrl" type="video/mp4" />
+      Your browser does not support the video tag.
+    </video>
+    <h2>{{video.title}}</h2>
+    <p>{{video.channel}}.{{video.views}}.{{video.timestamp}}</p>
+  </div>
