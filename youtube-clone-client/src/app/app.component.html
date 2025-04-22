@@ -1,5 +1,7 @@
-<main class="main">
-  <div class="content">
-    <router-outlet></router-outlet>
-  </div>
-</main>
+<app-header (search)="handleSearch($event)"></app-header><router-outlet></router-outlet>
+<app-category-slider (categorySelected)="handleCategory($event)"></app-category-slider>
+<div class="main-container">
+
+  <app-sidebar></app-sidebar>
+  <app-video-section [searchText]="searchText" [selectedCategory]="selectedCategory"></app-video-section>
+</div>

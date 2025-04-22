@@ -1,0 +1,10 @@
+.main-container {
+    display: flex;
+}
+app-video-section {
+    flex-grow: 1;
+}
+app-category-slider {
+    display: block;
+margin: 12px 0;
+}

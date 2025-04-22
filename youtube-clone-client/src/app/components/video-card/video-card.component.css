@@ -1,0 +1,16 @@
+.video-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    width: 100%;
+  }
+  
+  .thumbnail {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+  }
+  
+  .video-info {
+    padding: 8px 4px;
+  }

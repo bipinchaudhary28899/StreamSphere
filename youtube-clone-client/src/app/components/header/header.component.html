@@ -1,0 +1,16 @@
+<mat-toolbar color="primary" class="header-toolbar">
+  <div class="logo">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_Logo_2017.svg" alt="YouTube Logo" class="logo-img">
+    <span class="country-code">IN</span>
+  </div>
+    <span class="spacer" ></span>
+
+    <mat-form-field appearance="outline" class="search-box">
+      <mat-label>Search</mat-label>
+      <input matInput (input)="onSearchChange($event)" />
+    </mat-form-field>
+   
+  
+    <button mat-button color="accent" class="sigin-btn"><mat-icon>person</mat-icon>Sign In</button>
+
+  </mat-toolbar>
