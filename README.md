@@ -36,9 +36,11 @@ All work-in-progress code is being pushed to **secondary branches** for feature 
 ## 👨‍💻 Contributors
 
 - **Bipin kumar chaudhary** - https://github.com/bipinchaudhary28899
+
   Frontend Development, Backend APIs, AWS Integration, Auth System
 
-- **Nitika Agarwal** - [their GitHub profile link]  
+- **Nitika Agarwal** - https://github.com/NitikaAgrawal 
+
   Frontend Development, Backend APIs, Database Design, UI Components
 
 > We are open to collaboration! Feel free to fork, clone, or raise issues/PRs for improvements or feedback.
