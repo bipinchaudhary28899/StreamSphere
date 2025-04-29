@@ -1,0 +1,25 @@
+<mat-card class="profile-header">
+    <div class="background-image">
+      <img src="assets/bg-placeholder.jpg" alt="Background" />
+      <div class="profile-info">
+        <img mat-card-avatar class="profile-pic" src="assets/profile-placeholder.jpg" alt="Profile pic" />
+        <div class="username">Username</div>
+      </div>
+    </div>
+  </mat-card>
+  
+  <div class="profile-body">
+    <mat-sidenav-container class="sidenav-container">
+      <mat-sidenav mode="side" opened class="upload-sidebar">
+        <button mat-menu-item (click)="openUploadPage()">Upload Video</button>
+        <ul>
+          <li>•</li>
+        </ul>
+      </mat-sidenav>
+  
+      <mat-sidenav-content class="main-content">
+        <p>Main content area</p>
+      </mat-sidenav-content>
+    </mat-sidenav-container>
+  </div>
+  

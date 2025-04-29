@@ -1,12 +1,25 @@
 import { Routes } from '@angular/router';
-import { UserLoginComponent } from './user-login/user-login.component';
 import { AppComponent } from './app.component';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
+import { AuthGuard } from './auth.guard';
+import { VideoSectionComponent } from './components/video-section/video-section.component';
+import { UploadVideoComponent } from './components/upload-video/upload-video.component';
+import { UserProfileComponent } from './components/user-profile/user-profile.component';
 
 
 export const routes: Routes = [
-  { path: 'login', component: UserLoginComponent },
-  { path: '', redirectTo: '/login', pathMatch: 'full' },  // Redirect to /login when accessing root,
-  { path: '', component: AppComponent },
-  { path: 'video/:id', component: VideoPlayerComponent }
+  // Default route redirects to /home
+  { path: '', redirectTo: 'home', pathMatch: 'full' },
+
+  // Main route group
+  {
+    path: '',
+    children: [
+      { path: 'home', component: VideoSectionComponent },
+      { path: 'home/:userId', component: VideoSectionComponent, canActivate: [AuthGuard] },
+      { path: 'video/:id', component: VideoPlayerComponent },
+      { path: 'upload', component: UploadVideoComponent },
+      { path: 'user-profile', component: UserProfileComponent }
+    ]
+  }
 ];

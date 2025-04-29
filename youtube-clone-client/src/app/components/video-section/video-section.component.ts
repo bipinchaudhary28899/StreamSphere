@@ -18,3 +18,25 @@ get filteredVideos() {
   return this.videos.filter(v=> v.title.toLowerCase().includes(this.searchText.toLowerCase()) && (this.selectedCategory === 'All' || v.category ===this.selectedCategory));
 }
 }
+
+// 🧠 What You Should Do in VideoSectionComponent
+// Inside VideoSectionComponent, check if userId is present in the route:
+
+// ts
+// Copy
+// Edit
+// constructor(private route: ActivatedRoute, private authService: AuthService) {}
+
+// ngOnInit() {
+//   this.route.paramMap.subscribe(params => {
+//     const userId = params.get('userId');
+    
+//     if (userId) {
+//       // ✅ Logged in — fetch personalized videos
+//       this.fetchVideosForUser(userId);
+//     } else {
+//       // ❌ Not logged in — maybe show trending videos or ask to log in
+//       this.fetchPublicVideos();
+//     }
+//   });
+// }

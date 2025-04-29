@@ -13,10 +13,10 @@ export const handleGoogleLogin = async (token: string): Promise<IUserResponse> =
   });
 
   const { name, email, picture } = ticket.getPayload()!;
-
+  console.log("backend email is : ",email);
   let user = await User.findOne({ email });
   let isNewUser = false;
-
+  console.log("backend user is : ",user);
   if (!user) {
     user = new User({
       name,
@@ -34,11 +34,13 @@ export const handleGoogleLogin = async (token: string): Promise<IUserResponse> =
 
   return {
     token: jwtToken,
-    role: user.role,
-    email: user.email,
-    name: user.name,
-    isVerified: user.isVerified,
-    userId: user._id as string,  // ✅ Fix here
+    user: {
+      role: user.role,
+      email: user.email,
+      userName: user.name, 
+      isVerified: user.isVerified,
+      userId: user._id as string,
+    },
     isNewUser
   };
   

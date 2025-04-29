@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
 
-import googleAuth from './routes/auth.route';
+import centralRoute from './routes/centralRoute.route';
 
 dotenv.config();
 
@@ -14,10 +14,10 @@ app.use(cors({
 }));
 
 app.use(express.json());
-console.log('googleAuth typeof:', typeof googleAuth);
-console.log('googleAuth:', googleAuth);
+console.log('centralRoute typeof:', typeof centralRoute);
+console.log('centralRoute:', centralRoute);
 
-app.use('/api', googleAuth);
+app.use('/api', centralRoute);
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI!)

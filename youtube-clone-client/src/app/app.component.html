@@ -1,7 +1,15 @@
-<app-header (search)="handleSearch($event)"></app-header><router-outlet></router-outlet>
-<app-category-slider (categorySelected)="handleCategory($event)"></app-category-slider>
-<div class="main-container">
 
+  <app-header (search)="handleSearch($event)"></app-header>
+
+<div class="main-container">
   <app-sidebar></app-sidebar>
-  <app-video-section [searchText]="searchText" [selectedCategory]="selectedCategory"></app-video-section>
+  <div class="main-body">
+    <app-category-slider
+      *ngIf="showCategorySlider"
+      (categorySelected)="handleCategory($event)">
+    </app-category-slider>
+
+    <router-outlet></router-outlet>
+  </div>
 </div>
+ <!-- <app-video-section [searchText]="searchText" [selectedCategory]="selectedCategory"></app-video-section> -->

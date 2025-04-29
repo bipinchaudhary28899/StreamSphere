@@ -1,5 +1,14 @@
 .main-container {
     display: flex;
+    flex-direction: row;
+
+}
+.main-body{
+    display: flex;
+    flex-direction: column;
+    width: auto;
+    overflow-x: auto;
+
 }
 app-video-section {
     flex-grow: 1;
@@ -7,4 +16,5 @@ app-video-section {
 app-category-slider {
     display: block;
 margin: 12px 0;
+
 }

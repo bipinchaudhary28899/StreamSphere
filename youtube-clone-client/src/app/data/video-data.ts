@@ -7,7 +7,7 @@ export const VIDEO_DATA = [
       views: '1.3M views',
       timestamp: '5 years ago',
       category:'Watched',
-      videoUrl: ''  },
+      videoUrl: '../assets/thumbs/dance.mp4'  },
     {
       id: '2',
       title: 'Indian Idol',

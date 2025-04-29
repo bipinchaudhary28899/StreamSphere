@@ -1,0 +1,35 @@
+<div class="upload-container">
+  <form [formGroup]="uploadForm" (ngSubmit)="onSubmit()">
+    <div class="form-group">
+      <label>Title</label>
+      <input
+        formControlName="title"
+        type="text"
+        placeholder="Enter video title"
+      />
+    </div>
+
+    <div class="form-group">
+      <label>Description</label>
+      <textarea
+        formControlName="description"
+        placeholder="Enter description"
+      ></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Video File</label>
+      <input type="file" (change)="onFileSelected($event)" accept="video/*" />
+    </div>
+
+    <button type="submit" [disabled]="isUploading || !uploadForm.valid">
+      Upload Video
+    </button>
+
+    <mat-progress-bar *ngIf="isUploading" mode="determinate" [value]="uploadProgress"></mat-progress-bar>
+
+    <div *ngIf="uploadSuccess" class="success-message">
+      Video uploaded and saved successfully! 🎉
+    </div>
+  </form>
+</div>
