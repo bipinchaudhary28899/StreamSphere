@@ -1,0 +1,62 @@
+.profile-header {
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  
+    .background-image {
+      position: relative;
+      width: 100%;
+      height: 200px;
+      border: 2px solid black;
+  
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+  
+      .profile-info {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+  
+        .profile-pic {
+          width: 100px;
+          height: 100px;
+          border-radius: 50%;
+          border: 3px solid black;
+        }
+  
+        .username {
+          font-weight: bold;
+          font-size: 18px;
+          color: black;
+        }
+      }
+    }
+  }
+  
+  .profile-body {
+    .sidenav-container {
+      height: 100%;
+      min-height: 400px;
+      display: flex;
+  
+      .upload-sidebar {
+        width: 200px;
+        color: black;
+        padding: 16px;
+        border: 3px solid black;
+      }
+  
+      .main-content {
+        border: 3px solid black;
+        padding: 16px;
+        flex: 1;
+      }
+    }
+  }
+  

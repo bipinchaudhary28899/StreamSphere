@@ -1,0 +1,43 @@
+.slider-wrapper {
+  display: flex;
+  align-items: center;
+  background-color: white;
+  padding: 10px 12px;
+  border-bottom: 1px solid #ccc;
+  position: sticky;
+  top: 56px;
+  z-index: 100;
+}
+
+.category-container {
+  display: flex;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  flex-grow: 1;
+}
+
+.category-container button {
+  margin-right: 12px;
+  padding: 6px 14px;
+  background-color: #f0f0f0;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.category-container button.active {
+  background-color: black;
+  color: white;
+}
+
+.arrow-btn {
+  background-color: white;
+  border: none;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 6px 12px;
+}

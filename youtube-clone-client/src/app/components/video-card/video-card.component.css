@@ -1,0 +1,25 @@
+.video-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    width: 100%;
+  }
+  .video-card mat-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 10px;
+  }
+  
+  .video-card mat-card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  }
+  
+  .video-preview {
+    width: 100%;
+    height: 160px; /* reduce this as per your design */
+    object-fit: cover; /* this ensures video doesn't stretch weirdly */
+    border-radius: 10px 10px 0px 0px; /* optional: to round the corners */
+  }
+  

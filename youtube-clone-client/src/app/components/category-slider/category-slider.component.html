@@ -1,0 +1,14 @@
+<div class="slider-wrapper">
+    <button class="arrow-btn" (click)="scrollLeft()">&#10094;</button>
+  
+    <div class="category-container" #scrollContainer>
+      <button 
+        *ngFor="let category of categories"
+        [class.active]="category === selectedCategory "
+        (click)="selectCategory(category)">
+        {{ category }}
+      </button>
+    </div>
+  
+    <button class="arrow-btn" (click)="scrollRight()">&#10095;</button>
+  </div>

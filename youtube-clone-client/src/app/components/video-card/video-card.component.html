@@ -1,0 +1,12 @@
+<a [routerLink]="['/video', video.id]" class="video-card">
+  <mat-card>
+    <video class="video-preview" controls>
+      <source [src]="video.videoUrl" type="video/mp4" />
+    </video>
+    <mat-card-content>
+      <h3>{{ video.title }}</h3>
+      <p>{{ video.channel }}</p>
+      <p>{{ video.views }} • {{ video.timestamp }}</p>
+    </mat-card-content>
+  </mat-card>
+</a>
