@@ -1,6 +1,6 @@
-# YouTube Clone 🎥
+# StreamSphere 🎥
 
-A full-stack YouTube clone project built as a personal initiative to explore and demonstrate various modern web technologies. This project replicates core YouTube functionalities like user authentication, video uploads, search, and more.
+A full-stack video streaming platform built as a personal initiative to explore and demonstrate various modern web technologies. This project replicates core YouTube functionalities like user authentication, video uploads, search, and more.
 
 ## 🚀 Tech Stack
 
