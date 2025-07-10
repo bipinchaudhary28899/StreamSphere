@@ -72,11 +72,12 @@ export class UploadVideoComponent {
                 const fileUrl = signedUrl.split('?')[0];
   
                 // Step 4: Save video metadata in backend
+                console.log('is theuser still logged in : ', localStorage.getItem('user'))
                 const metadata = {
                   title,
-                  description,
-                  url: fileUrl,
-                  userId: 'demoUserId123', 
+                  description:"",
+                  S3_url: fileUrl,
+                  user_id: localStorage.getItem('user')? JSON.parse(localStorage.getItem('user')!).userId:'UNKNOWN USER', 
                 };
   
                 this.uploadService.saveVideoMetadata(metadata).subscribe({

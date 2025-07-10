@@ -28,6 +28,7 @@ export class UploadService {
   }
 
   saveVideoMetadata(metadata: any): Observable<any> {
+    console.log('meta data for saving is ', metadata);
     return this.http.post<any>(`${this.baseUrl}/save-video`, metadata);
   }
 }

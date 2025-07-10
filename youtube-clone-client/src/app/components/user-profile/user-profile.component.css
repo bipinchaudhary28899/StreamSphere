@@ -1,62 +1,109 @@
 .profile-header {
-    padding: 0;
-    background: transparent;
-    box-shadow: none;
-  
-    .background-image {
-      position: relative;
-      width: 100%;
-      height: 200px;
-      border: 2px solid black;
-  
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-  
-      .profile-info {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        display: flex;
-        align-items: center;
-        gap: 15px;
-  
-        .profile-pic {
-          width: 100px;
-          height: 100px;
-          border-radius: 50%;
-          border: 3px solid black;
-        }
-  
-        .username {
-          font-weight: bold;
-          font-size: 18px;
-          color: black;
-        }
-      }
-    }
-  }
-  
-  .profile-body {
-    .sidenav-container {
-      height: 100%;
-      min-height: 400px;
-      display: flex;
-  
-      .upload-sidebar {
-        width: 200px;
-        color: black;
-        padding: 16px;
-        border: 3px solid black;
-      }
-  
-      .main-content {
-        border: 3px solid black;
-        padding: 16px;
-        flex: 1;
-      }
-    }
-  }
+  padding: 0;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  border-radius: 0 0 24px 24px;
+  overflow: hidden;
+}
+
+.profile-header .background-image {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  border: none;
+  background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  border-radius: 0 0 24px 24px;
+  overflow: hidden;
+}
+
+.profile-header .background-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.85;
+  filter: blur(1px) brightness(0.95);
+}
+
+.profile-header .background-image .profile-info {
+  position: absolute;
+  top: 40px;
+  left: 40px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  background: rgba(255,255,255,0.85);
+  padding: 20px 32px;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+}
+
+.profile-header .background-image .profile-info .profile-pic {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  object-fit: cover;
+  transition: transform 0.2s;
+}
+
+.profile-header .background-image .profile-info .profile-pic:hover {
+  transform: scale(1.05) rotate(-2deg);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+}
+
+.profile-header .background-image .profile-info .username {
+  font-weight: 700;
+  font-size: 2rem;
+  color: #222;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.profile-body {
+  margin-top: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 500px;
+  background: #f7fafc;
+  border-radius: 24px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+  padding: 32px 0;
+}
+
+.profile-body .sidenav-container {
+  width: 90%;
+  min-height: 400px;
+  display: flex;
+  gap: 32px;
+}
+
+.profile-body .sidenav-container .upload-sidebar {
+  width: 220px;
+  color: #222;
+  padding: 24px 18px;
+  border-radius: 16px;
+  background: linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border: none;
+  font-weight: 500;
+  font-size: 1.1rem;
+  transition: box-shadow 0.2s;
+}
+
+.profile-body .sidenav-container .upload-sidebar:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+.profile-body .sidenav-container .main-content {
+  border-radius: 16px;
+  background: #fff;
+  padding: 32px 28px;
+  flex: 1;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border: none;
+  min-height: 400px;
+}
   

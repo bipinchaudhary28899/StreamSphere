@@ -1,14 +1,15 @@
 // services/saveVideo.service.ts
 import { Video } from '../models/video';
 
-export const saveVideoService = async (title: string, description: string, url: string) => {
+export const saveVideoService = async (title: string, description: string, S3_url: string,user_id:string) => {
   try {
-    console.log('Saving video with data:', { title, description, url });  // Log the incoming data
+    console.log('Saving video with data:', { title, description, S3_url ,user_id});  // Log the incoming data
 
     const newVideo = new Video({
       title,
       description,
-      url,
+      S3_url,
+      user_id,
       uploadedAt: new Date(),
     });
 

@@ -1,7 +1,6 @@
 import { Component } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { VIDEO_DATA } from '../../data/video-data';
 
 @Component({
   selector: 'app-video-player',
@@ -15,6 +14,5 @@ export class VideoPlayerComponent {
 
   constructor(private route: ActivatedRoute) {
     const videoId = this.route.snapshot.paramMap.get('id');
-    this.video = VIDEO_DATA.find(v => v.id === videoId);
   }
 }

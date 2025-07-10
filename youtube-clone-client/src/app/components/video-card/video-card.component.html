@@ -1,12 +1,10 @@
-<a [routerLink]="['/video', video.id]" class="video-card">
-  <mat-card>
-    <video class="video-preview" controls>
-      <source [src]="video.videoUrl" type="video/mp4" />
+<mat-card>
+    <video class="video-preview" controls controlsList="nodownload">
+      <source [src]="safeUrl" type="video/mp4" />
     </video>
     <mat-card-content>
-      <h3>{{ video.title }}</h3>
-      <p>{{ video.channel }}</p>
-      <p>{{ video.views }} • {{ video.timestamp }}</p>
+      <h3>{{ video?.title || 'Untitled Video' }}</h3>
+      <p>{{  'Untitled Channel'  }}</p>
+      <p>{{ 0 }} • {{ video.uploadedAt }}</p>
     </mat-card-content>
-  </mat-card>
-</a>
+</mat-card>

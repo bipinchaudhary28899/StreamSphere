@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 
 import centralRoute from './routes/centralRoute.route';
+import { Video } from './models/video';
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ console.log('centralRoute typeof:', typeof centralRoute);
 console.log('centralRoute:', centralRoute);
 
 app.use('/api', centralRoute);
+
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI!)
