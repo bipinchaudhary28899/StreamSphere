@@ -1,0 +1,29 @@
+<!-- video-list.component.html -->
+<div class="video-section-container">
+    <!-- Loading state -->
+    <div *ngIf="isLoading" class="loading-state">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Loading videos...</p>
+    </div>
+  
+    <!-- Error state -->
+    <div *ngIf="error && !isLoading" class="error-state">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ error }}</p>
+      <button mat-button color="primary" (click)="loadVideos()">Retry</button>
+    </div>
+  
+    <!-- Video grid (your existing structure) -->
+    <div *ngIf="!isLoading && !error" class="video-grid">
+      <app-video-card 
+        *ngFor="let video of filteredVideos" 
+        [video]="video">
+      </app-video-card>
+    </div>
+  
+    <!-- Empty state -->
+    <div *ngIf="!isLoading && !error && filteredVideos.length === 0" class="empty-state">
+      <mat-icon>videocam_off</mat-icon>
+      <p>No videos found</p>
+    </div>
+  </div>

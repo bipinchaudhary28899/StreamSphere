@@ -1,40 +1,121 @@
 .upload-container {
-    max-width: 500px;
-    margin: auto;
-    padding: 20px;
+  max-width: 520px;
+  margin: 40px auto;
+  padding: 32px 28px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 24px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+form {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
+.form-group {
+  margin-bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+label {
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 4px;
+  letter-spacing: 0.2px;
+}
+
+input[type="text"],
+textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #c3cfe2;
+  background: #f7fafc;
+  font-size: 1rem;
+  transition: border 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  outline: none;
+  box-sizing: border-box;
+}
+
+input[type="text"]:focus,
+textarea:focus {
+  border: 1.5px solid #7eaaff;
+  box-shadow: 0 2px 8px rgba(126,170,255,0.10);
+}
+
+input[type="file"] {
+  padding: 8px 0;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+button {
+  width: 100%;
+  padding: 14px 0;
+  background: linear-gradient(90deg, #7eaaff 0%, #4f8cff 100%);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(79,140,255,0.10);
+  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+  box-sizing: border-box;
+}
+
+button:disabled {
+  background: #b3c6e6;
+  cursor: not-allowed;
+  color: #f5f7fa;
+}
+
+button:not(:disabled):hover {
+  background: linear-gradient(90deg, #4f8cff 0%, #7eaaff 100%);
+  box-shadow: 0 4px 16px rgba(79,140,255,0.16);
+  transform: translateY(-2px) scale(1.01);
+}
+
+mat-progress-bar {
+  margin-top: 18px;
+  border-radius: 8px;
+  height: 8px;
+  background: #e3eafc;
+}
+
+.success-message {
+  margin-top: 18px;
+  color: #2ecc40;
+  font-weight: 700;
+  background: #eafaf1;
+  border-radius: 8px;
+  padding: 12px 0;
+  text-align: center;
+  box-shadow: 0 1px 4px rgba(46,204,64,0.08);
+  font-size: 1.08rem;
+}
+
+@media (max-width: 600px) {
+  .upload-container {
+    padding: 16px 4vw;
+    max-width: 98vw;
   }
-  
-  .form-group {
-    margin-bottom: 15px;
-  }
-  
   input[type="text"],
-  textarea {
-    width: 100%;
-    padding: 8px;
-    box-sizing: border-box;
-  }
-  
+  textarea,
   button {
-    width: 100%;
-    padding: 10px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    cursor: pointer;
+    font-size: 0.98rem;
   }
-  
-  button:disabled {
-    background-color: #aaa;
-  }
-  
-  .progress-bar {
-    margin-top: 15px;
-  }
-  
-  .success-message {
-    margin-top: 15px;
-    color: green;
-    font-weight: bold;
-  }
+}
   

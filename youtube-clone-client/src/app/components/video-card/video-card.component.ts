@@ -1,15 +1,30 @@
+// video-card.component.ts
+import { Component, Input, OnInit } from '@angular/core';
+import { MatCard, MatCardContent } from '@angular/material/card';
+import { DomSanitizer } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
-import { Component, Input } from '@angular/core';
-import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-video-card',
-  standalone: true,
-  imports: [CommonModule,MatCardModule,RouterModule],
   templateUrl: './video-card.component.html',
-  styleUrl: './video-card.component.css'
+  styleUrls: ['./video-card.component.scss'],
+  standalone: true,
+  imports: [MatCardContent, MatCard, CommonModule]
 })
-export class VideoCardComponent {
-@Input() video: any;
+export class VideoCardComponent implements OnInit {
+  @Input() video: any;
+  safeUrl: any;
+
+  constructor(private sanitizer: DomSanitizer) {}
+
+  ngOnInit() {
+    // Test the URL directly in browser console
+    console.log('Video URL:', this.video.url);
+    
+    // Create safe URL for Angular
+    this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.video.S3_url);
+  }
+  get safeVideoUrl(): string {
+    return this.video?.S3_url || '';
+  }
 }

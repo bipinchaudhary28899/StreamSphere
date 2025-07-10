@@ -113,9 +113,9 @@ export class UserLoginComponent {
     
         // Save user and token to localStorage
         localStorage.setItem('token', res.token);
-        localStorage.setItem('user', JSON.stringify(res.user)); // ✅ SAVE FIRST
+        localStorage.setItem('user', JSON.stringify(res.user)); // SAVE FIRST
     
-        this.checkLoginState(); // ✅ THEN SET STATE FROM STORAGE
+        this.checkLoginState(); //  SET STATE FROM STORAGE
     
         console.log('(handleCredentialResponse) token  ', localStorage.getItem('token'));
         console.log('(handleCredentialResponse) user  ', localStorage.getItem('user'));
