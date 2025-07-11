@@ -1,14 +1,75 @@
 <mat-toolbar color="primary" class="header-toolbar">
   <div class="logo">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_Logo_2017.svg" alt="YouTube Logo" class="logo-img" (click)="redirectToHome()">
-    <span class="country-code">IN</span>
+    <span class="app-name" (click)="redirectToHome()">StreamSphere</span>
   </div>
-    <span class="spacer" ></span>
-    
-    <mat-form-field appearance="outline" class="search-box">
-      <mat-label>Search</mat-label>
-      <input matInput (input)="onSearchChange($event)" />
-    </mat-form-field>
+  
+  <span class="spacer"></span>
+  
+  <input class="search-box" type="text" placeholder="Search" (input)="onSearchChange($event)" />
 
-<app-user-login></app-user-login>
-  </mat-toolbar>
+  <!-- Mobile User Dropdown -->
+  <div class="mobile-user-menu" *ngIf="isMobile && isLoggedIn">
+    <button mat-icon-button [matMenuTriggerFor]="userMenu" class="user-profile-btn">
+      <img [src]="profileImage" 
+           [alt]="user?.name + ' profile picture'"
+           (error)="onImageError($event)"
+           class="user-profile-img" />
+    </button>
+    
+    <mat-menu #userMenu="matMenu" class="user-dropdown-menu">
+      <div class="user-info">
+        <img [src]="profileImage" 
+             [alt]="user?.name + ' profile picture'"
+             (error)="onImageError($event)"
+             class="user-profile-img-large" />
+        <div class="user-details">
+          <div class="user-name">{{ user?.name }}</div>
+          <div class="user-email">{{ user?.email }}</div>
+        </div>
+      </div>
+      
+      <mat-divider></mat-divider>
+      
+      <!-- Sidebar options moved to dropdown -->
+      <button mat-menu-item (click)="redirectToHome()">
+        <mat-icon>home</mat-icon>
+        <span>Home</span>
+      </button>
+      
+      <button mat-menu-item>
+        <mat-icon>play_arrow</mat-icon>
+        <span>Shorts</span>
+      </button>
+      
+      <button mat-menu-item>
+        <mat-icon>subscriptions</mat-icon>
+        <span>Subscriptions</span>
+      </button>
+      
+      <button mat-menu-item (click)="navigateToProfile()">
+        <mat-icon>person</mat-icon>
+        <span>You</span>
+      </button>
+      
+      <button mat-menu-item>
+        <mat-icon>history</mat-icon>
+        <span>History</span>
+      </button>
+      
+      <mat-divider></mat-divider>
+      
+      <button mat-menu-item (click)="navigateToUpload()">
+        <mat-icon>upload</mat-icon>
+        <span>Upload Video</span>
+      </button>
+      
+      <button mat-menu-item (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Logout</span>
+      </button>
+    </mat-menu>
+  </div>
+
+  <!-- Desktop User Login Component -->
+  <app-user-login *ngIf="!isMobile"></app-user-login>
+</mat-toolbar>

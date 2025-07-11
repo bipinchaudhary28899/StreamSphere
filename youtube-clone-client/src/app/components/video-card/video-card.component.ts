@@ -3,6 +3,7 @@ import { Component, Input, OnInit } from '@angular/core';
 import { MatCard, MatCardContent } from '@angular/material/card';
 import { DomSanitizer } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-video-card',
@@ -15,7 +16,10 @@ export class VideoCardComponent implements OnInit {
   @Input() video: any;
   safeUrl: any;
 
-  constructor(private sanitizer: DomSanitizer) {}
+  constructor(
+    private sanitizer: DomSanitizer,
+    private router: Router
+  ) {}
 
   ngOnInit() {
     // Test the URL directly in browser console
@@ -24,7 +28,14 @@ export class VideoCardComponent implements OnInit {
     // Create safe URL for Angular
     this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.video.S3_url);
   }
+
   get safeVideoUrl(): string {
     return this.video?.S3_url || '';
+  }
+
+  onVideoClick() {
+    if (this.video && this.video._id) {
+      this.router.navigate(['/video', this.video._id]);
+    }
   }
 }

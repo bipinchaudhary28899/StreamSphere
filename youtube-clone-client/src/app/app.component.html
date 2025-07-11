@@ -1,13 +1,7 @@
 <app-header (search)="handleSearch($event)"></app-header>
-<div class="main-container">
-  <app-sidebar></app-sidebar>
+<div class="main-container" [ngClass]="{'no-sidebar': !isLoggedIn}">
+  <app-sidebar *ngIf="isLoggedIn"></app-sidebar>
   <div class="main-body">
-    <app-category-slider
-      *ngIf="showCategorySlider"
-      (categorySelected)="handleCategory($event)">
-    </app-category-slider>
-
     <router-outlet></router-outlet>
   </div>
 </div>
- <!-- <app-video-section [searchText]="searchText" [selectedCategory]="selectedCategory"></app-video-section> -->

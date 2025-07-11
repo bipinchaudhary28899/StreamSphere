@@ -1,5 +1,6 @@
 <!-- video-list.component.html -->
 <div class="video-section-container">
+  <app-category-slider (categorySelected)="handleCategory($event)"></app-category-slider>
     <!-- Loading state -->
     <div *ngIf="isLoading" class="loading-state">
       <mat-spinner diameter="50"></mat-spinner>
@@ -26,4 +27,4 @@
       <mat-icon>videocam_off</mat-icon>
       <p>No videos found</p>
     </div>
-  </div>
+</div>

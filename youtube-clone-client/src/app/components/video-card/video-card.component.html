@@ -1,4 +1,4 @@
-<mat-card>
+<mat-card (click)="onVideoClick()" class="video-card">
     <video class="video-preview" controls controlsList="nodownload">
       <source [src]="safeUrl" type="video/mp4" />
     </video>
@@ -6,5 +6,8 @@
       <h3>{{ video?.title || 'Untitled Video' }}</h3>
       <p>{{  'Untitled Channel'  }}</p>
       <p>{{ 0 }} • {{ video.uploadedAt }}</p>
+      <div class="category-badge" *ngIf="video?.category">
+        <span class="category-tag">{{ video.category }}</span>
+      </div>
     </mat-card-content>
 </mat-card>

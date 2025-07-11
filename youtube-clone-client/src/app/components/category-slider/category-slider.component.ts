@@ -10,10 +10,19 @@ import { CommonModule } from '@angular/common';
 })
 export class CategorySliderComponent {
 
-  categories= [
-   'All', 'Music', 'Gaming', 'News', 'Sports', 'Movies', 'Live', 'Fashion',
-   'Learning', 'Podcasts', 'Science', 'Disha Vakani','Web Series','Comedy', 'Technology', 'Trending','Audition',
-   'Recently Uploaded','Arjit Singh','Watched'
+  categories: string[] = [
+    'Music',
+    'Gaming',
+    'Sports',
+    'News',
+    'Movies',
+    'Learning',
+    'Comedy',
+    'Travel',
+    'Fitness',
+    'Web Series',
+    'Podcasts',
+    'Uncategorized'
   ];
 
   selectedCategory = 'All';

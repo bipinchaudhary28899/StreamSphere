@@ -33,4 +33,18 @@ export class VideoController {
       res.status(500).json({ message: 'Failed to fetch video', error });
     }
   }
+
+  /**
+   * GET /api/videos/category/:category
+   * Fetch videos by category
+   */
+  static async getVideosByCategory(req: Request, res: Response) {
+    try {
+      const { category } = req.params;
+      const videos = await videoService.getVideosByCategory(category);
+      res.json(videos);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch videos by category', error });
+    }
+  }
 }
