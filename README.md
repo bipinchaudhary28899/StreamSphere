@@ -1,6 +1,6 @@
 # StreamSphere 🎥
 
-A full-stack video streaming platform built as a personal initiative to explore and demonstrate various modern web technologies. This project replicates core YouTube functionalities like user authentication, video uploads, search, and more.
+A full-stack video streaming platform built as a personal initiative to explore and demonstrate various modern web technologies. This project replicates core StreamSphere functionalities like user authentication, video uploads, search, and more.
 
 ## 🚀 Tech Stack
 
