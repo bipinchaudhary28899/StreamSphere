@@ -1,20 +1,109 @@
+/* Ensure the app takes full viewport height */
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 .main-container {
-    display: flex;
-    flex-direction: row;
-
+  display: flex;
+  flex: 1 0 auto;
+  min-height: 0;
 }
-.main-body{
-    display: flex;
-    flex-direction: column;
-    width: auto;
-    overflow-x: auto;
 
+.main-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: 240px;
+  overflow-y: auto;
+  height: calc(100vh - 56px);
+  padding-bottom: 0;
 }
+
+.main-container.no-sidebar .main-body {
+  margin-left: 0;
+}
+
+.app-footer {
+  display: none;
+}
+
 app-video-section {
     flex-grow: 1;
 }
+
 app-category-slider {
     display: block;
-margin: 12px 0;
+    margin: 12px 0;
+}
 
+.footer-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.footer-links a {
+  color: #764ba2;
+  text-decoration: none;
+  margin: 0 6px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+.footer-links a:hover {
+  color: #3498db;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .main-container {
+        flex-direction: column;
+        height: auto;
+    }
+    
+    .main-body {
+        width: 100%;
+        padding: 0 8px;
+    }
+    
+    app-sidebar {
+        display: none; /* Hide sidebar on mobile */
+    }
+}
+
+@media (max-width: 480px) {
+    .main-body {
+        padding: 0 4px;
+    }
+}
+
+@media (max-width: 600px) {
+  .app-footer {
+    font-size: 0.92rem;
+    padding: 12px 0 8px 0;
+  }
+  .footer-content {
+    gap: 2px;
+  }
+  .footer-links a {
+    margin: 0 2px;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-body {
+    margin-left: 0 !important;
+    width: 100vw !important;
+  }
+  .main-container.no-sidebar .main-body {
+    margin-left: 0 !important;
+    width: 100vw !important;
+  }
 }

@@ -27,7 +27,7 @@ export class UploadVideoComponent {
   ) {
     this.uploadForm = this.fb.group({
       title: ['', Validators.required],
-      description: ['', Validators.required],
+      description: [''], // Remove required validator to make it optional
       video: [null, Validators.required]
     });
   }
@@ -75,7 +75,7 @@ export class UploadVideoComponent {
                 console.log('is theuser still logged in : ', localStorage.getItem('user'))
                 const metadata = {
                   title,
-                  description:"",
+                  description: description, // Use the user's description input
                   S3_url: fileUrl,
                   user_id: localStorage.getItem('user')? JSON.parse(localStorage.getItem('user')!).userId:'UNKNOWN USER', 
                 };

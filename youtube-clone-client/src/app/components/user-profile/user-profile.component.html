@@ -1,9 +1,15 @@
 <mat-card class="profile-header">
     <div class="background-image">
-      <img src="assets/bg-placeholder.jpg" alt="Background" />
+      <img src="assets/thumbs/timer.jpg" alt="Background" />
       <div class="profile-info">
-        <img mat-card-avatar class="profile-pic" src="assets/profile-placeholder.jpg" alt="Profile pic" />
-        <div class="username">Username</div>
+        <img mat-card-avatar class="profile-pic" 
+             [src]="profileImage" 
+             [alt]="userName + ' profile picture'"
+             (error)="onImageError($event)" />
+        <div class="user-details">
+          <div class="username">{{ userName }}</div>
+          <div class="user-email">{{ userEmail }}</div>
+        </div>
       </div>
     </div>
   </mat-card>
@@ -12,13 +18,17 @@
     <mat-sidenav-container class="sidenav-container">
       <mat-sidenav mode="side" opened class="upload-sidebar">
         <button mat-menu-item (click)="openUploadPage()">Upload Video</button>
+        <button mat-menu-item (click)="logout()">Logout</button>
         <ul>
           <li>•</li>
         </ul>
       </mat-sidenav>
   
       <mat-sidenav-content class="main-content">
-        <p>Main content area</p>
+        <div class="welcome-section">
+          <h2>Welcome back, {{ userName }}!</h2>
+          <p>Manage your videos and profile here.</p>
+        </div>
       </mat-sidenav-content>
     </mat-sidenav-container>
   </div>

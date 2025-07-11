@@ -10,5 +10,6 @@ router.post('/google-login', googleLogin);
 router.post('/upload-url', uploadController);
 router.post('/save-video', saveVideoController);
 router.get('/home', VideoController.getVideos);
+router.get('/videos/category/:category', VideoController.getVideosByCategory);
 
 export default router;

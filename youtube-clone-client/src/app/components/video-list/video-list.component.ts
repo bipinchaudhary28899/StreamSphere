@@ -6,13 +6,14 @@ import { MatIcon } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Subscription } from 'rxjs';
+import { CategorySliderComponent } from "../category-slider/category-slider.component";
 
 @Component({
   selector: 'app-video-list',
   templateUrl: './video-list.component.html',
   styleUrls: ['./video-list.component.scss'],
   standalone: true,
-  imports: [VideoCardComponent, MatIcon, CommonModule, MatProgressSpinnerModule]
+  imports: [VideoCardComponent, MatIcon, CommonModule, MatProgressSpinnerModule, CategorySliderComponent]
 })
 export class VideoListComponent implements OnInit, OnDestroy {
   allVideos: any[] = [];
@@ -21,6 +22,8 @@ export class VideoListComponent implements OnInit, OnDestroy {
   isLoading = true;
   error: string | null = null;
   private searchSubscription?: Subscription;
+  private categorySubscription?: Subscription;
+  currentCategory: string = 'All';
 
   constructor(private videoService: VideoService) { }
 
@@ -29,11 +32,18 @@ export class VideoListComponent implements OnInit, OnDestroy {
     this.searchSubscription = this.videoService.search$.subscribe(searchTerm => {
       this.applyFilter(searchTerm);
     });
+    this.categorySubscription = this.videoService.category$.subscribe(category => {
+      this.currentCategory = category;
+      this.loadVideosByCategory(category);
+    });
   }
 
   ngOnDestroy(): void {
     if (this.searchSubscription) {
       this.searchSubscription.unsubscribe();
+    }
+    if (this.categorySubscription) {
+      this.categorySubscription.unsubscribe();
     }
   }
 
@@ -52,10 +62,36 @@ export class VideoListComponent implements OnInit, OnDestroy {
       }
     });
   }
+
+  loadVideosByCategory(category: string): void {
+    this.isLoading = true;
+    this.error = null;
+    
+    this.videoService.getVideosByCategory(category).subscribe({
+      next: (videos) => {
+        this.allVideos = videos;
+        console.log(`Videos for category "${category}":`, videos);
+        this.filteredVideos = [...videos];
+        this.isLoading = false;
+      },
+      error: (err) => {
+        this.error = `Failed to load videos for category "${category}". Please try again later.`;
+        this.isLoading = false;
+        console.error('Error loading videos by category:', err);
+      }
+    });
+  }
+
   loadUserVideos() {
     const userId = JSON.parse(localStorage.getItem('user')!).userId;
     this.myVideos = this.allVideos.filter(video => video.userId === userId);
   }
+
+  handleCategory(category: string): void {
+    this.currentCategory = category;
+    this.loadVideosByCategory(category);
+  }
+
   // Optional: Add filtering logic
   applyFilter(filterTerm: string): void {
     if (!filterTerm || filterTerm.trim() === '') {

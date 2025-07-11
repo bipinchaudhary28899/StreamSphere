@@ -12,23 +12,37 @@ export const handleGoogleLogin = async (token: string): Promise<IUserResponse> =
     audience: process.env.GOOGLE_CLIENT_ID
   });
 
-  const { name, email, picture } = ticket.getPayload()!;
-  console.log("backend email is : ",email);
+  const payload = ticket.getPayload()!;
+  const { name, email, picture } = payload;
+  
+  console.log("backend email is : ", email);
+  console.log("Google profile image URL: ", picture);
+  
   let user = await User.findOne({ email });
   let isNewUser = false;
-  console.log("backend user is : ",user);
+  
   if (!user) {
+    // Create new user
     user = new User({
-      name,
-      email,
-      profileImage: picture,
+      name: name || 'Unknown User',
+      email: email || '',
+      profileImage: picture || '',
       isVerified: true,
       role: 'user'
     });
     await user.save();
     isNewUser = true;
+    console.log("New user created with profile image: ", picture);
+  } else {
+    // Update existing user's profile image to get the latest from Google
+    user.profileImage = picture || user.profileImage;
+    user.name = name || user.name; // Also update name in case it changed
+    await user.save();
+    console.log("Updated existing user's profile image: ", picture);
   }
 
+  console.log("backend user is : ", user);
+  
   const jwtPayload = { subject: user._id, email: user.email, userId: user._id };
   const jwtToken = jwt.sign(jwtPayload, process.env.JWT_SECRET!);
 
@@ -38,10 +52,11 @@ export const handleGoogleLogin = async (token: string): Promise<IUserResponse> =
       role: user.role,
       email: user.email,
       userName: user.name, 
+      name: user.name, // Add name for consistency
+      profileImage: user.profileImage || '', // Ensure it's always a string
       isVerified: user.isVerified,
       userId: user._id as string,
     },
     isNewUser
   };
-  
 };

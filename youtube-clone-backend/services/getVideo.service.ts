@@ -15,4 +15,14 @@ export class VideoService {
   async getVideoByUrl(S3_url: string) {
     return await Video.findOne({ S3_url }).exec();
   }
+
+  /**
+   * Get videos by category
+   */
+  async getVideosByCategory(category: string) {
+    if (category === 'All') {
+      return await Video.find().sort({ uploadedAt: -1 }).exec();
+    }
+    return await Video.find({ category }).sort({ uploadedAt: -1 }).exec();
+  }
 }

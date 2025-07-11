@@ -1,9 +1,56 @@
-<div *ngIf="video">
-    <h2>{{ video.title }}</h2>
-    <video width="100%" height="auto" controls>
-      <source [src]="video.videoUrl" type="video/mp4" />
-      Your browser does not support the video tag.
-    </video>
-    <h2>{{video.title}}</h2>
-    <p>{{video.channel}}.{{video.views}}.{{video.timestamp}}</p>
+<div class="video-player-container">
+  <!-- Loading state -->
+  <div *ngIf="loading" class="loading">
+    <div class="spinner"></div>
+    <p>Loading video...</p>
   </div>
+
+  <!-- Error state -->
+  <div *ngIf="error" class="error">
+    <h2>Error</h2>
+    <p>{{ error }}</p>
+    <button (click)="retryLoad()">Try Again</button>
+  </div>
+
+  <!-- Video content -->
+  <div *ngIf="video && !loading && !error" class="video-content">
+    <!-- Video player -->
+    <div class="video-section">
+      <video 
+        [src]="safeVideoUrl" 
+        controls 
+        controlsList="nodownload"
+        class="main-video-player"
+        preload="metadata">
+        Your browser does not support the video tag.
+      </video>
+    </div>
+
+    <!-- Video information -->
+    <div class="video-info">
+      <h1 class="video-title">{{ video.title }}</h1>
+      
+      <div class="video-meta">
+        <span class="upload-date">{{ formatDate(video.uploadedAt) }}</span>
+        <span class="video-id">ID: {{ video._id }}</span>
+        <span class="category-badge" *ngIf="video.category">
+          <span class="category-tag">{{ video.category }}</span>
+        </span>
+      </div>
+
+      <div class="video-description" *ngIf="video.description">
+        <h3>Description</h3>
+        <p>{{ video.description }}</p>
+      </div>
+
+      <div class="video-details">
+        <div class="detail-item">
+          <strong>Uploaded:</strong> {{ formatDate(video.uploadedAt) }}
+        </div>
+        <div class="detail-item">
+          <strong>User ID:</strong> {{ video.user_id }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
