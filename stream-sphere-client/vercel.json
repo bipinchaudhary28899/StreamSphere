@@ -1,4 +1,4 @@
 {
-  "builds": [{ "src": "dist/stream-sphere-client/browser/**/*", "use": "@vercel/static" }],
+  "builds": [{ "src": "dist/stream-sphere-client/**/*", "use": "@vercel/static" }],
   "routes": [{ "src": "/.*", "dest": "/index.html" }]
 } 
