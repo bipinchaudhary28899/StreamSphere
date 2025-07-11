@@ -1,4 +1,6 @@
 {
-  "builds": [{ "src": "dist/stream-sphere-client/**/*", "use": "@vercel/static" }],
-  "routes": [{ "src": "/.*", "dest": "/index.html" }]
+  "outputDirectory": "dist/stream-sphere-client",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 } 
