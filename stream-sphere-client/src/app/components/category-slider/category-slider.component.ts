@@ -11,17 +11,10 @@ import { CommonModule } from '@angular/common';
 export class CategorySliderComponent {
 
   categories: string[] = [
-    'Music',
-    'Gaming',
-    'Sports',
-    'News',
-    'Movies',
-    'Learning',
-    'Comedy',
-    'Travel',
-    'Fitness',
-    'Web Series',
-    'Podcasts',
+    'Music', 'Gaming', 'Sports', 'Movies', 'Comedy', 'Web Series',
+    'Learning', 'Podcasts', 'News', 'Fitness', 'Vlogs', 'Travel',
+    'Tech', 'Food & Recipes', 'Motivation', 'Short Films', 'Art & Design',
+    'Fashion', 'Kids', 'History', 'DIY', 'Documentaries', 'Spirituality',
     'Uncategorized'
   ];
 
