@@ -1,12 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpEvent, HttpRequest, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UploadService {
-  private baseUrl = 'http://localhost:3000/api'; // Backend base URL
+  private baseUrl = 'https://stream-sphere-azure.vercel.app/api'; // Deployed backend URL
 
   constructor(private http: HttpClient) {}
 

@@ -1,13 +1,14 @@
 import { HttpClient } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { Observable, BehaviorSubject } from "rxjs";
+import { environment } from '../../environments/environment';
 
 // video.service.ts
 @Injectable({
   providedIn: 'root'
 })
 export class VideoService {
-  private apiUrl = 'http://localhost:3000/api/home'; // Change to your backend URL
+  private apiUrl = 'https://stream-sphere-azure.vercel.app/api'; // Deployed backend URL
   private searchSubject = new BehaviorSubject<string>('');
   private categorySubject = new BehaviorSubject<string>('All');
   public search$ = this.searchSubject.asObservable();
@@ -16,11 +17,11 @@ export class VideoService {
   constructor(private http: HttpClient) { }
 
   getAllVideos(): Observable<any[]> {
-    return this.http.get<any[]>(this.apiUrl);
+    return this.http.get<any[]>(`${this.apiUrl}/home`);
   }
 
   getVideosByCategory(category: string): Observable<any[]> {
-    const url = category === 'All' ? this.apiUrl : `http://localhost:3000/api/videos/category/${encodeURIComponent(category)}`;
+    const url = category === 'All' ? `${this.apiUrl}/home` : `${this.apiUrl}/videos/category/${encodeURIComponent(category)}`;
     return this.http.get<any[]>(url);
   }
 
