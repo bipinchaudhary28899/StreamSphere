@@ -8,7 +8,7 @@ import { environment } from '../../environments/environment';
   providedIn: 'root'
 })
 export class VideoService {
-  private apiUrl = 'https://stream-sphere-azure.vercel.app/api'; // Deployed backend URL
+  private apiUrl = environment.apiUrl;
   private searchSubject = new BehaviorSubject<string>('');
   private categorySubject = new BehaviorSubject<string>('All');
   public search$ = this.searchSubject.asObservable();

@@ -7,7 +7,7 @@ import { environment } from '../../environments/environment';
   providedIn: 'root'
 })
 export class UploadService {
-  private baseUrl = 'https://stream-sphere-azure.vercel.app/api'; // Deployed backend URL
+  private baseUrl = environment.apiUrl;
 
   constructor(private http: HttpClient) {}
 
