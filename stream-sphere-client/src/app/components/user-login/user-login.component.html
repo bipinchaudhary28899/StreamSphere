@@ -1,14 +1,3 @@
 <div *ngIf="!isLoggedIn" class="jobluu-social-login">
   <div id="googleLoginButton"></div>
 </div>
-
-<div *ngIf="isLoggedIn" class="user-menu-wrapper">
-  <button mat-button [matMenuTriggerFor]="userMenu" class="username-btn">
-    👋 {{ userName }}
-  </button>
-
-  <mat-menu #userMenu="matMenu" yPosition="below">
-    <button mat-menu-item (click)="logOut()">Log Out</button>
-    <button mat-menu-item (click)="openUserProfile()">User Profile</button>
-  </mat-menu>
-</div>

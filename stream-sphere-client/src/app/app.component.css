@@ -63,14 +63,19 @@ app-category-slider {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .main-container {
-        flex-direction: column;
-        height: auto;
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100vw !important;
+        box-sizing: border-box;
+        overflow-x: hidden;
     }
-    
-    .main-body {
-        width: 100%;
-        padding: 0 8px;
+    .main-container, .main-body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100vw !important;
+        box-sizing: border-box;
+        overflow-x: hidden;
     }
     
     app-sidebar {
@@ -79,9 +84,6 @@ app-category-slider {
 }
 
 @media (max-width: 480px) {
-    .main-body {
-        padding: 0 4px;
-    }
 }
 
 @media (max-width: 600px) {

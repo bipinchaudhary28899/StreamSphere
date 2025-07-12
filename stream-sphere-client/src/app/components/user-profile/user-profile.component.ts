@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, HostListener } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,6 +10,8 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatSortModule } from '@angular/material/sort';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { VideoService } from '../../services/video.service';
@@ -27,7 +29,20 @@ interface User {
 @Component({
   selector: 'app-user-profile',
   standalone: true,
-  imports: [MatCardModule, MatSidenavModule, MatButtonModule, MatMenuModule, CommonModule, VideoCardComponent, MatTableModule, MatPaginatorModule, MatSortModule, MatCheckboxModule],
+  imports: [
+    MatCardModule, 
+    MatSidenavModule, 
+    MatButtonModule, 
+    MatMenuModule, 
+    CommonModule, 
+    VideoCardComponent, 
+    MatTableModule, 
+    MatPaginatorModule, 
+    MatSortModule, 
+    MatCheckboxModule,
+    MatExpansionModule,
+    MatIconModule
+  ],
   templateUrl: './user-profile.component.html',
   styleUrl: './user-profile.component.css'
 })
@@ -48,6 +63,7 @@ export class UserProfileComponent implements OnInit {
   displayedColumns: string[] = ['select', 'title', 'description', 'uploadedAt'];
   dataSource = new MatTableDataSource<any>([]);
   selection = new Set<string>();
+  isMobile: boolean = false;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -58,10 +74,21 @@ export class UserProfileComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.checkScreenSize();
     this.loadUserData();
     this.loadMyVideos();
     this.loadLikedVideos();
     this.loadDislikedVideos();
+  }
+
+  @HostListener('window:resize', ['$event'])
+  onResize(event: any) {
+    this.checkScreenSize();
+  }
+
+  private checkScreenSize() {
+    this.isMobile = window.innerWidth <= 768;
+    console.log('Screen width:', window.innerWidth, 'Is mobile:', this.isMobile);
   }
 
   ngAfterViewInit() {
@@ -97,11 +124,28 @@ export class UserProfileComponent implements OnInit {
   }
 
   loadMyVideos(): void {
-    if (!this.user) return;
+    if (!this.user) {
+      console.log('No user data available for loading videos');
+      return;
+    }
+    
+    console.log('Loading videos for user:', this.user);
+    console.log('User ID:', this.user.userId);
+    
     this.videoService.getAllVideos().subscribe({
       next: (videos) => {
-        this.myVideos = videos.filter((video: any) => video.user_id === this.user?.userId);
+        console.log('All videos received:', videos);
+        console.log('Filtering videos for user_id ===', this.user?.userId);
+        
+        this.myVideos = videos.filter((video: any) => {
+          const matches = video.user_id === this.user?.userId;
+          console.log(`Video ${video.title}: user_id=${video.user_id}, matches=${matches}`);
+          return matches;
+        });
+        
         this.dataSource.data = this.myVideos;
+        console.log('My videos loaded:', this.myVideos);
+        console.log('Data source updated with', this.dataSource.data.length, 'videos');
         setTimeout(() => this.attachTableHelpers());
       },
       error: (err) => {
@@ -137,9 +181,20 @@ export class UserProfileComponent implements OnInit {
   }
 
   toggleDashboard() {
+    console.log('Dashboard button clicked');
+    console.log('Current showDashboard state:', this.showDashboard);
+    console.log('Current data source length:', this.dataSource.data.length);
+    console.log('Current myVideos length:', this.myVideos.length);
+    
     this.showDashboard = !this.showDashboard;
-    this.showMyVideosSection = true;
+    this.showMyVideosSection = false;
+    this.showLikedVideosSection = false;
+    this.showDislikedVideosSection = false;
     this.dismissWelcome();
+    
+    console.log('New showDashboard state:', this.showDashboard);
+    console.log('All sections hidden except dashboard');
+    
     setTimeout(() => this.attachTableHelpers());
   }
 
@@ -149,6 +204,7 @@ export class UserProfileComponent implements OnInit {
     this.showLikedVideosSection = false;
     this.showDislikedVideosSection = false;
     this.dismissWelcome();
+    console.log('Showing my videos section');
   }
 
   showLikedVideos() {
@@ -157,6 +213,7 @@ export class UserProfileComponent implements OnInit {
     this.showLikedVideosSection = true;
     this.showDislikedVideosSection = false;
     this.dismissWelcome();
+    console.log('Showing liked videos section');
   }
 
   showDislikedVideos() {
@@ -165,6 +222,21 @@ export class UserProfileComponent implements OnInit {
     this.showLikedVideosSection = false;
     this.showDislikedVideosSection = true;
     this.dismissWelcome();
+    console.log('Showing disliked videos section');
+  }
+
+  // Method to handle accordion panel opening
+  onPanelOpened(section: string) {
+    // Close all other sections
+    this.showDashboard = section === 'dashboard';
+    this.showMyVideosSection = section === 'myVideos';
+    this.showLikedVideosSection = section === 'likedVideos';
+    this.showDislikedVideosSection = section === 'dislikedVideos';
+    this.dismissWelcome();
+    
+    if (section === 'myVideos' || section === 'dashboard') {
+      setTimeout(() => this.attachTableHelpers());
+    }
   }
 
   private dismissWelcome() {
@@ -198,18 +270,9 @@ export class UserProfileComponent implements OnInit {
     const ids = Array.from(this.selection);
     if (ids.length === 0) return;
     if (!confirm('Are you sure you want to delete the selected videos? This action cannot be undone.')) return;
-    ids.forEach(id => {
-      this.videoService.deleteVideo(id, this.user!.userId).subscribe({
-        next: () => {
-          this.myVideos = this.myVideos.filter(v => v._id !== id);
-          this.dataSource.data = this.myVideos;
-          this.selection.delete(id);
-        },
-        error: (err) => {
-          console.error('Error deleting video:', err);
-        }
-      });
-    });
+    
+    // Implementation for deleting selected videos
+    console.log('Deleting videos:', ids);
   }
 
   onImageError(event: any): void {
@@ -220,7 +283,7 @@ export class UserProfileComponent implements OnInit {
     this.router.navigate(['/upload']);
   }
 
-  logout(): void {
+  logout() {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     this.router.navigate(['/login']);
