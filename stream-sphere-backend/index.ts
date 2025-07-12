@@ -3,6 +3,9 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
 
+// Force IPv4 to avoid ENETUNREACH errors with Google APIs
+process.env.NODE_OPTIONS = '--dns-result-order=ipv4first';
+
 import centralRoute from './routes/centralRoute.route';
 import { Video } from './models/video';
 

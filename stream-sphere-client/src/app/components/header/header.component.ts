@@ -83,14 +83,7 @@ export class HeaderComponent {
   }
   
   redirectToHome() {
-    const userString = localStorage.getItem('user');
-    if (userString) {
-      const user = JSON.parse(userString);
-      this.isLoggedIn = true;
-      this.router.navigate([`/home/${user.userId}`]);
-    } else {
-      this.router.navigate(['/home']);
-    }
+    this.router.navigate(['/home']);
   }
 
   navigateToProfile() {

@@ -60,6 +60,14 @@ input[type="file"] {
   box-sizing: border-box;
 }
 
+.duration-limit {
+  color: #666;
+  font-size: 0.9rem;
+  font-style: italic;
+  margin-top: 4px;
+  display: block;
+}
+
 button {
   width: 100%;
   padding: 14px 0;

@@ -1,13 +1,54 @@
-<mat-card (click)="onVideoClick()" class="video-card">
+<ng-container *ngIf="flipEnabled; else normalCard">
+  <div class="flip-card" [class.flipped]="flip">
+    <div class="flip-card-inner">
+      <div class="flip-card-front">
+        <mat-card (click)="onVideoClick()" class="video-card" [ngClass]="{ 'faded': faded }">
+          <video class="video-preview" controls controlsList="nodownload">
+            <source [src]="safeUrl" type="video/mp4" />
+          </video>
+          <mat-card-content>
+            <div class="video-header">
+              <h3>{{ video?.title || 'Untitled Video' }}</h3>
+            </div>
+            <p>Uploaded by {{ video?.user_name || video?.userName || 'Unknown User' }}</p>
+            <p>{{ 0 }} • {{ video.uploadedAt }}</p>
+            <div class="category-badge" *ngIf="video?.category">
+              <span class="category-tag">{{ video.category }}</span>
+            </div>
+            <div class="flip-icon" (click)="onFlipClick($event)">
+              <mat-icon>swap_horiz</mat-icon>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+      <div class="flip-card-back">
+        <mat-card class="video-card">
+          <div class="flipped-content">
+            <h3>{{ video?.title || 'Untitled Video' }}</h3>
+            <p>More info or actions here!</p>
+            <div class="flip-icon" (click)="onFlipClick($event)">
+              <mat-icon>swap_horiz</mat-icon>
+            </div>
+          </div>
+        </mat-card>
+      </div>
+    </div>
+  </div>
+</ng-container>
+<ng-template #normalCard>
+  <mat-card (click)="onVideoClick()" class="video-card" [ngClass]="{ 'faded': faded }">
     <video class="video-preview" controls controlsList="nodownload">
       <source [src]="safeUrl" type="video/mp4" />
     </video>
     <mat-card-content>
-      <h3>{{ video?.title || 'Untitled Video' }}</h3>
-      <p>{{  'Untitled Channel'  }}</p>
+      <div class="video-header">
+        <h3>{{ video?.title || 'Untitled Video' }}</h3>
+      </div>
+      <p>Uploaded by {{ video?.user_name || video?.userName || 'Unknown User' }}</p>
       <p>{{ 0 }} • {{ video.uploadedAt }}</p>
       <div class="category-badge" *ngIf="video?.category">
         <span class="category-tag">{{ video.category }}</span>
       </div>
     </mat-card-content>
-</mat-card>
+  </mat-card>
+</ng-template>

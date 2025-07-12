@@ -99,10 +99,8 @@
 
 .video-meta {
   display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  color: #7f8c8d;
-  font-size: 0.9rem;
+  align-items: center;
+  gap: 12px;
 }
 
 .upload-date {
@@ -192,6 +190,120 @@
 
 .video-link:hover {
   text-decoration: underline;
+}
+
+.delete-btn {
+  color: #f44336;
+  transition: color 0.2s ease;
+  font-variation-settings: 'FILL' 1;
+}
+.delete-btn:hover {
+  color: #d32f2f;
+  background: none !important;
+  box-shadow: none !important;
+}
+
+.delete-btn .mat-icon {
+  transition: font-variation-settings 0.2s;
+}
+
+.delete-btn:hover::before {
+  content: 'delete_outline';
+  font-family: 'Material Icons';
+  position: absolute;
+  left: 0;
+  right: 0;
+  color: #d32f2f;
+}
+
+.like-dislike-section {
+  margin: 20px 0;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.counts-display {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 15px;
+  align-items: center;
+}
+
+.count-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #666;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.count-item mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: #999;
+}
+
+.interactive-buttons {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.interactive-buttons button {
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.interactive-buttons button:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.interactive-buttons button.liked {
+  color: #1976d2;
+  background-color: rgba(25, 118, 210, 0.1);
+}
+
+.interactive-buttons button.liked mat-icon {
+  color: #1976d2;
+}
+
+.interactive-buttons button.disliked {
+  color: #d32f2f;
+  background-color: rgba(211, 47, 47, 0.1);
+}
+
+.interactive-buttons button.disliked mat-icon {
+  color: #d32f2f;
+}
+
+.interactive-buttons button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.interactive-buttons mat-icon {
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+}
+
+.login-prompt {
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+}
+
+.login-prompt p {
+  margin: 0;
+  font-size: 0.9rem;
 }
 
 /* Responsive design */

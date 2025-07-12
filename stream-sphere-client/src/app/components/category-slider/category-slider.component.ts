@@ -24,8 +24,13 @@ export class CategorySliderComponent {
   @Output() categorySelected = new EventEmitter<string>();
   
   selectCategory(category: string) {
-    this.selectedCategory = category;
-    this.categorySelected.emit(category);
+    if (this.selectedCategory === category) {
+      this.selectedCategory = 'All';
+      this.categorySelected.emit('All');
+    } else {
+      this.selectedCategory = category;
+      this.categorySelected.emit(category);
+    }
   }
   scrollLeft() {
 this.scrollContainer.nativeElement.scrollBy({left:-150,behavior:'smooth'});  }

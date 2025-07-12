@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';  // Import Material 
 import { MatInputModule } from '@angular/material/input';    // Import Material Input
 import { CommonModule } from '@angular/common';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-upload-video',
@@ -23,7 +24,8 @@ export class UploadVideoComponent {
 
   constructor(
     private fb: FormBuilder,
-    private uploadService: UploadService
+    private uploadService: UploadService,
+    private router: Router
   ) {
     this.uploadForm = this.fb.group({
       title: ['', Validators.required],
@@ -35,9 +37,51 @@ export class UploadVideoComponent {
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      this.selectedFile = input.files[0];
-      this.uploadForm.patchValue({ video: this.selectedFile });
+      const file = input.files[0];
+      
+      // Check if it's a video file
+      if (!file.type.startsWith('video/')) {
+        alert('Please select a valid video file.');
+        return;
+      }
+      
+      // Check video duration
+      this.checkVideoDuration(file).then(duration => {
+        if (duration > 120) { // 2 minutes = 120 seconds
+          alert('Video duration exceeds 2 minutes. Please select a shorter video.');
+          input.value = '';
+          this.selectedFile = null;
+          return;
+        }
+        
+        this.selectedFile = file;
+        this.uploadForm.patchValue({ video: file });
+      }).catch(error => {
+        console.error('Error checking video duration:', error);
+        // If we can't check duration, still allow the upload
+        this.selectedFile = file;
+        this.uploadForm.patchValue({ video: file });
+      });
     }
+  }
+
+  private checkVideoDuration(file: File): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      
+      video.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(video.src);
+        resolve(video.duration);
+      };
+      
+      video.onerror = () => {
+        window.URL.revokeObjectURL(video.src);
+        reject(new Error('Could not load video metadata'));
+      };
+      
+      video.src = URL.createObjectURL(file);
+    });
   }
 
   onSubmit() {
@@ -73,11 +117,13 @@ export class UploadVideoComponent {
   
                 // Step 4: Save video metadata in backend
                 console.log('is theuser still logged in : ', localStorage.getItem('user'))
+                const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null;
                 const metadata = {
                   title,
                   description: description, // Use the user's description input
                   S3_url: fileUrl,
-                  user_id: localStorage.getItem('user')? JSON.parse(localStorage.getItem('user')!).userId:'UNKNOWN USER', 
+                  user_id: user ? user.userId : 'UNKNOWN USER',
+                  user_name: user ? user.name : 'Unknown User',
                 };
   
                 this.uploadService.saveVideoMetadata(metadata).subscribe({
@@ -88,10 +134,20 @@ export class UploadVideoComponent {
                     this.uploadForm.reset();
                     this.selectedFile = null;
                     this.uploadProgress = 0;
+                    setTimeout(() => {
+                      this.router.navigate(['/home']);
+                    }, 1500); // Redirect after 1.5 seconds
                   },
                   error: (err) => {
                     console.error('Error saving metadata:', err);
                     this.isUploading = false;
+                    
+                    // Handle duration error from backend
+                    if (err.error && err.error.error && err.error.error.includes('duration exceeds')) {
+                      alert(err.error.error);
+                    } else {
+                      alert('Error saving video. Please try again.');
+                    }
                   }
                 });
                 break;

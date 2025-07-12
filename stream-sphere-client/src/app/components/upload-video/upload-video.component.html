@@ -21,6 +21,7 @@
     <div class="form-group">
       <label>Video File</label>
       <input type="file" (change)="onFileSelected($event)" accept="video/*" />
+      <small class="duration-limit">Maximum video duration: 2 minutes</small>
     </div>
 
     <button type="submit" [disabled]="isUploading || !uploadForm.valid">

@@ -1,0 +1,55 @@
+<div class="carousel-container" *ngIf="topVideos.length > 0">
+  <div class="carousel-header">
+    <h2>🔥 Trending Videos</h2>
+    <p>Most liked videos on StreamSphere</p>
+  </div>
+
+  <div class="carousel-stacked-wrapper">
+    <!-- Previous Card -->
+    <div [class]="getPrevCardClass()" *ngIf="prevVideo" (click)="prevSlide()">
+      <app-video-card 
+        [video]="prevVideo" 
+        [flipEnabled]="false"
+        [faded]="true"
+        class="carousel-video-card">
+      </app-video-card>
+    </div>
+    <!-- Active Card -->
+    <div [class]="getActiveCardClass()">
+      <app-video-card 
+        [video]="currentVideo" 
+        [flipEnabled]="false"
+        class="carousel-video-card">
+      </app-video-card>
+    </div>
+    <!-- Next Card -->
+    <div [class]="getNextCardClass()" *ngIf="nextVideo" (click)="nextSlide()">
+      <app-video-card 
+        [video]="nextVideo" 
+        [flipEnabled]="false"
+        [faded]="true"
+        class="carousel-video-card">
+      </app-video-card>
+    </div>
+  </div>
+
+  <!-- Navigation Buttons -->
+  <div class="carousel-nav">
+    <button (click)="prevSlide()" [disabled]="topVideos.length <= 1 || isAnimating">
+      ← Previous
+    </button>
+    <button (click)="nextSlide()" [disabled]="topVideos.length <= 1 || isAnimating">
+      Next →
+    </button>
+  </div>
+
+  <!-- Indicators -->
+  <div class="carousel-indicators">
+    <div 
+      *ngFor="let video of topVideos; let i = index"
+      class="carousel-indicator"
+      [class.active]="i === currentIndex"
+      (click)="goToSlide(i)">
+    </div>
+  </div>
+</div> 
