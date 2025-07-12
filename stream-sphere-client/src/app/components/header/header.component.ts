@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter, HostListener } from '@angular/core';
+import { Component, Output, EventEmitter, HostListener, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -9,6 +9,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { UserLoginComponent } from "../user-login/user-login.component";
 import { Router } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
+import { Subscription } from 'rxjs';
 
 interface User {
   userId: string;
@@ -26,37 +28,51 @@ interface User {
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.css']
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit, OnDestroy {
   constructor(
     private router: Router,
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
   ){ 
   }
   
   isLoggedIn: boolean = false;
-  isMobile: boolean = false;
   user: User | null = null;
   profileImage: string = 'assets/thumbs/taarak.jpg';
+  private loginSubscription: Subscription | null = null;
   
   @Output() search = new EventEmitter<string>();
 
   ngOnInit() {
-    this.checkScreenSize();
     this.loadUserData();
+    this.subscribeToLoginState();
   }
 
-  @HostListener('window:resize', ['$event'])
-  onResize(event: any) {
-    this.checkScreenSize();
-    this.loadUserData();
+  ngOnDestroy() {
+    if (this.loginSubscription) {
+      this.loginSubscription.unsubscribe();
+    }
   }
 
-  private checkScreenSize() {
-    this.isMobile = window.innerWidth <= 768;
+  private subscribeToLoginState() {
+    this.loginSubscription = this.authService.getLoginState().subscribe(
+      (isLoggedIn: boolean) => {
+        console.log('Header: Login state changed to:', isLoggedIn);
+        this.isLoggedIn = isLoggedIn;
+        this.loadUserData();
+        // Use setTimeout to defer the change detection to the next cycle
+        setTimeout(() => {
+          this.cdr.detectChanges();
+        });
+      }
+    );
   }
 
   loadUserData(): void {
     try {
       const userData = localStorage.getItem('user');
+      console.log('Header: Loading user data from localStorage:', userData);
+      
       if (userData) {
         this.user = JSON.parse(userData);
         this.isLoggedIn = true;
@@ -65,10 +81,12 @@ export class HeaderComponent {
         } else {
           this.profileImage = 'assets/thumbs/taarak.jpg';
         }
+        console.log('Header: User is logged in:', this.user);
       } else {
         this.isLoggedIn = false;
         this.user = null;
         this.profileImage = 'assets/thumbs/taarak.jpg';
+        console.log('Header: User is not logged in');
       }
     } catch (error) {
       this.isLoggedIn = false;
@@ -97,7 +115,9 @@ export class HeaderComponent {
   logout() {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
-    this.loadUserData();
+    setTimeout(() => {
+      this.authService.updateLoginState(false);
+    });
     this.router.navigate(['/login']);
   }
 

@@ -1,14 +1,21 @@
 <mat-toolbar color="primary" class="header-toolbar">
   <div class="logo">
-    <span class="app-name" (click)="redirectToHome()">StreamSphere</span>
+    <img src="assets/thumbs/Stream Sphere Icon.png" 
+         alt="StreamSphere" 
+         class="app-logo desktop-logo" 
+         (click)="redirectToHome()" />
+    <img src="assets/thumbs/ss_icon_mobile.png" 
+         alt="StreamSphere" 
+         class="app-logo mobile-logo" 
+         (click)="redirectToHome()" />
   </div>
   
-  <span class="spacer"></span>
-  
-  <input class="search-box" type="text" placeholder="Search" (input)="onSearchChange($event)" />
+  <div class="search-container">
+    <input class="search-box" type="text" placeholder="Search" (input)="onSearchChange($event)" />
+  </div>
 
-  <!-- Mobile User Dropdown -->
-  <div class="mobile-user-menu" *ngIf="isMobile && isLoggedIn">
+  <!-- User Menu for logged in users -->
+  <div class="user-menu" *ngIf="isLoggedIn">
     <button mat-icon-button [matMenuTriggerFor]="userMenu" class="user-profile-btn">
       <img [src]="profileImage" 
            [alt]="user?.name + ' profile picture'"
@@ -30,7 +37,6 @@
       
       <mat-divider></mat-divider>
       
-      <!-- Sidebar options moved to dropdown -->
       <button mat-menu-item (click)="redirectToHome()">
         <mat-icon>home</mat-icon>
         <span>Home</span>
@@ -70,6 +76,6 @@
     </mat-menu>
   </div>
 
-  <!-- Desktop User Login Component -->
-  <app-user-login *ngIf="!isMobile"></app-user-login>
+  <!-- User Login Component for non-logged in users -->
+  <app-user-login *ngIf="!isLoggedIn"></app-user-login>
 </mat-toolbar>

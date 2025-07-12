@@ -145,12 +145,14 @@
 
 /* Liked and Disliked Videos Sections */
 .liked-videos-section,
-.disliked-videos-section {
+.disliked-videos-section,
+.dashboard-section {
   padding: 20px 0;
 }
 
 .liked-videos-section h3,
-.disliked-videos-section h3 {
+.disliked-videos-section h3,
+.dashboard-section h3 {
   font-size: 1.8rem;
   font-weight: 600;
   color: #222;
@@ -165,6 +167,16 @@
 
 .disliked-videos-section h3 {
   color: #f44336;
+}
+
+.dashboard-section h3 {
+  color: #2196f3;
+}
+
+.dashboard-section p {
+  color: #666;
+  font-size: 1.1rem;
+  margin-bottom: 20px;
 }
 
 .no-videos {
@@ -186,49 +198,278 @@
   margin-top: 20px;
 }
 
+/* Mobile Layout Styles */
+.mobile-layout {
+  padding: 16px;
+  max-width: 100%;
+}
+
+.mobile-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.mobile-action-btn {
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-accordion {
+  width: 100%;
+}
+
+.mobile-panel {
+  margin-bottom: 8px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-panel mat-expansion-panel-header {
+  padding: 16px;
+  background-color: #f5f5f5;
+}
+
+.mobile-panel mat-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 500;
+}
+
+.mobile-panel mat-icon {
+  color: #666;
+}
+
+.mobile-panel .mat-expansion-panel-body {
+  padding: 16px;
+}
+
+/* Reduce padding for dashboard section in mobile accordion */
+.mobile-panel[ng-reflect-expanded="true"] .dashboard-section {
+  padding: 8px 0 !important;
+}
+
+.mobile-panel .dashboard-section .mat-expansion-panel-body {
+  padding: 8px 0 !important;
+}
+
+/* Mobile styles */
 @media (max-width: 768px) {
   .profile-header .background-image {
     height: 120px;
   }
+  
   .profile-header .background-image .profile-info {
     top: 12px;
     left: 12px;
     padding: 10px 14px;
     gap: 12px;
   }
+  
   .profile-header .background-image .profile-info .profile-pic {
     width: 60px;
     height: 60px;
   }
+  
   .profile-header .background-image .profile-info .user-details .username {
     font-size: 1.1rem;
   }
+  
   .profile-header .background-image .profile-info .user-details .user-email {
     font-size: 0.8rem;
   }
+  
   .profile-body {
     margin-top: 12px;
     padding: 8px 0;
   }
+  
   .profile-body .sidenav-container {
     flex-direction: column;
     gap: 12px;
     width: 100%;
   }
+  
   .profile-body .sidenav-container .upload-sidebar {
     width: 100%;
     padding: 12px 8px;
     font-size: 1rem;
   }
+  
   .profile-body .sidenav-container .main-content {
     padding: 12px 8px;
     min-height: 200px;
   }
+  
   .welcome-section {
     padding: 20px 4px;
   }
+  
   .welcome-section h2 {
     font-size: 1.3rem;
+  }
+  
+  /* Ensure sections are visible on mobile */
+  .liked-videos-section,
+  .disliked-videos-section,
+  .my-videos-section {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
+  .video-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+  
+  .liked-videos-section h3,
+  .disliked-videos-section h3 {
+    font-size: 1.4rem;
+    margin-bottom: 16px;
+  }
+  
+  .no-videos {
+    padding: 20px 10px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-body .sidenav-container {
+    width: 95%;
+  }
+  
+  .profile-body .sidenav-container .main-content {
+    padding: 8px 4px;
+  }
+  
+  .video-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .welcome-section h2 {
+    font-size: 1.1rem;
+  }
+  
+  .welcome-section p {
+    font-size: 1rem;
+  }
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+  .profile-body {
+    padding: 0;
+  }
+  
+  .mobile-layout {
+    padding: 12px;
+  }
+  
+  .mobile-actions {
+    flex-direction: column;
+  }
+  
+  .mobile-action-btn {
+    width: 100%;
+  }
+  
+  .video-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .welcome-section {
+    margin-bottom: 20px;
+  }
+  
+  .welcome-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+  }
+  
+  .welcome-section p {
+    font-size: 0.9rem;
+  }
+}
+
+/* Ensure content is visible in mobile accordion */
+.mobile-panel .my-videos-section,
+.mobile-panel .liked-videos-section,
+.mobile-panel .disliked-videos-section,
+.mobile-panel .dashboard-section {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Fix spacing for mobile dashboard section */
+.mobile-panel .dashboard-section {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.mobile-panel .dashboard-section h3 {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+.mobile-panel .dashboard-section p {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+.mobile-panel .dashboard-section table {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+.mobile-panel .dashboard-section button {
+  margin-left: 0 !important;
+}
+
+/* Mobile table adjustments */
+@media (max-width: 768px) {
+  .mat-table {
+    font-size: 0.8rem;
+  }
+  
+  .mat-header-cell,
+  .mat-cell {
+    padding: 8px 4px;
+  }
+  
+  .mat-column-description {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  /* Override accordion panel body padding for dashboard */
+  .mobile-panel .mat-expansion-panel-body {
+    padding: 8px !important;
+  }
+  
+  /* Further reduce padding for dashboard content */
+  .mobile-panel .dashboard-section {
+    padding: 0 !important;
+  }
+  
+  .mobile-panel .dashboard-section h3,
+  .mobile-panel .dashboard-section p,
+  .mobile-panel .dashboard-section button,
+  .mobile-panel .dashboard-section table {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
   }
 }
   
