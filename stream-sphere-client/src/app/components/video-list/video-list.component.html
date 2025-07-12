@@ -1,5 +1,8 @@
 <!-- video-list.component.html -->
 <div class="video-section-container">
+  <!-- Hero Carousel - Top 3 Most Liked Videos -->
+  <app-hero-carousel></app-hero-carousel>
+  
   <app-category-slider (categorySelected)="handleCategory($event)"></app-category-slider>
     <!-- Loading state -->
     <div *ngIf="isLoading" class="loading-state">
@@ -18,7 +21,8 @@
     <div *ngIf="!isLoading && !error" class="video-grid">
       <app-video-card 
         *ngFor="let video of filteredVideos" 
-        [video]="video">
+        [video]="video"
+        (videoDeleted)="onVideoDeleted($event)">
       </app-video-card>
     </div>
   

@@ -7,26 +7,11 @@ export class CategoryDetectionService {
 
   // Define common video categories
   private readonly categories = [
-    'Gaming',
-    'Technology', 
-    'Education',
-    'Music',
-    'Sports',
-    'Comedy',
-    'Cooking',
-    'Travel',
-    'News',
-    'Lifestyle',
-    'Entertainment',
-    'Science',
-    'Business',
-    'Health',
-    'Fashion',
-    'Art',
-    'Documentary',
-    'Animation',
-    'Tutorial',
-    'Review'
+    'Music', 'Gaming', 'Sports', 'Movies', 'Comedy', 'Web Series',
+    'Learning', 'Podcasts', 'News', 'Fitness', 'Vlogs', 'Travel',
+    'Tech', 'Food & Recipes', 'Motivation', 'Short Films', 'Art & Design',
+    'Fashion', 'Kids', 'History', 'DIY', 'Documentaries', 'Spirituality',
+    'Uncategorized'
   ];
 
   async detectCategory(title: string, description: string): Promise<string> {

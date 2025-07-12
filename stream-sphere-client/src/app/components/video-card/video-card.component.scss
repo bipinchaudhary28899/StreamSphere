@@ -26,6 +26,28 @@
     pointer-events: none; /* Prevent video controls from interfering with card click */
   }
   
+  .video-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  
+  .video-header h3 {
+    margin: 0;
+    flex: 1;
+  }
+  
+  .delete-btn {
+    color: #f44336;
+    transition: color 0.2s ease;
+  }
+  
+  .delete-btn:hover {
+    color: #d32f2f;
+    background-color: rgba(244, 67, 54, 0.1);
+  }
+  
   @media (max-width: 600px) {
     .video-card {
       max-width: 98vw;
@@ -57,4 +79,91 @@
     letter-spacing: 0.5px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
+
+/* Simplified flip card styles */
+.flip-card {
+  perspective: 1000px;
+  width: 100%;
+  height: 340px; /* Fixed height to maintain consistency */
+}
+
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.flip-card.flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.flip-card-front, .flip-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  top: 0;
+  left: 0;
+}
+
+.flip-card-front {
+  z-index: 2;
+}
+
+.flip-card-back {
+  transform: rotateY(180deg);
+  z-index: 1;
+}
+
+/* Ensure both front and back cards have the same dimensions */
+.flip-card-front .video-card,
+.flip-card-back .video-card {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.flip-card-front .video-card mat-card-content,
+.flip-card-back .video-card mat-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.flip-icon {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  cursor: pointer;
+  padding: 6px;
+  transition: background 0.2s;
+  z-index: 10;
+}
+
+.flip-icon:hover {
+  background: #f0f0f0;
+}
+
+.flipped-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 20px;
+  text-align: center;
+}
+
+.video-card.faded {
+  filter: grayscale(0.7) brightness(0.85);
+  opacity: 0.7;
+  pointer-events: none;
+}
   

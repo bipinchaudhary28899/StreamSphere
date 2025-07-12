@@ -143,6 +143,49 @@
   line-height: 1.6;
 }
 
+/* Liked and Disliked Videos Sections */
+.liked-videos-section,
+.disliked-videos-section {
+  padding: 20px 0;
+}
+
+.liked-videos-section h3,
+.disliked-videos-section h3 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e1e5e9;
+}
+
+.liked-videos-section h3 {
+  color: #4caf50;
+}
+
+.disliked-videos-section h3 {
+  color: #f44336;
+}
+
+.no-videos {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.no-videos p {
+  margin: 0;
+  font-style: italic;
+}
+
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  margin-top: 20px;
+}
+
 @media (max-width: 768px) {
   .profile-header .background-image {
     height: 120px;

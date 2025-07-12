@@ -7,13 +7,14 @@ import { CommonModule } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Subscription } from 'rxjs';
 import { CategorySliderComponent } from "../category-slider/category-slider.component";
+import { HeroCarouselComponent } from "../hero-carousel/hero-carousel.component";
 
 @Component({
   selector: 'app-video-list',
   templateUrl: './video-list.component.html',
   styleUrls: ['./video-list.component.scss'],
   standalone: true,
-  imports: [VideoCardComponent, MatIcon, CommonModule, MatProgressSpinnerModule, CategorySliderComponent]
+  imports: [VideoCardComponent, MatIcon, CommonModule, MatProgressSpinnerModule, CategorySliderComponent, HeroCarouselComponent]
 })
 export class VideoListComponent implements OnInit, OnDestroy {
   allVideos: any[] = [];
@@ -51,9 +52,11 @@ export class VideoListComponent implements OnInit, OnDestroy {
     this.videoService.getAllVideos().subscribe({
       next: (videos) => {
         this.allVideos = videos;
-        console.log("all video are : ",this.allVideos);
+        console.log("All videos loaded:", this.allVideos.length, "videos");
+        console.log("First video sample:", this.allVideos[0]);
         this.filteredVideos = [...videos]; // Initially show all videos
         this.isLoading = false;
+        console.log("Filtered videos count:", this.filteredVideos.length);
       },
       error: (err) => {
         this.error = 'Failed to load videos. Please try again later.';
@@ -80,6 +83,13 @@ export class VideoListComponent implements OnInit, OnDestroy {
         console.error('Error loading videos by category:', err);
       }
     });
+  }
+
+  onVideoDeleted(videoId: string): void {
+    // Remove the deleted video from all arrays
+    this.allVideos = this.allVideos.filter(video => video._id !== videoId);
+    this.filteredVideos = this.filteredVideos.filter(video => video._id !== videoId);
+    this.myVideos = this.myVideos.filter(video => video._id !== videoId);
   }
 
   loadUserVideos() {

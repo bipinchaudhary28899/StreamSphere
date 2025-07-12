@@ -43,7 +43,11 @@ export const handleGoogleLogin = async (token: string): Promise<IUserResponse> =
 
   console.log("backend user is : ", user);
   
-  const jwtPayload = { subject: user._id, email: user.email, userId: user._id };
+  const jwtPayload = { 
+    userId: user._id, 
+    email: user.email, 
+    subject: user._id 
+  };
   const jwtToken = jwt.sign(jwtPayload, process.env.JWT_SECRET!);
 
   return {
@@ -60,3 +64,28 @@ export const handleGoogleLogin = async (token: string): Promise<IUserResponse> =
     isNewUser
   };
 };
+
+// JWT authentication middleware
+export function authenticateJWT(req: any, res: any, next: any) {
+  const authHeader = req.headers.authorization;
+  console.log('JWT Middleware - Auth header:', authHeader);
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('JWT Middleware - No token provided');
+    return res.status(401).json({ message: 'No token provided' });
+  }
+  
+  const token = authHeader.split(' ')[1];
+  console.log('JWT Middleware - Token received:', token.substring(0, 20) + '...');
+  console.log('JWT Middleware - JWT_SECRET exists:', !!process.env.JWT_SECRET);
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!);
+    console.log('JWT Middleware - Token decoded successfully:', decoded);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    console.error('JWT Middleware - Token verification failed:', err);
+    return res.status(401).json({ message: 'Invalid token' });
+  }
+}
