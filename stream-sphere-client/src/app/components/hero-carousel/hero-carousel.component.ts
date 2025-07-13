@@ -155,15 +155,17 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
         
         // Map backend data to frontend Video interface
         this.videos = backendVideos.map((backendVideo: any) => ({
-          id: backendVideo._id,
+          _id: backendVideo._id,
           title: backendVideo.title,
           description: backendVideo.description || 'Watch this amazing video on StreamSphere',
-          thumbnail: this.generateThumbnailUrl(backendVideo.S3_url, backendVideo.category),
-          channel: backendVideo.user_name,
-          views: this.formatViews(Math.floor(Math.random() * 10000) + 100),
-          timestamp: this.formatTimestamp(new Date(backendVideo.uploadedAt)),
+          S3_url: backendVideo.S3_url,
+          thumbnail_url: this.generateThumbnailUrl(backendVideo.S3_url, backendVideo.category),
+          user_id: backendVideo.user_id || '',
           category: backendVideo.category,
-          videoUrl: backendVideo.S3_url
+          likes: backendVideo.likes || 0,
+          dislikes: backendVideo.dislikes || 0,
+          uploadedAt: backendVideo.uploadedAt,
+          commentCount: backendVideo.commentCount || 0
         }));
         
         console.log('Mapped videos:', this.videos);
@@ -209,16 +211,8 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
     return `${baseUrl}/${colorPair}?text=${text}`;
   }
 
-  private formatViews(views: number): string {
-    if (views >= 1000000) {
-      return (views / 1000000).toFixed(1) + 'M';
-    } else if (views >= 1000) {
-      return (views / 1000).toFixed(1) + 'K';
-    }
-    return views.toString();
-  }
 
-  private formatTimestamp(date: Date): string {
+  formatTimestamp(date: Date): string {
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
     
@@ -227,6 +221,10 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
     if (diffInSeconds < 86400) return Math.floor(diffInSeconds / 3600) + ' hours ago';
     if (diffInSeconds < 2592000) return Math.floor(diffInSeconds / 86400) + ' days ago';
     return Math.floor(diffInSeconds / 2592000) + ' months ago';
+  }
+
+  createDate(dateString: string): Date {
+    return new Date(dateString);
   }
 
   private observeCurrentVideo(): void {
@@ -317,7 +315,7 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
   onPlayNowClick(): void {
     if (this.videos[this.currentIndex]) {
       // Navigate to video player page
-      window.location.href = `/video/${this.videos[this.currentIndex].id}`;
+      window.location.href = `/video/${this.videos[this.currentIndex]._id}`;
     }
   }
 

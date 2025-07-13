@@ -16,6 +16,8 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { VideoService } from '../../services/video.service';
 import { VideoCardComponent } from '../video-card/video-card.component';
+import { AuthService } from '../../services/auth.service';
+import { Subscription } from 'rxjs';
 
 interface User {
   userId: string;
@@ -47,8 +49,8 @@ interface User {
   styleUrl: './user-profile.component.css'
 })
 export class UserProfileComponent implements OnInit {
-  user: User | null = null;
-  profileImage: string = 'assets/thumbs/taarak.jpg';
+  user: any;
+  profileImage: string = 'assets/default-avatar.png';
   userName: string = 'Username';
   userEmail: string = '';
   myVideos: any[] = [];
@@ -64,13 +66,15 @@ export class UserProfileComponent implements OnInit {
   dataSource = new MatTableDataSource<any>([]);
   selection = new Set<string>();
   isMobile: boolean = false;
+  private loginSubscription: Subscription | null = null;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
   constructor(
     private router: Router,
-    private videoService: VideoService
+    private videoService: VideoService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -79,6 +83,25 @@ export class UserProfileComponent implements OnInit {
     this.loadMyVideos();
     this.loadLikedVideos();
     this.loadDislikedVideos();
+  }
+
+  ngOnDestroy() {
+    if (this.loginSubscription) {
+      this.loginSubscription.unsubscribe();
+    }
+  }
+
+  private subscribeToLoginState() {
+    this.loginSubscription = this.authService.getLoginState().subscribe(
+      (isLoggedIn: boolean) => {
+        console.log('UserProfile: Login state changed to:', isLoggedIn);
+        this.loadUserData();
+        // Use setTimeout to defer the change detection to the next cycle
+        setTimeout(() => {
+          // this.cdr.detectChanges(); // This line was removed as per the new_code
+        });
+      }
+    );
   }
 
   @HostListener('window:resize', ['$event'])
@@ -105,6 +128,8 @@ export class UserProfileComponent implements OnInit {
   loadUserData(): void {
     try {
       const userData = localStorage.getItem('user');
+      console.log('UserProfile: Loading user data from localStorage:', userData);
+      
       if (userData) {
         this.user = JSON.parse(userData);
         this.userName = this.user?.name || 'Username';
@@ -112,13 +137,13 @@ export class UserProfileComponent implements OnInit {
         if (this.user?.profileImage) {
           this.profileImage = this.user.profileImage;
         }
-        console.log('User data loaded:', this.user);
+        console.log('UserProfile: User data loaded:', this.user);
       } else {
-        console.log('No user data found in localStorage');
+        console.log('UserProfile: No user data found in localStorage');
         this.router.navigate(['/login']);
       }
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('UserProfile: Error loading user data:', error);
       this.router.navigate(['/login']);
     }
   }
@@ -275,8 +300,8 @@ export class UserProfileComponent implements OnInit {
     console.log('Deleting videos:', ids);
   }
 
-  onImageError(event: any): void {
-    event.target.src = 'assets/thumbs/taarak.jpg';
+  onImageError(event: Event): void {
+    (event.target as HTMLImageElement).src = 'assets/default-avatar.png';
   }
 
   openUploadPage(): void {

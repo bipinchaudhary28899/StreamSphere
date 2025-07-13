@@ -22,7 +22,7 @@ html, body {
   min-width: 0;
   margin-left: 240px;
   overflow-y: auto;
-  height: calc(100vh - 56px);
+  height: calc(100vh - 80px);
   padding-bottom: 0;
 }
 
