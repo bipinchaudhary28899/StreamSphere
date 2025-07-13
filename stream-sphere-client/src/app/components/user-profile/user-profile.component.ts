@@ -136,8 +136,6 @@ export class UserProfileComponent implements OnInit {
         this.userEmail = this.user?.email || '';
         if (this.user?.profileImage) {
           this.profileImage = this.user.profileImage;
-        } else {
-          this.profileImage = 'assets/default-avatar.png';
         }
         console.log('UserProfile: User data loaded:', this.user);
       } else {
