@@ -1,18 +1,18 @@
 <mat-card class="profile-header">
-    <div class="background-image">
-      <img src="assets/thumbs/timer.jpg" alt="Background" />
-      <div class="profile-info">
-        <img mat-card-avatar class="profile-pic" 
-             [src]="profileImage" 
-             [alt]="userName + ' profile picture'"
-             (error)="onImageError($event)" />
-        <div class="user-details">
-          <div class="username">{{ userName }}</div>
-          <div class="user-email">{{ userEmail }}</div>
-        </div>
+  <div class="background-image">
+    <img src="assets/thumbs/timer.jpg" alt="Background" />
+    <div class="profile-info">
+      <img mat-card-avatar class="profile-pic" 
+           [src]="profileImage" 
+           [alt]="userName + ' profile picture'"
+           (error)="onImageError($event)" />
+      <div class="user-details">
+        <div class="username">{{ userName }}</div>
+        <div class="user-email">{{ userEmail }}</div>
       </div>
     </div>
-  </mat-card>
+  </div>
+</mat-card>
   
   <div class="profile-body">
     <!-- Desktop Layout (Sidebar) -->

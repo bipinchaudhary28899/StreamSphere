@@ -46,6 +46,8 @@ export const handleGoogleLogin = async (token: string): Promise<IUserResponse> =
   const jwtPayload = { 
     userId: user._id, 
     email: user.email, 
+    name: user.name,
+    profileImage: user.profileImage,
     subject: user._id 
   };
   const jwtToken = jwt.sign(jwtPayload, process.env.JWT_SECRET!);

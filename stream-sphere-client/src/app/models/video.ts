@@ -1,11 +1,18 @@
 export interface Video {
-    id: string;
+    _id: string;
     title: string;
     description?: string;
-    thumbnail: string;
-    channel: string;
-    views: string;
-    timestamp: string;
-    category: string;
-    videoUrl: string;
+    S3_url: string;
+    thumbnail_url?: string;
+    user_id: string;
+    category?: string;
+    likes: number;
+    dislikes: number;
+    uploadedAt: string;
+    commentCount?: number;
+}
+
+export interface VideoResponse {
+    success: boolean;
+    videos: Video[];
 }

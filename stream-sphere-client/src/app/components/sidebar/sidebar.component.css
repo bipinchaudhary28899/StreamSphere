@@ -5,11 +5,9 @@
   position: fixed;
   top: 56px;
   left: 0;
-  height: calc(100vh - 56px);
-  padding-top: 8px;
-  margin-top: 8px;
+  height: calc(100vh - 80px);
+  margin-top: 24px;
   z-index: 200;
-  overflow-y: auto;
 }
 
 .sidebar-nav mat-list-item {

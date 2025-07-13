@@ -81,6 +81,10 @@ export class VideoService {
     return this.http.get<any[]>(`${this.apiUrl}/videos/disliked`, { headers });
   }
 
+  getCommentCount(videoId: string): Observable<{ success: boolean; count: number }> {
+    return this.http.get<{ success: boolean; count: number }>(`${this.apiUrl}/videos/${videoId}/comments/count`);
+  }
+
   setSearchTerm(term: string): void {
     console.log('Video service setting search term:', term);
     this.searchSubject.next(term);

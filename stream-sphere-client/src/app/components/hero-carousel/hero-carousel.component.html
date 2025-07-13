@@ -6,8 +6,8 @@
       <!-- Video Preview -->
       <video 
         #videoElement
-        *ngIf="currentVideo?.videoUrl"
-        [src]="currentVideo?.videoUrl" 
+        *ngIf="currentVideo?.S3_url"
+        [src]="currentVideo?.S3_url" 
         class="hero-video"
         muted
         loop
@@ -16,15 +16,15 @@
         (loadeddata)="onVideoLoad()">
         <!-- Fallback to thumbnail if video fails to load -->
         <img 
-          [src]="currentVideo?.thumbnail" 
+          [src]="currentVideo?.thumbnail_url" 
           [alt]="currentVideo?.title"
           class="hero-image">
       </video>
       
       <!-- Fallback Image if no video -->
       <img 
-        *ngIf="!currentVideo?.videoUrl"
-        [src]="currentVideo?.thumbnail" 
+        *ngIf="!currentVideo?.S3_url"
+        [src]="currentVideo?.thumbnail_url" 
         [alt]="currentVideo?.title"
         class="hero-image">
     </div>
@@ -39,9 +39,9 @@
         <h1 class="hero-title">{{ currentVideo?.title }}</h1>
         <p class="hero-description">{{ currentVideo?.description }}</p>
         <div class="hero-meta">
-          <span class="hero-channel">{{ currentVideo?.channel }}</span>
-          <span class="hero-views">{{ currentVideo?.views }} views</span>
-          <span class="hero-timestamp">{{ currentVideo?.timestamp }}</span>
+          <span class="hero-channel">{{ currentVideo?.user_id }}</span>
+          <span class="hero-likes">{{ currentVideo?.likes }} likes</span>
+          <span class="hero-timestamp">{{ formatTimestamp(createDate(currentVideo?.uploadedAt || '')) }}</span>
         </div>
         <button class="hero-play-btn" (click)="onPlayNowClick()">
           <span class="play-icon">▶</span>

@@ -1,0 +1,106 @@
+<div class="comment-section">
+  <h3 class="comment-section-title">
+    Comments ({{ comments.length }})
+  </h3>
+
+  <!-- Comment Form -->
+  <div class="comment-form" *ngIf="isLoggedIn">
+    <div class="comment-input-container">
+      <img 
+        [src]="currentUser?.profileImage || getDefaultAvatar(currentUser?.name || 'User')" 
+        [alt]="currentUser?.name || 'User'"
+        class="user-avatar"
+        onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNlNWU3ZWYiLz4KPHBhdGggZD0iTTIwIDEwQzIyLjA5IDEwIDI0IDEyLjA5IDI0IDE0QzI0IDE1LjkxIDIyLjA5IDE4IDIwIDE4QzE3LjkxIDE4IDE2IDE1LjkxIDE2IDE0QzE2IDEyLjA5IDE3LjkxIDEwIDIwIDEwWk0yMCAyMEMyMi4wOSAyMCAyNCAyMi4wOSAyNCAyNEMyNCAyNS45MSAyMi4wOSAyOCAyMCAyOEMxNy45MSAyOCAxNiAyNS45MSAxNiAyNEMxNiAyMi4wOSAxNy45MSAyMCAyMCAyMFoiIGZpbGw9IiM5Y2EzYWYiLz4KPC9zdmc+'"
+      >
+      <div class="comment-input-wrapper">
+        <textarea
+          [(ngModel)]="newComment"
+          placeholder="Add a comment..."
+          class="comment-input"
+          rows="3"
+          maxlength="1000"
+          [disabled]="submitting"
+        ></textarea>
+        <div class="comment-actions">
+          <span class="char-count">{{ newComment.length }}/1000</span>
+          <button
+            (click)="submitComment()"
+            [disabled]="!newComment.trim() || submitting"
+            class="submit-btn"
+            [class.loading]="submitting"
+          >
+            <span *ngIf="!submitting">Post</span>
+            <span *ngIf="submitting">Posting...</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login Prompt -->
+  <div class="login-prompt" *ngIf="!isLoggedIn">
+    <p>Please log in to comment on this video.</p>
+  </div>
+
+  <!-- Comments List -->
+  <div class="comments-list" *ngIf="!loading">
+    <div class="comment-item" *ngFor="let comment of comments">
+      <div class="comment-header">
+        <img 
+          [src]="comment.user_profile_image || getDefaultAvatar(comment.username)" 
+          [alt]="comment.username"
+          class="comment-avatar"
+          onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNlNWU3ZWYiLz4KPHBhdGggZD0iTTIwIDEwQzIyLjA5IDEwIDI0IDEyLjA5IDI0IDE0QzI0IDE1LjkxIDIyLjA5IDE4IDIwIDE4QzE3LjkxIDE4IDE2IDE1LjkxIDE2IDE0QzE2IDEyLjA5IDE3LjkxIDEwIDIwIDEwWk0yMCAyMEMyMi4wOSAyMCAyNCAyMi4wOSAyNCAyNEMyNCAyNS45MSAyMi4wOSAyOCAyMCAyOEMxNy45MSAyOCAxNiAyNS45MSAxNiAyNEMxNiAyMi4wOSAxNy45MSAyMCAyMCAyMFoiIGZpbGw9IiM5Y2EzYWYiLz4KPC9zdmc+'"
+        >
+        <div class="comment-info">
+          <span class="comment-username">{{ comment.username }}</span>
+          <span class="comment-date">{{ formatDate(comment.created_at) }}</span>
+        </div>
+        <div class="comment-actions-menu" *ngIf="canEditComment(comment) || canDeleteComment(comment)">
+          <button class="action-btn" (click)="startEdit(comment)" *ngIf="canEditComment(comment)">
+            Edit
+          </button>
+          <button class="action-btn delete" (click)="deleteComment(comment._id)" *ngIf="canDeleteComment(comment)">
+            Delete
+          </button>
+        </div>
+      </div>
+
+      <!-- Comment Content -->
+      <div class="comment-content" *ngIf="editingCommentId !== comment._id">
+        <p>{{ comment.content }}</p>
+      </div>
+
+      <!-- Edit Form -->
+      <div class="comment-edit-form" *ngIf="editingCommentId === comment._id">
+        <textarea
+          [(ngModel)]="editContent"
+          class="edit-input"
+          rows="3"
+          maxlength="1000"
+        ></textarea>
+        <div class="edit-actions">
+          <span class="char-count">{{ editContent.length }}/1000</span>
+          <button class="cancel-btn" (click)="cancelEdit()">Cancel</button>
+          <button 
+            class="save-btn" 
+            (click)="updateComment(comment._id)"
+            [disabled]="!editContent.trim()"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-comments" *ngIf="comments.length === 0">
+      <p>No comments yet. Be the first to comment!</p>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-comments" *ngIf="loading">
+    <p>Loading comments...</p>
+  </div>
+</div> 

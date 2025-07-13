@@ -3,9 +3,11 @@ import { googleLogin } from '../controllers/auth.controller';
 import { uploadController } from '../controllers/upload.controller';
 import { saveVideoController } from '../controllers/saveVideo.controller';
 import { VideoController } from '../controllers/getVideo.controller';
+import { CommentController } from '../controllers/comment.controller';
 import { authenticateJWT } from '../services/auth.service';
 
 const router: Router = express.Router();
+const commentController = new CommentController();
 
 router.post('/google-login', googleLogin);
 router.post('/upload-url', uploadController);
@@ -36,6 +38,26 @@ router.get('/videos/:videoId/reaction', authenticateJWT, async (req: Request, re
 });
 router.delete('/videos/:videoId', async (req: Request, res: Response) => {
   await VideoController.deleteVideo(req, res);
+});
+
+// Comment routes
+router.get('/videos/:videoId/comments', async (req: Request, res: Response) => {
+  await commentController.getCommentsByVideoId(req, res);
+});
+router.post('/videos/:videoId/comments', authenticateJWT, async (req: Request, res: Response) => {
+  await commentController.createComment(req, res);
+});
+router.put('/comments/:commentId', authenticateJWT, async (req: Request, res: Response) => {
+  await commentController.updateComment(req, res);
+});
+router.delete('/comments/:commentId', authenticateJWT, async (req: Request, res: Response) => {
+  await commentController.deleteComment(req, res);
+});
+router.get('/videos/:videoId/comments/count', async (req: Request, res: Response) => {
+  await commentController.getCommentCount(req, res);
+});
+router.get('/user/comments', authenticateJWT, async (req: Request, res: Response) => {
+  await commentController.getCommentsByUserId(req, res);
 });
 
 export default router;
