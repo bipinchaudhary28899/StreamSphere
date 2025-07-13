@@ -211,14 +211,6 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
     return `${baseUrl}/${colorPair}?text=${text}`;
   }
 
-  formatViews(views: number): string {
-    if (views >= 1000000) {
-      return (views / 1000000).toFixed(1) + 'M';
-    } else if (views >= 1000) {
-      return (views / 1000).toFixed(1) + 'K';
-    }
-    return views.toString();
-  }
 
   formatTimestamp(date: Date): string {
     const now = new Date();
