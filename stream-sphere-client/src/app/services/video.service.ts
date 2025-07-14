@@ -86,12 +86,12 @@ export class VideoService {
   }
 
   setSearchTerm(term: string): void {
-    console.log('Video service setting search term:', term);
+    
     this.searchSubject.next(term);
   }
 
   setCategory(category: string): void {
-    console.log('Video service setting category:', category);
+    
     this.categorySubject.next(category);
   }
 }

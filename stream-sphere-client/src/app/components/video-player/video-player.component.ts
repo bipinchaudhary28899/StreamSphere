@@ -74,18 +74,13 @@ export class VideoPlayerComponent implements OnInit {
     const userData = localStorage.getItem('user');
     const token = localStorage.getItem('token');
     
-    console.log('Checking user authentication:');
-    console.log('User data:', userData);
-    console.log('Token exists:', !!token);
-    console.log('Token value:', token ? token.substring(0, 20) + '...' : 'null');
     
     if (userData && token) {
       try {
         const user = JSON.parse(userData);
         this.currentUserId = user.userId;
         this.isOwner = this.video.user_id === user.userId;
-        console.log('User authenticated:', this.currentUserId);
-        console.log('Is owner:', this.isOwner);
+        
         // Get user's reaction to this video
         this.getUserReaction();
       } catch (error) {
@@ -94,7 +89,7 @@ export class VideoPlayerComponent implements OnInit {
         this.isOwner = false;
       }
     } else {
-      console.log('User not authenticated - missing data or token');
+     
       this.currentUserId = null;
       this.isOwner = false;
     }
@@ -116,18 +111,16 @@ export class VideoPlayerComponent implements OnInit {
 
   onLikeClick() {
     if (!this.currentUserId || !this.video._id || this.isLiking) {
-      console.log('Cannot like: userId=', this.currentUserId, 'videoId=', this.video._id, 'isLiking=', this.isLiking);
+      
       return;
     }
     
     this.isLiking = true;
-    console.log('Attempting to like video:', this.video._id);
-    console.log('Current user ID:', this.currentUserId);
-    console.log('Token exists:', !!localStorage.getItem('token'));
+    
     
     this.videoService.likeVideo(this.video._id).subscribe({
       next: (updatedVideo) => {
-        console.log('Like successful:', updatedVideo);
+       
         // Update the video data with new like count
         this.video.likes = updatedVideo.likes;
         this.video.dislikes = updatedVideo.dislikes;
@@ -155,18 +148,16 @@ export class VideoPlayerComponent implements OnInit {
 
   onDislikeClick() {
     if (!this.currentUserId || !this.video._id || this.isDisliking) {
-      console.log('Cannot dislike: userId=', this.currentUserId, 'videoId=', this.video._id, 'isDisliking=', this.isDisliking);
+     
       return;
     }
     
     this.isDisliking = true;
-    console.log('Attempting to dislike video:', this.video._id);
-    console.log('Current user ID:', this.currentUserId);
-    console.log('Token exists:', !!localStorage.getItem('token'));
+    
     
     this.videoService.dislikeVideo(this.video._id).subscribe({
       next: (updatedVideo) => {
-        console.log('Dislike successful:', updatedVideo);
+        
         // Update the video data with new dislike count
         this.video.likes = updatedVideo.likes;
         this.video.dislikes = updatedVideo.dislikes;

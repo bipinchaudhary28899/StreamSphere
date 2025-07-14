@@ -30,11 +30,9 @@ export class UserLoginComponent {
     this.router.events
     .pipe(filter((event: any) => event instanceof NavigationStart))
     .subscribe((event: NavigationStart) => {
-      console.log('NavigationStart:', event.url);
 
       // If user is navigating to Login page ("/"), force logout
       if (event.url === '/') {
-        console.log('Navigating to login, clearing session.');
         this.clearSession();
       }
     });
@@ -42,15 +40,13 @@ export class UserLoginComponent {
 
   ngOnInit(): void {
     this.checkLoginState();
-    console.log('START (ngOnInit) isLoggedIn is ', this.isLoggedIn);
     this.loadGoogleScript();
-    console.log('END (ngOnInit) isLoggedIn is ', this.isLoggedIn);
   }
 
   private loadGoogleScript(): void {
     // Check if script is already loaded
     if (document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
-      console.log('Google script already loaded');
+      
       this.googleScriptLoaded = true;
       return;
     }
@@ -61,11 +57,9 @@ export class UserLoginComponent {
     script.defer = true;
 
     script.onload = () => {
-      console.log('Google script loaded successfully');
       this.googleScriptLoaded = true;
       // Wait a bit for the script to fully initialize
       setTimeout(() => {
-        console.log('Google script fully initialized');
         // Check if google object is available
         if (typeof google !== 'undefined' && google.accounts) {
           console.log('Google object is ready to use');
@@ -93,10 +87,10 @@ export class UserLoginComponent {
     return new Promise((resolve) => {
       const checkGoogle = () => {
         if (typeof google !== 'undefined' && google.accounts) {
-          console.log('Google script is ready');
+          
           resolve(true);
         } else {
-          console.log('Waiting for Google script to be ready...');
+          
           setTimeout(checkGoogle, 100);
         }
       };
@@ -116,7 +110,7 @@ export class UserLoginComponent {
 
   checkLoginState() {
     const storedUser = localStorage.getItem('user');
-    console.log('START storedUser is ', storedUser);
+    
 
     if (storedUser && storedUser !== 'undefined') {
       try {
@@ -127,7 +121,7 @@ export class UserLoginComponent {
           setTimeout(() => {
             this.auth.updateLoginState(true);
           });
-          console.log('User is logged in');
+          
         } else {
           this.isLoggedIn = false;
           setTimeout(() => {
@@ -149,26 +143,23 @@ export class UserLoginComponent {
       });
     }
     this.cdr.detectChanges();
-    console.log('END storedUser is ', storedUser);
-    console.log('END (checkLoginState) isLoggedIn is ', this.isLoggedIn);
+  
   }
 
   initializeGoogleSignIn() {
-    console.log('Google Sign-In button is being rendered');
-    console.log('Google script loaded:', this.googleScriptLoaded);
+ 
     
     // Safe check for google object
     const googleExists = typeof google !== 'undefined';
     const googleAccountsExists = googleExists && typeof google.accounts !== 'undefined';
     
-    console.log('Google object exists:', googleExists);
-    console.log('Google accounts object exists:', googleAccountsExists);
+
     
     this.retryCount = 0;
     
     const tryRender = async () => {
       const buttonElement = document.getElementById('googleLoginButton');
-      console.log('Button element found:', buttonElement);
+      
       
       // Safe check for google object
       const googleExists = typeof google !== 'undefined';
@@ -216,7 +207,7 @@ export class UserLoginComponent {
           );
 
           google.accounts.id.prompt();
-          console.log('Google button rendered successfully');
+          
         } catch (error) {
           console.error('Error rendering Google button:', error);
           // Add a fallback button if Google button fails
@@ -251,7 +242,7 @@ export class UserLoginComponent {
   private retryCount = 0;
 
   private addFallbackButton(container: HTMLElement): void {
-    console.log('Adding fallback login button');
+    
     container.innerHTML = `
       <button style="
         background: #4285f4;
@@ -277,18 +268,18 @@ export class UserLoginComponent {
   }
 
   handleCredentialResponse(response: any) {
-    console.log('Google Sign-In response received');
+    
     
     if (response.credential) {
       this.auth.googleLogin(response.credential).subscribe({
         next: (result) => {
-          console.log('Google login successful:', result);
+          
           
           // Store user data and token in localStorage
           if (result.user && result.token) {
             localStorage.setItem('user', JSON.stringify(result.user));
             localStorage.setItem('token', result.token);
-            console.log('User data and token stored in localStorage');
+            
           }
           
           this.isLoggedIn = true;

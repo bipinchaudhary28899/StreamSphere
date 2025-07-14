@@ -32,18 +32,7 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
     // Add visibility change listener to pause video when window loses focus
     document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
     
-    // Debug: Check video element after a delay
-    setTimeout(() => {
-      this.checkVideoElement();
-    }, 2000);
-  }
-
-  private checkVideoElement(): void {
-    console.log('Checking video element...');
-    console.log('Video element exists:', !!this.videoElement);
-    console.log('Video element native element:', this.videoElement?.nativeElement);
-    console.log('Current video:', this.currentVideo);
-    console.log('Videos array length:', this.videos.length);
+    
   }
 
   ngOnDestroy(): void {
@@ -65,15 +54,12 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
       // Pause video and auto-advance when page becomes hidden
       if (this.videoElement?.nativeElement) {
         this.videoElement.nativeElement.pause();
-        console.log('Video paused due to page visibility change');
       }
       this.stopAutoAdvance();
     } else {
       // Resume video and auto-advance when page becomes visible again
       if (this.videoElement?.nativeElement) {
-        console.log('Page became visible, attempting to resume video...');
         this.videoElement.nativeElement.play().then(() => {
-          console.log('Video resumed successfully after visibility change');
           this.startAutoAdvance();
         }).catch(error => {
           console.log('Failed to resume video after visibility change:', error);
@@ -88,39 +74,31 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
   private startAutoAdvance(): void {
     this.stopAutoAdvance(); // Clear any existing timer
     this.autoAdvanceTimer = setInterval(() => {
-      console.log('Auto-advancing to next video...');
       this.nextVideo();
     }, this.AUTO_ADVANCE_INTERVAL);
-    console.log('Auto-advance timer started');
   }
 
   private stopAutoAdvance(): void {
     if (this.autoAdvanceTimer) {
       clearInterval(this.autoAdvanceTimer);
       this.autoAdvanceTimer = null;
-      console.log('Auto-advance timer stopped');
     }
   }
 
   private setupIntersectionObserver(): void {
-    console.log('Setting up intersection observer...');
     this.intersectionObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach(entry => {
           const video = entry.target as HTMLVideoElement;
-          console.log('Video intersection:', entry.isIntersecting, video);
           if (entry.isIntersecting) {
             // Video is visible, play it and start auto-advance
-            console.log('Attempting to play video...');
             video.play().then(() => {
-              console.log('Video started playing successfully');
               this.startAutoAdvance();
             }).catch(error => {
               console.log('Auto-play failed:', error);
               // Try again after a delay
               setTimeout(() => {
                 video.play().then(() => {
-                  console.log('Video started playing on retry');
                   this.startAutoAdvance();
                 }).catch(retryError => {
                   console.log('Retry play also failed:', retryError);
@@ -130,7 +108,6 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
             });
           } else {
             // Video is not visible, pause it and stop auto-advance
-            console.log('Pausing video...');
             video.pause();
             this.stopAutoAdvance();
           }
@@ -141,17 +118,14 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
         rootMargin: '0px'
       }
     );
-    console.log('Intersection observer created');
   }
 
   loadTopVideos(): void {
     this.isLoading = true;
     this.error = '';
-    console.log('Loading top videos...');
 
     this.videoService.getTopLikedVideos().subscribe({
       next: (backendVideos) => {
-        console.log('Backend videos received:', backendVideos);
         
         // Map backend data to frontend Video interface
         this.videos = backendVideos.map((backendVideo: any) => ({
@@ -168,7 +142,6 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
           commentCount: backendVideo.commentCount || 0
         }));
         
-        console.log('Mapped videos:', this.videos);
         this.isLoading = false;
         
         // Set up intersection observer for the current video after data loads
@@ -228,10 +201,8 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
   }
 
   private observeCurrentVideo(): void {
-    console.log('Observing current video...');
     if (this.videoElement && this.intersectionObserver) {
       this.intersectionObserver.observe(this.videoElement.nativeElement);
-      console.log('Current video observed.');
     } else {
       console.warn('Video element or intersection observer not ready for observation.');
     }
@@ -240,7 +211,6 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
   private unobserveCurrentVideo(): void {
     if (this.videoElement && this.intersectionObserver) {
       this.intersectionObserver.unobserve(this.videoElement.nativeElement);
-      console.log('Current video un-observed.');
     }
   }
 
@@ -271,7 +241,6 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
   }
 
   onVideoLoad(): void {
-    console.log('Video loaded, observing for visibility...');
     
     // Video loaded, observe it for visibility
     this.observeCurrentVideo();
@@ -287,20 +256,16 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
       const video = this.videoElement.nativeElement;
       const rect = video.getBoundingClientRect();
       const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
-      
-      console.log('Force checking video visibility:', isVisible, 'document.hidden:', document.hidden);
+    
       
       if (isVisible && !document.hidden) {
-        console.log('Video is visible on page load, forcing play...');
         video.play().then(() => {
-          console.log('Video started playing on page load');
           this.startAutoAdvance();
         }).catch(error => {
           console.log('Force play failed:', error);
           // Try again after a short delay
           setTimeout(() => {
             video.play().then(() => {
-              console.log('Video started playing on retry');
               this.startAutoAdvance();
             }).catch(retryError => {
               console.log('Retry play also failed:', retryError);

@@ -61,8 +61,6 @@ export class CommentSectionComponent implements OnInit, OnDestroy {
     if (userData) {
       try {
         this.currentUser = JSON.parse(userData);
-        console.log('Current user loaded:', this.currentUser);
-        console.log('User ID field:', this.currentUser._id || this.currentUser.userId || this.currentUser.id);
       } catch (error) {
         console.error('Error parsing user data:', error);
         this.currentUser = null;
@@ -155,26 +153,12 @@ export class CommentSectionComponent implements OnInit, OnDestroy {
   canEditComment(comment: Comment): boolean {
     const userId = this.currentUser?._id || this.currentUser?.userId || this.currentUser?.id;
     const canEdit = this.isLoggedIn && this.currentUser && comment.user_id === userId;
-    console.log('Can edit comment:', { 
-      isLoggedIn: this.isLoggedIn, 
-      currentUser: this.currentUser, 
-      commentUserId: comment.user_id, 
-      currentUserId: userId, 
-      canEdit 
-    });
     return canEdit;
   }
 
   canDeleteComment(comment: Comment): boolean {
     const userId = this.currentUser?._id || this.currentUser?.userId || this.currentUser?.id;
     const canDelete = this.isLoggedIn && this.currentUser && comment.user_id === userId;
-    console.log('Can delete comment:', { 
-      isLoggedIn: this.isLoggedIn, 
-      currentUser: this.currentUser, 
-      commentUserId: comment.user_id, 
-      currentUserId: userId, 
-      canDelete 
-    });
     return canDelete;
   }
 
