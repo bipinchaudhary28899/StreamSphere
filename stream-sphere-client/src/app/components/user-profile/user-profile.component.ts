@@ -297,8 +297,7 @@ export class UserProfileComponent implements OnInit {
   }
 
   logout() {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+    this.authService.logout();
     this.router.navigate(['/login']);
   }
 }

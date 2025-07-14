@@ -109,11 +109,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   logout() {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    setTimeout(() => {
-      this.authService.updateLoginState(false);
-    });
+    this.authService.logout();
     this.router.navigate(['/login']);
   }
 

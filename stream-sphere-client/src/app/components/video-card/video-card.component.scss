@@ -20,22 +20,23 @@
   
   .video-preview {
     width: 100%;
-    height: 160px; /* reduce this as per your design */
-    object-fit: cover; /* this ensures video doesn't stretch weirdly */
-    border-radius: 10px 10px 0px 0px; /* optional: to round the corners */
-    pointer-events: none; /* Prevent video controls from interfering with card click */
+    height: 260px; /* Increased height for more video space */
+    object-fit: cover;
+    border-radius: 10px 10px 0px 0px;
+    pointer-events: none;
   }
   
   .video-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
   }
   
   .video-header h3 {
+    font-size: 1.05rem;
     margin: 0;
-    flex: 1;
+    font-weight: 600;
   }
   
   .delete-btn {
@@ -59,12 +60,12 @@
       box-shadow: 0 6px 12px rgba(0, 0, 0, 0.18);
     }
     .video-preview {
-      height: 120px;
+      height: 160px;
     }
   }
 
   .category-badge {
-    margin-top: 8px;
+    margin-top: 4px;
   }
 
   .category-tag {
@@ -165,5 +166,221 @@
   filter: grayscale(0.7) brightness(0.85);
   opacity: 0.7;
   pointer-events: none;
+}
+  
+  mat-card-content {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  p {
+    margin: 2px 0 0 0;
+    font-size: 0.92rem;
+    color: #555;
+  }
+  
+.video-card {
+  position: relative;
+  z-index: 1;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(80, 80, 120, 0.08), 0 1.5px 6px rgba(80, 80, 120, 0.06);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 400px;
+  min-height: 320px;
+  max-height: 480px;
+  border: 5px solid #fff;
+  transition: border-color 0.3s;
+}
+
+.video-card::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  border-radius: 23px;
+  background: linear-gradient(120deg, #764ba2, #667eea, #43cea2, #185a9d);
+  background-size: 300% 300%;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  animation: borderGradientMove 4s ease-in-out infinite;
+}
+
+@keyframes borderGradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.video-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.video-card:hover::before {
+  opacity: 1;
+  filter: brightness(1.15) saturate(1.2);
+}
+
+.video-card:hover {
+  border-color: transparent;
+}
+
+.video-card {
+  display: flex;
+  flex-direction: column;
+  height: 400px; /* Set a fixed height for ratio calculation */
+  min-height: 320px;
+  max-height: 480px;
+}
+
+.video-preview {
+  flex: 0 0 60%;
+  height: 60%;
+  min-height: 140px;
+  max-height: 240px;
+  width: 100%;
+  object-fit: cover;
+  border-radius: 10px 10px 0px 0px;
+  pointer-events: none;
+}
+
+mat-card-content {
+  flex: 1 1 40%;
+  height: 40%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+@media (max-width: 600px) {
+  .video-card {
+    height: 320px;
+    min-height: 180px;
+    max-height: 400px;
+    display: flex;
+    flex-direction: column;
+  }
+  .video-preview {
+    flex: 0 0 60%;
+    height: 60%;
+    min-height: 80px;
+    max-height: 200px;
+    width: 100%;
+    object-fit: cover;
+  }
+  mat-card-content {
+    flex: 1 1 40%;
+    height: 40%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+  .video-info-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .category-badge {
+    margin-left: 0;
+    margin-top: 4px;
+  }
+  .skeleton-card {
+    max-width: 98vw;
+    min-width: 0;
+    margin: 8px auto;
+  }
+  .skeleton-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 8px;
+  }
+}
+  
+.video-info-section {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.uploader-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: #e0e7ef;
+  border-radius: 50%;
+  margin-right: 2px;
+}
+
+.uploader-name {
+  font-weight: 500;
+  font-size: 0.98rem;
+  color: #333;
+}
+
+.likes-info {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.97rem;
+  color: #764ba2;
+  font-weight: 500;
+}
+
+.like-icon {
+  font-size: 1.1rem;
+  color: #764ba2;
+  margin-right: 2px;
+}
+
+.like-count {
+  font-weight: 600;
+  color: #222;
+}
+
+.like-label {
+  font-size: 0.92rem;
+  color: #666;
+  margin-left: 2px;
+}
+
+.category-badge {
+  margin-top: 0;
+  margin-left: 8px;
+}
+
+@media (max-width: 600px) {
+  .video-info-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .category-badge {
+    margin-left: 0;
+    margin-top: 4px;
+  }
 }
   
