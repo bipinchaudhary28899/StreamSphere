@@ -36,8 +36,7 @@ export class VideoCardComponent implements OnInit {
       return;
     }
     
-    // Test the URL directly in browser console
-    console.log('Video URL:', this.video.S3_url);
+   
     
     // Create safe URL for Angular
     this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.video.S3_url);

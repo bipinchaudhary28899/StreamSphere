@@ -5,7 +5,8 @@ import { HeaderComponent } from "./components/header/header.component";
 import { SidebarComponent } from './components/sidebar/sidebar.component';
 
 import { VideoService } from './services/video.service';
-import { filter } from 'rxjs';
+import { filter, Subscription } from 'rxjs';
+import { AuthService } from './services/auth.service';
 
 @Component({
   selector: 'app-root',
@@ -20,10 +21,12 @@ export class AppComponent {
   isHomePage: boolean = true;
   isLoggedIn: boolean = false;
   public currentYear: number = new Date().getFullYear();
+  private loginSubscription: Subscription | null = null;
 
   constructor(
     private router: Router,
-    private videoService: VideoService
+    private videoService: VideoService,
+    private authService: AuthService
   ) {
     this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
@@ -34,6 +37,19 @@ export class AppComponent {
         this.checkLoginState();
       });
     this.checkLoginState();
+    this.subscribeToLoginState();
+  }
+
+  subscribeToLoginState() {
+    this.loginSubscription = this.authService.getLoginState().subscribe((isLoggedIn: boolean) => {
+      this.isLoggedIn = isLoggedIn;
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.loginSubscription) {
+      this.loginSubscription.unsubscribe();
+    }
   }
 
   checkLoginState() {

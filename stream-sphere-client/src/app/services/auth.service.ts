@@ -46,4 +46,11 @@ export class AuthService {
   isLoggedIn(): boolean {
     return this.loginStateSubject.value;
   }
+
+  // Centralized logout method
+  logout() {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    this.updateLoginState(false);
+  }
 }

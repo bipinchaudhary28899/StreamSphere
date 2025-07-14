@@ -94,7 +94,7 @@ export class UserProfileComponent implements OnInit {
   private subscribeToLoginState() {
     this.loginSubscription = this.authService.getLoginState().subscribe(
       (isLoggedIn: boolean) => {
-        console.log('UserProfile: Login state changed to:', isLoggedIn);
+        
         this.loadUserData();
         // Use setTimeout to defer the change detection to the next cycle
         setTimeout(() => {
@@ -111,7 +111,7 @@ export class UserProfileComponent implements OnInit {
 
   private checkScreenSize() {
     this.isMobile = window.innerWidth <= 768;
-    console.log('Screen width:', window.innerWidth, 'Is mobile:', this.isMobile);
+    
   }
 
   ngAfterViewInit() {
@@ -128,7 +128,7 @@ export class UserProfileComponent implements OnInit {
   loadUserData(): void {
     try {
       const userData = localStorage.getItem('user');
-      console.log('UserProfile: Loading user data from localStorage:', userData);
+      
       
       if (userData) {
         this.user = JSON.parse(userData);
@@ -137,9 +137,9 @@ export class UserProfileComponent implements OnInit {
         if (this.user?.profileImage) {
           this.profileImage = this.user.profileImage;
         }
-        console.log('UserProfile: User data loaded:', this.user);
+        
       } else {
-        console.log('UserProfile: No user data found in localStorage');
+        
         this.router.navigate(['/login']);
       }
     } catch (error) {
@@ -150,27 +150,20 @@ export class UserProfileComponent implements OnInit {
 
   loadMyVideos(): void {
     if (!this.user) {
-      console.log('No user data available for loading videos');
       return;
     }
     
-    console.log('Loading videos for user:', this.user);
-    console.log('User ID:', this.user.userId);
-    
     this.videoService.getAllVideos().subscribe({
       next: (videos) => {
-        console.log('All videos received:', videos);
-        console.log('Filtering videos for user_id ===', this.user?.userId);
-        
+       
         this.myVideos = videos.filter((video: any) => {
           const matches = video.user_id === this.user?.userId;
-          console.log(`Video ${video.title}: user_id=${video.user_id}, matches=${matches}`);
+          
           return matches;
         });
         
         this.dataSource.data = this.myVideos;
-        console.log('My videos loaded:', this.myVideos);
-        console.log('Data source updated with', this.dataSource.data.length, 'videos');
+        
         setTimeout(() => this.attachTableHelpers());
       },
       error: (err) => {
@@ -184,7 +177,7 @@ export class UserProfileComponent implements OnInit {
     this.videoService.getLikedVideos().subscribe({
       next: (videos) => {
         this.likedVideos = videos;
-        console.log('Liked videos loaded:', this.likedVideos);
+        
       },
       error: (err) => {
         console.error('Error loading liked videos:', err);
@@ -197,7 +190,7 @@ export class UserProfileComponent implements OnInit {
     this.videoService.getDislikedVideos().subscribe({
       next: (videos) => {
         this.dislikedVideos = videos;
-        console.log('Disliked videos loaded:', this.dislikedVideos);
+       
       },
       error: (err) => {
         console.error('Error loading disliked videos:', err);
@@ -206,10 +199,7 @@ export class UserProfileComponent implements OnInit {
   }
 
   toggleDashboard() {
-    console.log('Dashboard button clicked');
-    console.log('Current showDashboard state:', this.showDashboard);
-    console.log('Current data source length:', this.dataSource.data.length);
-    console.log('Current myVideos length:', this.myVideos.length);
+  
     
     this.showDashboard = !this.showDashboard;
     this.showMyVideosSection = false;
@@ -217,8 +207,6 @@ export class UserProfileComponent implements OnInit {
     this.showDislikedVideosSection = false;
     this.dismissWelcome();
     
-    console.log('New showDashboard state:', this.showDashboard);
-    console.log('All sections hidden except dashboard');
     
     setTimeout(() => this.attachTableHelpers());
   }
@@ -229,7 +217,7 @@ export class UserProfileComponent implements OnInit {
     this.showLikedVideosSection = false;
     this.showDislikedVideosSection = false;
     this.dismissWelcome();
-    console.log('Showing my videos section');
+    
   }
 
   showLikedVideos() {
@@ -238,7 +226,7 @@ export class UserProfileComponent implements OnInit {
     this.showLikedVideosSection = true;
     this.showDislikedVideosSection = false;
     this.dismissWelcome();
-    console.log('Showing liked videos section');
+    
   }
 
   showDislikedVideos() {
@@ -247,7 +235,7 @@ export class UserProfileComponent implements OnInit {
     this.showLikedVideosSection = false;
     this.showDislikedVideosSection = true;
     this.dismissWelcome();
-    console.log('Showing disliked videos section');
+    
   }
 
   // Method to handle accordion panel opening
@@ -297,7 +285,7 @@ export class UserProfileComponent implements OnInit {
     if (!confirm('Are you sure you want to delete the selected videos? This action cannot be undone.')) return;
     
     // Implementation for deleting selected videos
-    console.log('Deleting videos:', ids);
+    
   }
 
   onImageError(event: Event): void {
@@ -309,8 +297,7 @@ export class UserProfileComponent implements OnInit {
   }
 
   logout() {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+    this.authService.logout();
     this.router.navigate(['/login']);
   }
 }

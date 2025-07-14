@@ -6,6 +6,18 @@
   <app-category-slider (categorySelected)="handleCategory($event)"></app-category-slider>
     <!-- Loading state -->
     <div *ngIf="isLoading" class="loading-state">
+      <div class="video-grid">
+        <div *ngFor="let skeleton of [1,2,3,4,5,6]" class="skeleton-card">
+          <div class="skeleton-video"></div>
+          <div class="skeleton-info">
+            <div class="skeleton-avatar"></div>
+            <div class="skeleton-lines">
+              <div class="skeleton-line short"></div>
+              <div class="skeleton-line"></div>
+            </div>
+          </div>
+        </div>
+      </div>
       <mat-spinner diameter="50"></mat-spinner>
       <p>Loading videos...</p>
     </div>

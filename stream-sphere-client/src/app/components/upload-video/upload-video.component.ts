@@ -110,13 +110,11 @@ export class UploadVideoComponent {
                 break;
   
               case HttpEventType.Response:
-                console.log('Upload success!');
   
                 // Step 3: Construct the file URL from the signed URL (removing query params)
                 const fileUrl = signedUrl.split('?')[0];
   
                 // Step 4: Save video metadata in backend
-                console.log('is theuser still logged in : ', localStorage.getItem('user'))
                 const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null;
                 const metadata = {
                   title,
@@ -128,7 +126,6 @@ export class UploadVideoComponent {
   
                 this.uploadService.saveVideoMetadata(metadata).subscribe({
                   next: () => {
-                    console.log('Video saved in DB!');
                     this.uploadSuccess = true;
                     this.isUploading = false;
                     this.uploadForm.reset();

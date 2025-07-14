@@ -10,10 +10,21 @@
             <div class="video-header">
               <h3>{{ video?.title || 'Untitled Video' }}</h3>
             </div>
-            <p>Uploaded by {{ video?.user_name || video?.userName || 'Unknown User' }}</p>
-            <p>{{ 0 }} • {{ video.uploadedAt }}</p>
-            <div class="category-badge" *ngIf="video?.category">
-              <span class="category-tag">{{ video.category }}</span>
+            <div class="video-info-section">
+              <div class="uploader-info">
+                <span class="avatar-placeholder">
+                  <mat-icon>person</mat-icon>
+                </span>
+                <span class="uploader-name">{{ video?.user_name || video?.userName || 'Unknown User' }}</span>
+              </div>
+              <div class="likes-info">
+                <mat-icon class="like-icon">thumb_up</mat-icon>
+                <span class="like-count">{{ video.likes || 0 }}</span>
+                <span class="like-label">Likes</span>
+              </div>
+              <div class="category-badge" *ngIf="video?.category">
+                <span class="category-tag">{{ video.category }}</span>
+              </div>
             </div>
             <div class="flip-icon" (click)="onFlipClick($event)">
               <mat-icon>swap_horiz</mat-icon>
@@ -26,6 +37,22 @@
           <div class="flipped-content">
             <h3>{{ video?.title || 'Untitled Video' }}</h3>
             <p>More info or actions here!</p>
+            <div class="video-info-section">
+              <div class="uploader-info">
+                <span class="avatar-placeholder">
+                  <mat-icon>person</mat-icon>
+                </span>
+                <span class="uploader-name">{{ video?.user_name || video?.userName || 'Unknown User' }}</span>
+              </div>
+              <div class="likes-info">
+                <mat-icon class="like-icon">thumb_up</mat-icon>
+                <span class="like-count">{{ video.likes || 0 }}</span>
+                <span class="like-label">Likes</span>
+              </div>
+              <div class="category-badge" *ngIf="video?.category">
+                <span class="category-tag">{{ video.category }}</span>
+              </div>
+            </div>
             <div class="flip-icon" (click)="onFlipClick($event)">
               <mat-icon>swap_horiz</mat-icon>
             </div>
@@ -44,10 +71,21 @@
       <div class="video-header">
         <h3>{{ video?.title || 'Untitled Video' }}</h3>
       </div>
-      <p>Uploaded by {{ video?.user_name || video?.userName || 'Unknown User' }}</p>
-      <p>{{ 0 }} • {{ video.uploadedAt }}</p>
-      <div class="category-badge" *ngIf="video?.category">
-        <span class="category-tag">{{ video.category }}</span>
+      <div class="video-info-section">
+        <div class="uploader-info">
+          <span class="avatar-placeholder">
+            <mat-icon>person</mat-icon>
+          </span>
+          <span class="uploader-name">{{ video?.user_name || video?.userName || 'Unknown User' }}</span>
+        </div>
+        <div class="likes-info">
+          <mat-icon class="like-icon">thumb_up</mat-icon>
+          <span class="like-count">{{ video.likes || 0 }}</span>
+          <span class="like-label">Likes</span>
+        </div>
+        <div class="category-badge" *ngIf="video?.category">
+          <span class="category-tag">{{ video.category }}</span>
+        </div>
       </div>
     </mat-card-content>
   </mat-card>

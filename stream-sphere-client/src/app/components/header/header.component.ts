@@ -57,7 +57,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
   private subscribeToLoginState() {
     this.loginSubscription = this.authService.getLoginState().subscribe(
       (isLoggedIn: boolean) => {
-        console.log('Header: Login state changed to:', isLoggedIn);
         this.isLoggedIn = isLoggedIn;
         this.loadUserData();
         // Use setTimeout to defer the change detection to the next cycle
@@ -71,7 +70,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
   loadUserData(): void {
     try {
       const userData = localStorage.getItem('user');
-      console.log('Header: Loading user data from localStorage:', userData);
       
       if (userData) {
         this.user = JSON.parse(userData);
@@ -81,12 +79,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
         } else {
           this.profileImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNlNWU3ZWYiLz4KPHBhdGggZD0iTTIwIDEwQzIyLjA5IDEwIDI0IDEyLjA5IDI0IDE0QzI0IDE1LjkxIDIyLjA5IDE4IDIwIDE4QzE3LjkxIDE4IDE2IDE1LjkxIDE2IDE0QzE2IDEyLjA5IDE3LjkxIDEwIDIwIDEwWk0yMCAyMEMyMi4wOSAyMCAyNCAyMi4wOSAyNCAyNEMyNCAyNS45MSAyMi4wOSAyOCAyMCAyOEMxNy45MSAyOCAxNiAyNS45MSAxNiAyNEMxNiAyMi4wOSAxNy45MSAyMCAyMCAyMFoiIGZpbGw9IiM5Y2EzYWYiLz4KPC9zdmc+';
         }
-        console.log('Header: User is logged in:', this.user);
       } else {
         this.isLoggedIn = false;
         this.user = null;
         this.profileImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNlNWU3ZWYiLz4KPHBhdGggZD0iTTIwIDEwQzIyLjA5IDEwIDI0IDEyLjA5IDI0IDE0QzI0IDE1LjkxIDIyLjA5IDE4IDIwIDE4QzE3LjkxIDE4IDE2IDE1LjkxIDE2IDE0QzE2IDEyLjA5IDE3LjkxIDEwIDIwIDEwWk0yMCAyMEMyMi4wOSAyMCAyNCAyMi4wOSAyNCAyNEMyNCAyNS45MSAyMi4wOSAyOCAyMCAyOEMxNy45MSAyOCAxNiAyNS45MSAxNiAyNEMxNiAyMi4wOSAxNy45MSAyMCAyMCAyMFoiIGZpbGw9IiM5Y2EzYWYiLz4KPC9zdmc+';
-        console.log('Header: User is not logged in');
       }
     } catch (error) {
       this.isLoggedIn = false;
@@ -113,11 +109,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   logout() {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    setTimeout(() => {
-      this.authService.updateLoginState(false);
-    });
+    this.authService.logout();
     this.router.navigate(['/login']);
   }
 

@@ -52,11 +52,10 @@ export class VideoListComponent implements OnInit, OnDestroy {
     this.videoService.getAllVideos().subscribe({
       next: (videos) => {
         this.allVideos = videos;
-        console.log("All videos loaded:", this.allVideos.length, "videos");
-        console.log("First video sample:", this.allVideos[0]);
+       
         this.filteredVideos = [...videos]; // Initially show all videos
         this.isLoading = false;
-        console.log("Filtered videos count:", this.filteredVideos.length);
+        
       },
       error: (err) => {
         this.error = 'Failed to load videos. Please try again later.';
@@ -73,7 +72,7 @@ export class VideoListComponent implements OnInit, OnDestroy {
     this.videoService.getVideosByCategory(category).subscribe({
       next: (videos) => {
         this.allVideos = videos;
-        console.log(`Videos for category "${category}":`, videos);
+        
         this.filteredVideos = [...videos];
         this.isLoading = false;
       },
@@ -110,7 +109,7 @@ export class VideoListComponent implements OnInit, OnDestroy {
     }
     
     const searchTerm = filterTerm.toLowerCase().trim();
-    console.log('Searching for:', searchTerm);
+    
     
     this.filteredVideos = this.allVideos.filter(video => {
       const title = video.title?.toLowerCase() || '';
@@ -122,13 +121,11 @@ export class VideoListComponent implements OnInit, OnDestroy {
       const descriptionMatch = description.includes(searchTerm) && 
         (description.split(' ').some((word: string) => word.startsWith(searchTerm) || word.includes(searchTerm)));
       
-      if (titleMatch || descriptionMatch) {
-        console.log('Match found:', video.title, 'for search term:', searchTerm);
-      }
+     
       
       return titleMatch || descriptionMatch;
     });
     
-    console.log(`Filtered ${this.filteredVideos.length} videos for term: "${searchTerm}"`);
+    
   }
 }
