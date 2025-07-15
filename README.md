@@ -1,4 +1,4 @@
-# StreamSphere - YouTube-like Video Platform
+# StreamSphere - Video Platform
 
 A full-stack video streaming platform built with Angular (Frontend) and Node.js/Express (Backend), featuring Google OAuth authentication, video upload, like/dislike functionality, and category-based video organization.
 
