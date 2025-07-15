@@ -137,7 +137,8 @@ export class UserProfileComponent implements OnInit {
         if (this.user?.profileImage) {
           this.profileImage = this.user.profileImage;
         }
-        
+        console.log('Loaded user:', this.user);
+        console.log('Profile image set to:', this.profileImage);
       } else {
         
         this.router.navigate(['/login']);
@@ -289,7 +290,8 @@ export class UserProfileComponent implements OnInit {
   }
 
   onImageError(event: Event): void {
-    (event.target as HTMLImageElement).src = 'assets/default-avatar.png';
+    console.log('Image failed to load, using default avatar:', event);
+    (event.target as HTMLImageElement).src = 'assets/thumbs/default-avatar.png';
   }
 
   openUploadPage(): void {

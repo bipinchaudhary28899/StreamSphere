@@ -267,9 +267,11 @@ mat-card-content {
 
 @media (max-width: 600px) {
   .video-card {
-    height: 320px;
-    min-height: 180px;
-    max-height: 400px;
+    height: 360px;
+    min-width: 140px;
+    max-width: 96vw;
+    border-radius: 16px;
+    padding: 5px;
     display: flex;
     flex-direction: column;
   }
@@ -277,7 +279,7 @@ mat-card-content {
     flex: 0 0 60%;
     height: 60%;
     min-height: 80px;
-    max-height: 200px;
+    max-height: 220px;
     width: 100%;
     object-fit: cover;
   }
