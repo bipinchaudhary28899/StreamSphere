@@ -30,7 +30,7 @@ npm start
 #### Frontend Flow:
 1. **Entry Point**: `stream-sphere-client/src/app/components/user-login/user-login.component.ts`
    - Component loads Google Sign-In script dynamically
-   - Initializes Google OAuth with client ID: `696274223099-m83j37fcauhli1or0a4afjt6eut6f4or.apps.googleusercontent.com`
+   - Initializes Google OAuth with client ID.
 
 2. **User Interaction**: User clicks "Continue with Google" button
    - Google OAuth popup appears
