@@ -182,33 +182,30 @@
 .video-card {
   position: relative;
   z-index: 1;
-  background: #fff;
   border-radius: 18px;
-  box-shadow: 0 4px 24px rgba(80, 80, 120, 0.08), 0 1.5px 6px rgba(80, 80, 120, 0.06);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  height: 400px;
-  min-height: 320px;
-  max-height: 480px;
-  border: 5px solid #fff;
-  transition: border-color 0.3s;
+  overflow: visible;
+  background: transparent;
+  border: none;
+  padding: 5px; /* This is the border thickness */
+  transition: box-shadow 0.3s;
 }
 
 .video-card::before {
   content: '';
   position: absolute;
   z-index: 0;
-  top: -5px;
-  left: -5px;
-  right: -5px;
-  bottom: -5px;
-  border-radius: 23px;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 18px;
   background: linear-gradient(120deg, #764ba2, #667eea, #43cea2, #185a9d);
   background-size: 300% 300%;
   opacity: 0;
   transition: opacity 0.3s;
   pointer-events: none;
+  animation: none;
+}
+
+.video-card:hover::before {
+  opacity: 1;
   animation: borderGradientMove 4s ease-in-out infinite;
 }
 
@@ -218,14 +215,21 @@
   100% { background-position: 0% 50%; }
 }
 
+.video-card-inner {
+  position: relative;
+  z-index: 1;
+  background: white;
+  border-radius: 13px; /* slightly less than .video-card */
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .video-card > * {
   position: relative;
   z-index: 1;
-}
-
-.video-card:hover::before {
-  opacity: 1;
-  filter: brightness(1.15) saturate(1.2);
 }
 
 .video-card:hover {
