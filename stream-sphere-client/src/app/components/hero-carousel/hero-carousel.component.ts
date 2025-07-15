@@ -133,7 +133,6 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
           title: backendVideo.title,
           description: backendVideo.description || 'Watch this amazing video on StreamSphere',
           S3_url: backendVideo.S3_url,
-          thumbnail_url: this.generateThumbnailUrl(backendVideo.S3_url, backendVideo.category),
           user_id: backendVideo.user_id || '',
           category: backendVideo.category,
           likes: backendVideo.likes || 0,
@@ -160,30 +159,6 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
       }
     });
   }
-
-  private generateThumbnailUrl(videoUrl: string, category?: string): string {
-    // Create category-based placeholder thumbnails
-    const baseUrl = 'https://via.placeholder.com/1280x720';
-    const colors = {
-      'Sports': 'FF6B35/FFFFFF',
-      'Music': '9B59B6/FFFFFF', 
-      'Gaming': 'E74C3C/FFFFFF',
-      'Education': '3498DB/FFFFFF',
-      'Technology': '2C3E50/FFFFFF',
-      'Fashion': 'E91E63/FFFFFF',
-      'Art & Design': 'F39C12/FFFFFF',
-      'Food': '27AE60/FFFFFF',
-      'Travel': '1ABC9C/FFFFFF',
-      'Comedy': 'FFD700/000000',
-      'News': '34495E/FFFFFF',
-      'Lifestyle': 'E67E22/FFFFFF'
-    };
-    
-    const colorPair = colors[category as keyof typeof colors] || '000000/FFFFFF';
-    const text = encodeURIComponent(category || 'Video');
-    return `${baseUrl}/${colorPair}?text=${text}`;
-  }
-
 
   formatTimestamp(date: Date): string {
     const now = new Date();

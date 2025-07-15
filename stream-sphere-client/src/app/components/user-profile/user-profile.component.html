@@ -5,7 +5,8 @@
       <img mat-card-avatar class="profile-pic" 
            [src]="profileImage" 
            [alt]="userName + ' profile picture'"
-           (error)="onImageError($event)" />
+           (error)="onImageError($event)"
+           [attr.crossorigin]="'anonymous'" />
       <div class="user-details">
         <div class="username">{{ userName }}</div>
         <div class="user-email">{{ userEmail }}</div>
