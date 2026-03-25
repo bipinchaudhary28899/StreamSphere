@@ -118,6 +118,14 @@
   opacity: 0.9;
 }
 
+/* Action Buttons Row */
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .hero-play-btn {
   background: #e50914;
   color: white;
@@ -142,6 +150,37 @@
 
 .play-icon {
   font-size: 1.2rem;
+}
+
+.hero-sound-btn,
+.hero-mute-btn {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: all 0.3s ease;
+}
+
+.hero-sound-btn:hover,
+.hero-mute-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: white;
+  transform: translateY(-2px);
+}
+
+/* Subtle pulse to draw attention to the sound button */
+.hero-sound-btn {
+  animation: subtlePulse 2.5s ease-in-out infinite;
+}
+
+@keyframes subtlePulse {
+  0%, 100% { border-color: rgba(255, 255, 255, 0.6); }
+  50% { border-color: rgba(255, 255, 255, 1); }
 }
 
 /* Navigation Controls */
@@ -175,11 +214,6 @@
 .nav-btn:hover {
   background: rgba(0,0,0,0.9);
   transform: scale(1.1);
-}
-
-.nav-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
 }
 
 .arrow {
@@ -383,20 +417,6 @@
   background: #f40612;
 }
 
-/* Debug Info Styles */
-.debug-info {
-  background: #f0f0f0;
-  padding: 10px;
-  margin: 10px;
-  border: 1px solid #ccc;
-  font-family: monospace;
-  font-size: 12px;
-}
-
-.debug-info p {
-  margin: 2px 0;
-}
-
 /* Responsive Design */
 @media (max-width: 768px) {
   .hero-carousel {
@@ -421,9 +441,19 @@
     font-size: 0.9rem;
   }
 
+  .hero-actions {
+    gap: 0.75rem;
+  }
+
   .hero-play-btn {
     padding: 0.8rem 1.5rem;
     font-size: 1rem;
+  }
+
+  .hero-sound-btn,
+  .hero-mute-btn {
+    padding: 0.8rem 1.2rem;
+    font-size: 0.9rem;
   }
 
   .nav-btn {
@@ -468,8 +498,14 @@
     padding: 0 1rem;
   }
 
+  .hero-sound-btn,
+  .hero-mute-btn {
+    padding: 0.7rem 1rem;
+    font-size: 0.85rem;
+  }
+
   .hero-indicators {
     bottom: 0.5rem;
     right: 0.5rem;
   }
-} 
+}

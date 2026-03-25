@@ -18,15 +18,9 @@ import { VideoService } from '../../services/video.service';
 import { VideoCardComponent } from '../video-card/video-card.component';
 import { AuthService } from '../../services/auth.service';
 import { Subscription } from 'rxjs';
+import { User } from '../../models/user';
 
-interface User {
-  userId: string;
-  name: string;
-  email: string;
-  profileImage: string;
-  isVerified: boolean;
-  role: string;
-}
+// Using shared User interface from models
 
 @Component({
   selector: 'app-user-profile',
@@ -49,7 +43,7 @@ interface User {
   styleUrl: './user-profile.component.css'
 })
 export class UserProfileComponent implements OnInit {
-  user: any;
+  user: User | null = null;
   profileImage: string = 'assets/default-avatar.png';
   userName: string = 'Username';
   userEmail: string = '';
