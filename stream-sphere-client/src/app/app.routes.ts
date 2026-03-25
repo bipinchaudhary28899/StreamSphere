@@ -1,32 +1,48 @@
 import { Routes } from '@angular/router';
-import { AppComponent } from './app.component';
-import { VideoPlayerComponent } from './components/video-player/video-player.component';
 import { AuthGuard } from './auth.guard';
-import { VideoListComponent } from './components/video-list/video-list.component';
-import { UploadVideoComponent } from './components/upload-video/upload-video.component';
-import { UserProfileComponent } from './components/user-profile/user-profile.component';
 
 export const routes: Routes = [
-  // Default route redirects to /home
   { path: '', redirectTo: 'home', pathMatch: 'full' },
 
-  // Main route group
+  // Home (keep eager for fast load)
   {
-    path: '',
-    children: [
-      // Public routes
-      { path: 'home', component: VideoListComponent },
-      
-      // Protected routes
-      { path: 'home/:userId', component: VideoListComponent, canActivate: [AuthGuard] },
-      { path: 'upload', component: UploadVideoComponent, canActivate: [AuthGuard] },
-      { path: 'user-profile', component: UserProfileComponent, canActivate: [AuthGuard] },
-      
-      // Video player route
-      { path: 'video/:id', component: VideoPlayerComponent },
-      
-      // 404 route - redirect to home
-      { path: '**', redirectTo: 'home' }
-    ]
-  }
+    path: 'home',
+    loadComponent: () =>
+      import('./components/video-list/video-list.component')
+        .then(c => c.VideoListComponent)
+  },
+
+  {
+    path: 'home/:userId',
+    loadComponent: () =>
+      import('./components/video-list/video-list.component')
+        .then(c => c.VideoListComponent),
+    canActivate: [AuthGuard]
+  },
+
+  // Lazy loaded protected routes
+  {
+    path: 'upload',
+    loadComponent: () =>
+      import('./components/upload-video/upload-video.component')
+        .then(c => c.UploadVideoComponent),
+    canActivate: [AuthGuard]
+  },
+
+  {
+    path: 'user-profile',
+    loadComponent: () =>
+      import('./components/user-profile/user-profile.component')
+        .then(c => c.UserProfileComponent),
+    canActivate: [AuthGuard]
+  },
+
+  {
+    path: 'video/:id',
+    loadComponent: () =>
+      import('./components/video-player/video-player.component')
+        .then(c => c.VideoPlayerComponent)
+  },
+
+  { path: '**', redirectTo: 'home' }
 ];
