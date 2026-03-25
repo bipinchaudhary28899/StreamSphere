@@ -3,7 +3,7 @@ export interface Video {
     title: string;
     description?: string;
     S3_url: string;
-    thumbnail_url?: string;
+    thumbnail_url: string;
     user_id: string;
     category?: string;
     likes: number;

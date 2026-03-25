@@ -71,29 +71,28 @@ export class VideoPlayerComponent implements OnInit {
   }
 
   checkUserAuthentication() {
-    const userData = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
-    
-    
-    if (userData && token) {
-      try {
-        const user = JSON.parse(userData);
-        this.currentUserId = user.userId;
-        this.isOwner = this.video.user_id === user.userId;
-        
-        // Get user's reaction to this video
+  const userData = localStorage.getItem('user');
+
+  if (userData) {
+    try {
+      const user = JSON.parse(userData);
+      // Use optional chaining — backend may return userId or _id depending on shape
+      this.currentUserId = user.userId || user._id || null;
+      this.isOwner = this.video.user_id === this.currentUserId;
+
+      if (this.currentUserId) {
         this.getUserReaction();
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        this.currentUserId = null;
-        this.isOwner = false;
       }
-    } else {
-     
+    } catch (error) {
+      console.error('Error parsing user data:', error);
       this.currentUserId = null;
       this.isOwner = false;
     }
+  } else {
+    this.currentUserId = null;
+    this.isOwner = false;
   }
+}
 
   getUserReaction() {
     if (!this.currentUserId || !this.video._id) return;

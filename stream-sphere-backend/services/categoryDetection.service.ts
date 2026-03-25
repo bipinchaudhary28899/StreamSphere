@@ -48,6 +48,8 @@ export class CategoryDetectionService {
           }
         }
       );
+      //scores=[0.2,0.9,0]
+      //labels=[dance,sing,vehicle]
 
       if (response.data && response.data.labels && response.data.scores) {
         const bestMatchIndex = response.data.scores.indexOf(Math.max(...response.data.scores));

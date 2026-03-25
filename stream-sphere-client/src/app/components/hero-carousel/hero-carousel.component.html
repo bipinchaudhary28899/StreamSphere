@@ -1,37 +1,32 @@
-<div class="hero-carousel" *ngIf="videos.length > 0">
-  <!-- Main Hero Section -->
+<div class="hero-carousel" *ngIf="videos.length > 0 && !isLoading && !error">
   <div class="hero-container">
+
     <!-- Background Video/Image -->
     <div class="hero-background">
-      <!-- Video Preview -->
-      <video 
+      <!-- No muted attribute — controlled entirely by component -->
+      <video
         #videoElement
         *ngIf="currentVideo?.S3_url"
-        [src]="currentVideo?.S3_url" 
+        [src]="currentVideo?.S3_url"
         class="hero-video"
-        muted
         loop
         playsinline
         preload="metadata"
         (loadeddata)="onVideoLoad()">
-        <!-- Fallback to thumbnail if video fails to load -->
-        <img 
-          [src]="currentVideo?.thumbnail_url" 
-          [alt]="currentVideo?.title"
-          class="hero-image">
       </video>
-      
-      <!-- Fallback Image if no video -->
-      <img 
-        *ngIf="!currentVideo?.S3_url"
-        [src]="currentVideo?.thumbnail_url" 
+
+      <img
+        *ngIf="!currentVideo?.S3_url && currentVideo?.thumbnail_url"
+        [src]="currentVideo?.thumbnail_url"
         [alt]="currentVideo?.title"
         class="hero-image">
     </div>
 
     <!-- Gradient Overlays -->
-    <div class="hero-overlay"></div>
-    <div class="hero-overlay-bottom"></div>
+    <div class="hero-overlay">
+      <div class="gradient-top"></div>
+      <div class="gradient-bottom"></div>
+    </div>
 
     <!-- Content -->
     <div class="hero-content">
@@ -41,48 +36,61 @@
         <div class="hero-meta">
           <span class="hero-channel">{{ currentVideo?.user_id }}</span>
           <span class="hero-likes">{{ currentVideo?.likes }} likes</span>
-          <span class="hero-timestamp">{{ formatTimestamp(createDate(currentVideo?.uploadedAt || '')) }}</span>
+          <span class="hero-timestamp">
+            {{ formatTimestamp(createDate(currentVideo?.uploadedAt || '')) }}
+          </span>
         </div>
-        <button class="hero-play-btn" (click)="onPlayNowClick()">
-          <span class="play-icon">▶</span>
-          Play Now
-        </button>
+        <div class="hero-actions">
+          <button class="hero-play-btn" (click)="onPlayNowClick()">
+            <span class="play-icon">▶</span>
+            Play Now
+          </button>
+
+          <!-- Shown before first interaction, only if video has audio -->
+          <button
+            class="hero-sound-btn"
+            *ngIf="!userInteracted && hasAudio"
+            (click)="handleWatchWithSound()">
+            🔇 Watch with Sound
+          </button>
+
+          <!-- Shown after interaction, only if video has audio -->
+          <button
+            class="hero-mute-btn"
+            *ngIf="userInteracted && hasAudio"
+            (click)="toggleMute()">
+            {{ isMuted ? '🔇 Unmute' : '🔊 Mute' }}
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- Navigation Controls -->
     <div class="hero-controls">
-      <button 
-        class="nav-btn prev-btn" 
-        (click)="previousVideo()"
-        [disabled]="currentIndex === 0">
-        ‹
-      </button>
-      <button 
-        class="nav-btn next-btn" 
-        (click)="nextVideo()"
-        [disabled]="currentIndex === videos.length - 1">
-        ›
-      </button>
+      <button class="nav-btn prev-btn" (click)="previousVideo()">‹</button>
+      <button class="nav-btn next-btn" (click)="nextVideo()">›</button>
     </div>
 
-    <!-- Progress Indicator -->
-    <div class="progress-container">
+    <!-- Progress Bar -->
+    <div class="hero-progress">
       <div class="progress-bar">
-        <div 
-          class="progress-fill" 
-          [style.width.%]="((currentIndex + 1) / videos.length) * 100">
+        <div
+          class="progress-fill"
+          [style.width.%]="progressPercentage">
         </div>
       </div>
       <span class="progress-text">{{ currentIndex + 1 }} / {{ videos.length }}</span>
     </div>
+
   </div>
 </div>
 
 <!-- Loading State -->
 <div class="hero-carousel loading" *ngIf="isLoading">
-  <div class="loading-spinner"></div>
-  <p>Loading top videos...</p>
+  <div class="loading-spinner">
+    <div class="spinner"></div>
+    <p>Loading top videos...</p>
+  </div>
 </div>
 
 <!-- Error State -->
@@ -99,4 +107,4 @@
     <p>No videos available</p>
     <button (click)="loadTopVideos()">Refresh</button>
   </div>
-</div> 
+</div>

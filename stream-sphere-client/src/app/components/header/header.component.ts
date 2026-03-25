@@ -11,15 +11,7 @@ import { UserLoginComponent } from "../user-login/user-login.component";
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { Subscription } from 'rxjs';
-
-interface User {
-  userId: string;
-  name: string;
-  email: string;
-  profileImage: string;
-  isVerified: boolean;
-  role: string;
-}
+import { User } from '../../models/user';
 
 @Component({
   selector: 'app-header',

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { VideoService } from '../../services/video.service';
 import { Video } from '../../models/video';
@@ -10,61 +10,78 @@ import { Video } from '../../models/video';
   standalone: true,
   imports: [CommonModule]
 })
-export class HeroCarouselComponent implements OnInit, OnDestroy {
+export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('videoElement', { static: false }) videoElement!: ElementRef<HTMLVideoElement>;
-  
+
   videos: Video[] = [];
   currentIndex = 0;
   isLoading = true;
   error = '';
+  isMuted = true;
+  hasAudio = false;
+  userInteracted = false;
+
+  private viewInitialized = false;
+  private dataLoaded = false;
   private intersectionObserver: IntersectionObserver | null = null;
   private autoAdvanceTimer: any = null;
-  private readonly AUTO_ADVANCE_INTERVAL = 8000; // 8 seconds
+  private readonly AUTO_ADVANCE_INTERVAL = 8000;
+  private visibilityChangeHandler = this.handleVisibilityChange.bind(this);
 
-  constructor(private videoService: VideoService) {}
+  constructor(
+    private videoService: VideoService,
+    private ngZone: NgZone
+  ) {}
 
   ngOnInit(): void {
     this.loadTopVideos();
-    
-    // Set up intersection observer
     this.setupIntersectionObserver();
-    
-    // Add visibility change listener to pause video when window loses focus
-    document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
-    
-    
+    document.addEventListener('visibilitychange', this.visibilityChangeHandler);
+  }
+
+  ngAfterViewInit(): void {
+    this.viewInitialized = true;
+    if (this.dataLoaded) {
+      this.initPlayback();
+    }
   }
 
   ngOnDestroy(): void {
-    // Clean up intersection observer
     if (this.intersectionObserver) {
       this.intersectionObserver.disconnect();
       this.intersectionObserver = null;
     }
-    
-    // Clean up auto-advance timer
     this.stopAutoAdvance();
-    
-    // Clean up visibility change listener
-    document.removeEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+    document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
+  }
+
+  // Arrow function — correct 'this' without bind(), public for template access
+  handleWatchWithSound = (): void => {
+    this.userInteracted = true;
+    this.isMuted = false;
+    if (this.videoElement?.nativeElement) {
+      this.videoElement.nativeElement.muted = false;
+    }
+  }
+
+  toggleMute(): void {
+    this.isMuted = !this.isMuted;
+    if (this.videoElement?.nativeElement) {
+      this.videoElement.nativeElement.muted = this.isMuted;
+    }
   }
 
   private handleVisibilityChange(): void {
     if (document.hidden) {
-      // Pause video and auto-advance when page becomes hidden
       if (this.videoElement?.nativeElement) {
         this.videoElement.nativeElement.pause();
       }
       this.stopAutoAdvance();
     } else {
-      // Resume video and auto-advance when page becomes visible again
       if (this.videoElement?.nativeElement) {
-        this.videoElement.nativeElement.play().then(() => {
-          this.startAutoAdvance();
-        }).catch(error => {
-          console.log('Failed to resume video after visibility change:', error);
-          this.startAutoAdvance();
-        });
+        this.videoElement.nativeElement.play()
+          .then(() => this.startAutoAdvance())
+          .catch(() => this.startAutoAdvance());
       } else {
         this.startAutoAdvance();
       }
@@ -72,7 +89,7 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
   }
 
   private startAutoAdvance(): void {
-    this.stopAutoAdvance(); // Clear any existing timer
+    this.stopAutoAdvance();
     this.autoAdvanceTimer = setInterval(() => {
       this.nextVideo();
     }, this.AUTO_ADVANCE_INTERVAL);
@@ -91,32 +108,22 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
         entries.forEach(entry => {
           const video = entry.target as HTMLVideoElement;
           if (entry.isIntersecting) {
-            // Video is visible, play it and start auto-advance
-            video.play().then(() => {
-              this.startAutoAdvance();
-            }).catch(error => {
-              console.log('Auto-play failed:', error);
-              // Try again after a delay
-              setTimeout(() => {
-                video.play().then(() => {
-                  this.startAutoAdvance();
-                }).catch(retryError => {
-                  console.log('Retry play also failed:', retryError);
-                  this.startAutoAdvance(); // Start auto-advance even if video doesn't play
-                });
-              }, 1000);
-            });
+            video.play()
+              .then(() => this.startAutoAdvance())
+              .catch(() => {
+                setTimeout(() => {
+                  video.play()
+                    .then(() => this.startAutoAdvance())
+                    .catch(() => this.startAutoAdvance());
+                }, 1000);
+              });
           } else {
-            // Video is not visible, pause it and stop auto-advance
             video.pause();
             this.stopAutoAdvance();
           }
         });
       },
-      {
-        threshold: 0.3, // Lower threshold to trigger earlier
-        rootMargin: '0px'
-      }
+      { threshold: 0.3, rootMargin: '0px' }
     );
   }
 
@@ -126,31 +133,26 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
 
     this.videoService.getTopLikedVideos().subscribe({
       next: (backendVideos) => {
-        
-        // Map backend data to frontend Video interface
         this.videos = backendVideos.map((backendVideo: any) => ({
           _id: backendVideo._id,
           title: backendVideo.title,
           description: backendVideo.description || 'Watch this amazing video on StreamSphere',
           S3_url: backendVideo.S3_url,
+          thumbnail_url: backendVideo.thumbnail_url || '',
           user_id: backendVideo.user_id || '',
           category: backendVideo.category,
           likes: backendVideo.likes || 0,
           dislikes: backendVideo.dislikes || 0,
-          uploadedAt: backendVideo.uploadedAt,
+          uploadedAt: backendVideo.uploadedAt || '',
           commentCount: backendVideo.commentCount || 0
         }));
-        
+
         this.isLoading = false;
-        
-        // Set up intersection observer for the current video after data loads
-        setTimeout(() => {
-          this.observeCurrentVideo();
-          // Force play if visible after data loads
-          setTimeout(() => {
-            this.forcePlayIfVisible();
-          }, 300);
-        }, 100);
+        this.dataLoaded = true;
+
+        if (this.viewInitialized) {
+          this.initPlayback();
+        }
       },
       error: (error) => {
         console.error('Error loading top videos:', error);
@@ -160,10 +162,23 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
     });
   }
 
+  private initPlayback(): void {
+    this.ngZone.runOutsideAngular(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          this.ngZone.run(() => {
+            this.observeCurrentVideo();
+            this.forcePlayIfVisible();
+          });
+        });
+      });
+    });
+  }
+
   formatTimestamp(date: Date): string {
+    if (!date || isNaN(date.getTime())) return 'Unknown date';
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
     if (diffInSeconds < 60) return 'Just now';
     if (diffInSeconds < 3600) return Math.floor(diffInSeconds / 60) + ' minutes ago';
     if (diffInSeconds < 86400) return Math.floor(diffInSeconds / 3600) + ' hours ago';
@@ -178,8 +193,6 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
   private observeCurrentVideo(): void {
     if (this.videoElement && this.intersectionObserver) {
       this.intersectionObserver.observe(this.videoElement.nativeElement);
-    } else {
-      console.warn('Video element or intersection observer not ready for observation.');
     }
   }
 
@@ -189,41 +202,28 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
     }
   }
 
-  nextVideo(): void {
-    this.unobserveCurrentVideo();
-    this.stopAutoAdvance(); // Stop current timer
-    this.currentIndex = (this.currentIndex + 1) % this.videos.length;
-    setTimeout(() => {
-      this.observeCurrentVideo();
-      // Check if new video should be playing
-      setTimeout(() => {
-        this.forcePlayIfVisible();
-      }, 200);
-    }, 100);
-  }
-
-  previousVideo(): void {
-    this.unobserveCurrentVideo();
-    this.stopAutoAdvance(); // Stop current timer
-    this.currentIndex = (this.currentIndex - 1 + this.videos.length) % this.videos.length;
-    setTimeout(() => {
-      this.observeCurrentVideo();
-      // Check if new video should be playing
-      setTimeout(() => {
-        this.forcePlayIfVisible();
-      }, 200);
-    }, 100);
+  private checkAudioTrack(): void {
+    if (!this.videoElement?.nativeElement) {
+      this.hasAudio = false;
+      return;
+    }
+    const video = this.videoElement.nativeElement;
+    if ((video as any).audioTracks) {
+      this.hasAudio = (video as any).audioTracks.length > 0;
+    } else {
+      // Can't detect — default to true so button always shows as fallback
+      this.hasAudio = true;
+    }
   }
 
   onVideoLoad(): void {
-    
-    // Video loaded, observe it for visibility
+    this.checkAudioTrack();
     this.observeCurrentVideo();
-    
-    // Try to play immediately if visible and page is active
-    setTimeout(() => {
-      this.forcePlayIfVisible();
-    }, 200);
+    // Always start muted — required by browser for autoplay without interaction
+    if (this.videoElement?.nativeElement) {
+      this.videoElement.nativeElement.muted = true;
+    }
+    setTimeout(() => this.forcePlayIfVisible(), 200);
   }
 
   private forcePlayIfVisible(): void {
@@ -231,30 +231,59 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
       const video = this.videoElement.nativeElement;
       const rect = video.getBoundingClientRect();
       const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
-    
-      
-      if (isVisible && !document.hidden) {
-        video.play().then(() => {
-          this.startAutoAdvance();
-        }).catch(error => {
-          console.log('Force play failed:', error);
-          // Try again after a short delay
-          setTimeout(() => {
-            video.play().then(() => {
-              this.startAutoAdvance();
-            }).catch(retryError => {
-              console.log('Retry play also failed:', retryError);
-              this.startAutoAdvance(); // Start auto-advance even if video doesn't play
-            });
-          }, 500);
-        });
+
+      if (isVisible) {
+        // Always muted before interaction — browser hard requirement
+        video.muted = !this.userInteracted ? true : this.isMuted;
+        video.play()
+          .then(() => this.startAutoAdvance())
+          .catch(() => {
+            setTimeout(() => {
+              video.play()
+                .then(() => this.startAutoAdvance())
+                .catch(() => this.startAutoAdvance());
+            }, 500);
+          });
       }
     }
   }
 
+  nextVideo(): void {
+    this.unobserveCurrentVideo();
+    this.stopAutoAdvance();
+    this.hasAudio = false;
+    this.currentIndex = (this.currentIndex + 1) % this.videos.length;
+    setTimeout(() => {
+      this.observeCurrentVideo();
+      setTimeout(() => {
+        if (this.videoElement?.nativeElement) {
+          this.videoElement.nativeElement.muted = !this.userInteracted ? true : this.isMuted;
+        }
+        this.forcePlayIfVisible();
+        this.startAutoAdvance();
+      }, 200);
+    }, 100);
+  }
+
+  previousVideo(): void {
+    this.unobserveCurrentVideo();
+    this.stopAutoAdvance();
+    this.hasAudio = false;
+    this.currentIndex = (this.currentIndex - 1 + this.videos.length) % this.videos.length;
+    setTimeout(() => {
+      this.observeCurrentVideo();
+      setTimeout(() => {
+        if (this.videoElement?.nativeElement) {
+          this.videoElement.nativeElement.muted = !this.userInteracted ? true : this.isMuted;
+        }
+        this.forcePlayIfVisible();
+        this.startAutoAdvance();
+      }, 200);
+    }, 100);
+  }
+
   onPlayNowClick(): void {
     if (this.videos[this.currentIndex]) {
-      // Navigate to video player page
       window.location.href = `/video/${this.videos[this.currentIndex]._id}`;
     }
   }
@@ -266,4 +295,4 @@ export class HeroCarouselComponent implements OnInit, OnDestroy {
   get progressPercentage(): number {
     return ((this.currentIndex + 1) / this.videos.length) * 100;
   }
-} 
+}
