@@ -121,7 +121,7 @@ export class UploadVideoComponent {
                   description: description, // Use the user's description input
                   S3_url: fileUrl,
                   user_id: user ? user.userId : 'UNKNOWN USER',
-                  user_name: user ? user.name : 'Unknown User',
+                  userName: user ? user.name : 'Unknown User',
                 };
   
                 this.uploadService.saveVideoMetadata(metadata).subscribe({
