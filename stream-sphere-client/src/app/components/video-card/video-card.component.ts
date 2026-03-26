@@ -1,4 +1,3 @@
-// video-card.component.ts
 import { Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
 import { MatCard, MatCardContent } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -30,18 +29,11 @@ export class VideoCardComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    // Check if video data exists
     if (!this.video) {
       console.error('No video data provided to video card component');
       return;
     }
-    
-   
-    
-    // Create safe URL for Angular
     this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.video.S3_url);
-    
-    // Check if current user is the owner of this video
     const userData = localStorage.getItem('user');
     if (userData) {
       const user = JSON.parse(userData);
@@ -61,7 +53,7 @@ export class VideoCardComponent implements OnInit {
   }
 
   onDeleteClick(event: Event) {
-    event.stopPropagation(); // Prevent video click
+    event.stopPropagation();
     if (confirm('Are you sure you want to delete this video? This action cannot be undone.')) {
       this.deleteVideo();
     }
@@ -74,9 +66,6 @@ export class VideoCardComponent implements OnInit {
 
   deleteVideo() {
     if (!this.currentUserId || !this.video._id) return;
-    
-    // Note: You'll need to import VideoService if you want to keep delete functionality
-    // For now, just emit the event and let parent handle it
     this.videoDeleted.emit(this.video._id);
   }
 }

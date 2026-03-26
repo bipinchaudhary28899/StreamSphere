@@ -19,6 +19,8 @@ import { VideoCardComponent } from '../video-card/video-card.component';
 import { AuthService } from '../../services/auth.service';
 import { Subscription } from 'rxjs';
 import { User } from '../../models/user';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 // Using shared User interface from models
 
@@ -26,21 +28,21 @@ import { User } from '../../models/user';
   selector: 'app-user-profile',
   standalone: true,
   imports: [
-    MatCardModule, 
-    MatSidenavModule, 
-    MatButtonModule, 
-    MatMenuModule, 
-    CommonModule, 
-    VideoCardComponent, 
-    MatTableModule, 
-    MatPaginatorModule, 
-    MatSortModule, 
+    MatCardModule,
+    MatSidenavModule,
+    MatButtonModule,
+    MatMenuModule,
+    CommonModule,
+    VideoCardComponent,
+    MatTableModule,
+    MatPaginatorModule,
+    MatSortModule,
     MatCheckboxModule,
     MatExpansionModule,
-    MatIconModule
+    MatIconModule,
   ],
   templateUrl: './user-profile.component.html',
-  styleUrl: './user-profile.component.css'
+  styleUrl: './user-profile.component.css',
 })
 export class UserProfileComponent implements OnInit {
   user: User | null = null;
@@ -68,7 +70,7 @@ export class UserProfileComponent implements OnInit {
   constructor(
     private router: Router,
     private videoService: VideoService,
-    private authService: AuthService
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -86,16 +88,15 @@ export class UserProfileComponent implements OnInit {
   }
 
   private subscribeToLoginState() {
-    this.loginSubscription = this.authService.getLoginState().subscribe(
-      (isLoggedIn: boolean) => {
-        
+    this.loginSubscription = this.authService
+      .getLoginState()
+      .subscribe((isLoggedIn: boolean) => {
         this.loadUserData();
         // Use setTimeout to defer the change detection to the next cycle
         setTimeout(() => {
           // this.cdr.detectChanges(); // This line was removed as per the new_code
         });
-      }
-    );
+      });
   }
 
   @HostListener('window:resize', ['$event'])
@@ -105,7 +106,6 @@ export class UserProfileComponent implements OnInit {
 
   private checkScreenSize() {
     this.isMobile = window.innerWidth <= 768;
-    
   }
 
   ngAfterViewInit() {
@@ -122,8 +122,7 @@ export class UserProfileComponent implements OnInit {
   loadUserData(): void {
     try {
       const userData = localStorage.getItem('user');
-      
-      
+
       if (userData) {
         this.user = JSON.parse(userData);
         this.userName = this.user?.name || 'Username';
@@ -134,7 +133,6 @@ export class UserProfileComponent implements OnInit {
         console.log('Loaded user:', this.user);
         console.log('Profile image set to:', this.profileImage);
       } else {
-        
         this.router.navigate(['/login']);
       }
     } catch (error) {
@@ -147,23 +145,22 @@ export class UserProfileComponent implements OnInit {
     if (!this.user) {
       return;
     }
-    
+
     this.videoService.getAllVideos().subscribe({
       next: (videos) => {
-       
         this.myVideos = videos.filter((video: any) => {
           const matches = video.user_id === this.user?.userId;
-          
+
           return matches;
         });
-        
+
         this.dataSource.data = this.myVideos;
-        
+
         setTimeout(() => this.attachTableHelpers());
       },
       error: (err) => {
         console.error('Error loading user videos:', err);
-      }
+      },
     });
   }
 
@@ -172,11 +169,10 @@ export class UserProfileComponent implements OnInit {
     this.videoService.getLikedVideos().subscribe({
       next: (videos) => {
         this.likedVideos = videos;
-        
       },
       error: (err) => {
         console.error('Error loading liked videos:', err);
-      }
+      },
     });
   }
 
@@ -185,24 +181,20 @@ export class UserProfileComponent implements OnInit {
     this.videoService.getDislikedVideos().subscribe({
       next: (videos) => {
         this.dislikedVideos = videos;
-       
       },
       error: (err) => {
         console.error('Error loading disliked videos:', err);
-      }
+      },
     });
   }
 
   toggleDashboard() {
-  
-    
     this.showDashboard = !this.showDashboard;
     this.showMyVideosSection = false;
     this.showLikedVideosSection = false;
     this.showDislikedVideosSection = false;
     this.dismissWelcome();
-    
-    
+
     setTimeout(() => this.attachTableHelpers());
   }
 
@@ -212,7 +204,6 @@ export class UserProfileComponent implements OnInit {
     this.showLikedVideosSection = false;
     this.showDislikedVideosSection = false;
     this.dismissWelcome();
-    
   }
 
   showLikedVideos() {
@@ -221,7 +212,6 @@ export class UserProfileComponent implements OnInit {
     this.showLikedVideosSection = true;
     this.showDislikedVideosSection = false;
     this.dismissWelcome();
-    
   }
 
   showDislikedVideos() {
@@ -230,7 +220,6 @@ export class UserProfileComponent implements OnInit {
     this.showLikedVideosSection = false;
     this.showDislikedVideosSection = true;
     this.dismissWelcome();
-    
   }
 
   // Method to handle accordion panel opening
@@ -241,7 +230,7 @@ export class UserProfileComponent implements OnInit {
     this.showLikedVideosSection = section === 'likedVideos';
     this.showDislikedVideosSection = section === 'dislikedVideos';
     this.dismissWelcome();
-    
+
     if (section === 'myVideos' || section === 'dashboard') {
       setTimeout(() => this.attachTableHelpers());
     }
@@ -262,7 +251,7 @@ export class UserProfileComponent implements OnInit {
     if (this.isAllSelected()) {
       this.selection.clear();
     } else {
-      this.dataSource.data.forEach(row => this.selection.add(row._id));
+      this.dataSource.data.forEach((row) => this.selection.add(row._id));
     }
   }
 
@@ -277,10 +266,34 @@ export class UserProfileComponent implements OnInit {
   deleteSelected() {
     const ids = Array.from(this.selection);
     if (ids.length === 0) return;
-    if (!confirm('Are you sure you want to delete the selected videos? This action cannot be undone.')) return;
-    
-    // Implementation for deleting selected videos
-    
+    if (
+      !confirm(
+        'Are you sure you want to delete the selected videos? This action cannot be undone.',
+      )
+    )
+      return;
+
+    const userId = this.user?.userId;
+    if (!userId) return;
+
+    const deleteRequests = ids.map((id) =>
+      this.videoService.deleteVideo(id, userId).pipe(
+        catchError((err) => {
+          console.error(`Failed to delete video ${id}:`, err);
+          return of({ error: true, id });
+        }),
+      ),
+    );
+
+    forkJoin(deleteRequests).subscribe({
+      next: () => {
+        this.selection.clear();
+        this.loadMyVideos();
+      },
+      error: (err) => {
+        console.error('Unexpected error during deletion:', err);
+      },
+    });
   }
 
   onImageError(event: Event): void {

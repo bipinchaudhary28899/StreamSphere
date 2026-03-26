@@ -47,8 +47,8 @@ export class UploadVideoComponent {
       
       // Check video duration
       this.checkVideoDuration(file).then(duration => {
-        if (duration > 120) { // 2 minutes = 120 seconds
-          alert('Video duration exceeds 2 minutes. Please select a shorter video.');
+        if (duration > 180) { // 3 minutes = 180 seconds
+          alert('Video duration exceeds 3 minutes. Please select a shorter video.');
           input.value = '';
           this.selectedFile = null;
           return;

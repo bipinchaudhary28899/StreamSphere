@@ -50,8 +50,8 @@ export const saveVideoService = async (title: string, description: string, S3_ur
       const duration = await getVideoDuration(S3_url);
       console.log('Video duration:', duration, 'seconds');
       
-      if (duration > 120) {
-        throw new Error('Video duration exceeds 2 minutes (120 seconds). Please upload a shorter video.');
+      if (duration > 180) {
+        throw new Error('Video duration exceeds 3 minutes (180 seconds). Please upload a shorter video.');
       }
     } catch (durationError) {
       console.error('Error checking video duration:', durationError);

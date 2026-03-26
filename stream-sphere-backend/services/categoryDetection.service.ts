@@ -39,13 +39,21 @@ export class CategoryDetectionService {
     "Health & Wellness",
     "Business & Finance",
     "Personal Development",
-    "ASMR",
     "Unboxing & Reviews",
     "Live Streams",
     "Events & Conferences",
-    "Memes & Challenges"
+    "Memes & Challenges",
+    "festivals",
+    "Interviews",
+    "Trailers & Teasers",
+    "Animation",
+    "Magic & Illusions",
+    "Comedy Skits",
+    "Parodies",
+    "Reaction Videos",
+    "ASMR",
   ];
-  private readonly threshold = 0.2; // Confidence threshold for category assignment
+  private readonly threshold = 0.0; // Confidence threshold for category assignment
 
   async detectCategory(title: string, description: string): Promise<string> {
     try {
@@ -57,10 +65,10 @@ export class CategoryDetectionService {
         return await this.detectByHuggingFace(combinedText);
       }
 
-      return "Uncategorized";
+      return "Other";
     } catch (error) {
       console.error("Error detecting category:", error);
-      return "Uncategorized";
+      return "Other";
     }
   }
 
@@ -79,7 +87,7 @@ export class CategoryDetectionService {
             Authorization: `Bearer ${this.HUGGING_FACE_API_KEY}`,
             "Content-Type": "application/json",
           },
-          timeout: 10000,
+          timeout: 20000,
         },
       );
 
@@ -123,13 +131,13 @@ export class CategoryDetectionService {
         }
       }
 
-      return "Uncategorized";
+      return "Other";
     } catch (error: any) {
       console.error(
         "Hugging Face API error:",
         error?.response?.data || error.message,
       );
-      return "Uncategorized";
+      return "Other";
     }
   }
 
