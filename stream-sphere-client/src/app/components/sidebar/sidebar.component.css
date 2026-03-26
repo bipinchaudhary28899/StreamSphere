@@ -9,23 +9,6 @@
   margin-top: 24px;
   z-index: 200;
 }
-
-.sidebar-nav mat-list-item {
-  height: 48px;
-  margin: 12px 8px;
-  border-radius: 8px;
-  transition: background-color 0.2s;
-}
-
-.sidebar-nav mat-list-item:hover {
-  background-color: #f5f5f5;
-}
-
-.sidebar-nav mat-icon {
-  margin-right: 12px;
-  color: #606060;
-}
-
 /* Mobile styles */
 @media (max-width: 768px) {
   .mobile-hidden {
@@ -42,4 +25,52 @@
     border-bottom: 1px solid #e0e0e0;
     margin-top: 0;
   }
+}
+
+
+/* Fix icon + text vertical alignment */
+.sidebar-nav mat-list-item ::ng-deep .mdc-list-item__content,
+.sidebar-nav mat-list-item ::ng-deep .mat-mdc-list-item-unscoped-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+
+
+.sidebar-nav mat-list-item {
+  height: 48px;
+  margin: 12px 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s, color 0.2s;
+  color: #222;
+}
+
+.sidebar-nav mat-icon {
+  margin-right: 0;
+  color: #ff1963;
+  transition: color 0.2s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.sidebar-nav mat-list-item:hover {
+  background-color: #ff1963;
+  color: #fff;
+}
+
+.sidebar-nav mat-list-item:hover mat-icon {
+  color: #fff;
+}
+
+.active-link {
+  background-color: #ff1963;
+  border-radius: 8px;
+  color: #fff;
+  
+  font-weight: 600;
+}
+
+.active-link mat-icon {
+  color: #fff;
 }

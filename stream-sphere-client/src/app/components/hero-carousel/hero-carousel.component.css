@@ -127,7 +127,7 @@
 }
 
 .hero-play-btn {
-  background: #e50914;
+  background: #ff1a73;
   color: white;
   border: none;
   padding: 1rem 2rem;
@@ -143,7 +143,7 @@
 }
 
 .hero-play-btn:hover {
-  background: #f40612;
+  background: #ff1a73;
   transform: translateY(-2px);
   box-shadow: 0 6px 12px rgba(0,0,0,0.4);
 }
@@ -240,7 +240,7 @@
 
 .progress-fill {
   height: 100%;
-  background: #e50914;
+  background: #ff1a73;
   transition: width 0.3s ease;
 }
 

@@ -34,7 +34,6 @@
         <h1 class="hero-title">{{ currentVideo?.title }}</h1>
         <p class="hero-description">{{ currentVideo?.description }}</p>
         <div class="hero-meta">
-          <span class="hero-channel">{{ currentVideo?.user_id }}</span>
           <span class="hero-likes">{{ currentVideo?.likes }} likes</span>
           <span class="hero-timestamp">
             {{ formatTimestamp(createDate(currentVideo?.uploadedAt || '')) }}

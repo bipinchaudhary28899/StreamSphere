@@ -7,3 +7,13 @@ html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+.sidebar-nav .active-link .mdc-list-item__primary-text,
+.sidebar-nav .active-link span,
+.sidebar-nav mat-list-item.active-link .mdc-list-item__primary-text {
+  color: #fff !important;
+}
+
+.sidebar-nav mat-list-item:hover .mdc-list-item__primary-text,
+.sidebar-nav mat-list-item:hover span {
+  color: #fff !important;
+}

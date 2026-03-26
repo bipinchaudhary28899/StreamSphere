@@ -1,12 +1,12 @@
-import { HttpClient } from "@angular/common/http";
-import { Injectable } from "@angular/core";
-import { Observable, BehaviorSubject } from "rxjs";
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { Observable, BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { HttpHeaders } from '@angular/common/http';
 
 // video.service.ts
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class VideoService {
   private apiUrl = environment.apiUrl;
@@ -15,20 +15,23 @@ export class VideoService {
   public search$ = this.searchSubject.asObservable();
   public category$ = this.categorySubject.asObservable();
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
   getAllVideos(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/home`);
   }
 
   getVideosByCategory(category: string): Observable<any[]> {
-    const url = category === 'All' ? `${this.apiUrl}/home` : `${this.apiUrl}/videos/category/${encodeURIComponent(category)}`;
+    const url =
+      category === 'All'
+        ? `${this.apiUrl}/home`
+        : `${this.apiUrl}/videos/category/${encodeURIComponent(category)}`;
     return this.http.get<any[]>(url);
   }
 
   deleteVideo(videoId: string, userId: string): Observable<any> {
     return this.http.delete<any>(`${this.apiUrl}/videos/${videoId}`, {
-      body: { userId }
+      body: { userId },
     });
   }
 
@@ -38,7 +41,11 @@ export class VideoService {
     if (token) {
       headers = headers.set('Authorization', `Bearer ${token}`);
     }
-    return this.http.post<any>(`${this.apiUrl}/videos/${videoId}/like`, {}, { headers });
+    return this.http.post<any>(
+      `${this.apiUrl}/videos/${videoId}/like`,
+      {},
+      { headers },
+    );
   }
 
   dislikeVideo(videoId: string) {
@@ -47,7 +54,11 @@ export class VideoService {
     if (token) {
       headers = headers.set('Authorization', `Bearer ${token}`);
     }
-    return this.http.post<any>(`${this.apiUrl}/videos/${videoId}/dislike`, {}, { headers });
+    return this.http.post<any>(
+      `${this.apiUrl}/videos/${videoId}/dislike`,
+      {},
+      { headers },
+    );
   }
 
   getUserReaction(videoId: string) {
@@ -56,7 +67,10 @@ export class VideoService {
     if (token) {
       headers = headers.set('Authorization', `Bearer ${token}`);
     }
-    return this.http.get<{ reaction: string }>(`${this.apiUrl}/videos/${videoId}/reaction`, { headers });
+    return this.http.get<{ reaction: string }>(
+      `${this.apiUrl}/videos/${videoId}/reaction`,
+      { headers },
+    );
   }
 
   getLikedVideos(): Observable<any[]> {
@@ -81,17 +95,26 @@ export class VideoService {
     return this.http.get<any[]>(`${this.apiUrl}/videos/disliked`, { headers });
   }
 
-  getCommentCount(videoId: string): Observable<{ success: boolean; count: number }> {
-    return this.http.get<{ success: boolean; count: number }>(`${this.apiUrl}/videos/${videoId}/comments/count`);
+  getCommentCount(
+    videoId: string,
+  ): Observable<{ success: boolean; count: number }> {
+    return this.http.get<{ success: boolean; count: number }>(
+      `${this.apiUrl}/videos/${videoId}/comments/count`,
+    );
   }
 
   setSearchTerm(term: string): void {
-    
     this.searchSubject.next(term);
   }
 
   setCategory(category: string): void {
-    
     this.categorySubject.next(category);
   }
+  addToHistory(videoId: string, userId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/history/${videoId}`, { userId });
+  }
+
+  getWatchHistory(): Observable<any[]> {
+  return this.http.get<any[]>(`${this.apiUrl}/history`);
+}
 }

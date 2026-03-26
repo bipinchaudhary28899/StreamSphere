@@ -5,7 +5,9 @@ import { saveVideoController } from '../controllers/saveVideo.controller';
 import { VideoController } from '../controllers/getVideo.controller';
 import { CommentController } from '../controllers/comment.controller';
 import { authenticateJWT } from '../services/auth.service';
+import { WatchHistoryController } from '../controllers/watchHistory.controller';
 
+const watchHistoryController = new WatchHistoryController();
 const router: Router = express.Router();
 const commentController = new CommentController();
 
@@ -59,5 +61,10 @@ router.get('/videos/:videoId/comments/count', async (req: Request, res: Response
 router.get('/user/comments', authenticateJWT, async (req: Request, res: Response) => {
   await commentController.getCommentsByUserId(req, res);
 });
-
+router.post('/history/:videoId', authenticateJWT,  async (req: Request, res: Response) => { /* upsertWatchHistory */ 
+  await watchHistoryController.upsertWatchHistory(req, res);
+});
+router.get('/history', authenticateJWT, async (req: Request, res: Response) => { /* getWatchHistory */ 
+  await watchHistoryController.getWatchHistory(req, res);
+});
 export default router;

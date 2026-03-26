@@ -1,7 +1,7 @@
 .profile-header {
   padding: 0;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   border-radius: 0 0 24px 24px;
   overflow: hidden;
 }
@@ -12,7 +12,7 @@
   height: 220px;
   border: none;
   background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
   border-radius: 0 0 24px 24px;
   overflow: hidden;
 }
@@ -32,10 +32,10 @@
   display: flex;
   align-items: center;
   gap: 24px;
-  background: rgba(255,255,255,0.85);
+  background: rgba(255, 255, 255, 0.85);
   padding: 20px 32px;
   border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
 .profile-header .background-image .profile-info .profile-pic {
@@ -43,14 +43,14 @@
   height: 110px;
   border-radius: 50%;
   border: 4px solid #fff;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   object-fit: cover;
   transition: transform 0.2s;
 }
 
 .profile-header .background-image .profile-info .profile-pic:hover {
   transform: scale(1.05) rotate(-2deg);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
 .profile-header .background-image .profile-info .user-details {
@@ -64,7 +64,7 @@
   font-size: 2rem;
   color: #222;
   letter-spacing: 0.5px;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .profile-header .background-image .profile-info .user-details .user-email {
@@ -82,7 +82,7 @@
   min-height: 500px;
   background: #f7fafc;
   border-radius: 24px;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
   padding: 32px 0;
 }
 
@@ -99,7 +99,7 @@
   padding: 24px 18px;
   border-radius: 16px;
   background: linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   border: none;
   font-weight: 500;
   font-size: 1.1rem;
@@ -107,7 +107,7 @@
 }
 
 .profile-body .sidenav-container .upload-sidebar:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 .profile-body .sidenav-container .main-content {
@@ -115,7 +115,7 @@
   background: #fff;
   padding: 32px 28px;
   flex: 1;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   border: none;
   min-height: 400px;
 }
@@ -193,7 +193,7 @@
 
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 24px;
   margin-top: 20px;
 }
@@ -206,16 +206,19 @@
 
 .mobile-actions {
   display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
   gap: 12px;
   margin-bottom: 20px;
-  flex-wrap: wrap;
 }
 
 .mobile-action-btn {
-  flex: 1;
-  min-width: 120px;
+  width: 140px;
+  min-width: unset;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 
@@ -249,71 +252,73 @@
   padding: 16px;
 }
 
-/* Reduce padding for dashboard section in mobile accordion */
-.mobile-panel[ng-reflect-expanded="true"] .dashboard-section {
-  padding: 8px 0 !important;
-}
-
-.mobile-panel .dashboard-section .mat-expansion-panel-body {
-  padding: 8px 0 !important;
-}
-
 /* Mobile styles */
 @media (max-width: 768px) {
   .profile-header .background-image {
     height: 120px;
   }
-  
+
   .profile-header .background-image .profile-info {
     top: 12px;
     left: 12px;
     padding: 10px 14px;
     gap: 12px;
   }
-  
+
   .profile-header .background-image .profile-info .profile-pic {
     width: 60px;
     height: 60px;
   }
-  
+
   .profile-header .background-image .profile-info .user-details .username {
     font-size: 1.1rem;
   }
-  
+
   .profile-header .background-image .profile-info .user-details .user-email {
     font-size: 0.8rem;
   }
-  
+
   .profile-body {
     margin-top: 12px;
     padding: 8px 0;
   }
-  
+
   .profile-body .sidenav-container {
     flex-direction: column;
     gap: 12px;
     width: 100%;
   }
-  
+
   .profile-body .sidenav-container .upload-sidebar {
     width: 100%;
     padding: 12px 8px;
     font-size: 1rem;
   }
-  
+
   .profile-body .sidenav-container .main-content {
-    padding: 12px 8px;
-    min-height: 200px;
+    border-radius: 16px;
+    background: #fff;
+    padding: 32px 16px;
+    flex: 1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: none;
+    min-height: 400px;
   }
-  
+
   .welcome-section {
     padding: 20px 4px;
+    margin-bottom: 20px;
   }
-  
+
   .welcome-section h2 {
     font-size: 1.3rem;
+    margin-bottom: 8px;
   }
-  
+
+  .welcome-section p {
+    font-size: 0.9rem;
+  }
+
   /* Ensure sections are visible on mobile */
   .liked-videos-section,
   .disliked-videos-section,
@@ -322,22 +327,108 @@
     visibility: visible !important;
     opacity: 1 !important;
   }
-  
+
   .video-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 16px;
+    grid-template-columns: 1fr;
+    gap: 12px;
     margin-top: 16px;
   }
-  
+
   .liked-videos-section h3,
   .disliked-videos-section h3 {
     font-size: 1.4rem;
     margin-bottom: 16px;
   }
-  
+
   .no-videos {
     padding: 20px 10px;
     font-size: 1rem;
+  }
+
+  /* Mobile action buttons — centered row with equal fixed width */
+  .mobile-actions {
+    flex-direction: row;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .mobile-action-btn {
+    width: 140px;
+    flex: unset;
+  }
+
+  .mobile-layout {
+    padding: 12px;
+  }
+
+  /* ── Dashboard mobile: zero spacing, show only checkbox + title ────────── */
+
+  /* Strip all padding/margin from the section wrapper */
+  .dashboard-section,
+  .mobile-panel .dashboard-section {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Hide the redundant h3 and subtitle — the accordion header already labels it */
+  .mobile-panel .dashboard-section h3,
+  .mobile-panel .dashboard-section > p {
+    display: none !important;
+  }
+
+  /* Hide description and uploaded-at columns — too cramped */
+  .mat-column-description,
+  .mat-column-uploadedAt {
+    display: none !important;
+  }
+
+  /* Table: full width, no margin, smaller font */
+  .mat-table {
+    width: 100% !important;
+    margin: 0 !important;
+    font-size: 0.78rem;
+  }
+
+  /* Zero out all cell padding */
+  .mat-header-cell,
+  .mat-cell {
+    padding: 6px 4px !important;
+    font-size: 0.78rem;
+    border-bottom-width: 1px;
+  }
+
+  /* Checkbox column: fixed narrow width */
+  .mat-column-select {
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    flex: 0 0 36px !important;
+    padding: 6px 2px !important;
+  }
+
+  /* Title column: takes all remaining space, truncates gracefully */
+  .mat-column-title {
+    flex: 1 1 auto !important;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* Delete button: full width, flush to edges */
+  .dashboard-section [mat-raised-button] {
+    width: 100% !important;
+    margin: 0 0 8px 0 !important;
+  }
+
+  /* Accordion panel body: no padding for dashboard */
+  .mobile-panel .mat-expansion-panel-body {
+    padding: 8px 0 !important;
+  }
+
+  /* Paginator: tighten up */
+  .mat-paginator {
+    font-size: 0.75rem;
   }
 }
 
@@ -345,59 +436,17 @@
   .profile-body .sidenav-container {
     width: 95%;
   }
-  
+
   .profile-body .sidenav-container .main-content {
     padding: 8px 4px;
   }
-  
-  .video-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  
+
   .welcome-section h2 {
     font-size: 1.1rem;
   }
-  
+
   .welcome-section p {
     font-size: 1rem;
-  }
-}
-
-/* Responsive adjustments for mobile */
-@media (max-width: 768px) {
-  .profile-body {
-    padding: 0;
-  }
-  
-  .mobile-layout {
-    padding: 12px;
-  }
-  
-  .mobile-actions {
-    flex-direction: column;
-  }
-  
-  .mobile-action-btn {
-    width: 100%;
-  }
-  
-  .video-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  
-  .welcome-section {
-    margin-bottom: 20px;
-  }
-  
-  .welcome-section h2 {
-    font-size: 1.5rem;
-    margin-bottom: 8px;
-  }
-  
-  .welcome-section p {
-    font-size: 0.9rem;
   }
 }
 
@@ -411,65 +460,21 @@
   opacity: 1 !important;
 }
 
-/* Fix spacing for mobile dashboard section */
 .mobile-panel .dashboard-section {
   padding: 0 !important;
   margin: 0 !important;
 }
 
-.mobile-panel .dashboard-section h3 {
-  margin-left: 0 !important;
-  padding-left: 0 !important;
-}
-
-.mobile-panel .dashboard-section p {
-  margin-left: 0 !important;
-  padding-left: 0 !important;
-}
-
-.mobile-panel .dashboard-section table {
-  margin-left: 0 !important;
-  padding-left: 0 !important;
-}
-
+.mobile-panel .dashboard-section h3,
+.mobile-panel .dashboard-section p,
+.mobile-panel .dashboard-section table,
 .mobile-panel .dashboard-section button {
   margin-left: 0 !important;
+  padding-left: 0 !important;
 }
-
-/* Mobile table adjustments */
 @media (max-width: 768px) {
-  .mat-table {
-    font-size: 0.8rem;
-  }
-  
-  .mat-header-cell,
-  .mat-cell {
-    padding: 8px 4px;
-  }
-  
-  .mat-column-description {
-    max-width: 100px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  
-  /* Override accordion panel body padding for dashboard */
-  .mobile-panel .mat-expansion-panel-body {
-    padding: 8px !important;
-  }
-  
-  /* Further reduce padding for dashboard content */
-  .mobile-panel .dashboard-section {
-    padding: 0 !important;
-  }
-  
-  .mobile-panel .dashboard-section h3,
-  .mobile-panel .dashboard-section p,
-  .mobile-panel .dashboard-section button,
-  .mobile-panel .dashboard-section table {
-    margin-left: 0 !important;
-    padding-left: 0 !important;
+  ::ng-deep .mat-mdc-paginator-outer-container,
+  ::ng-deep .mat-mdc-paginator-container {
+    justify-content: center !important;
   }
 }
-  

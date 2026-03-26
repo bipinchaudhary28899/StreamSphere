@@ -32,7 +32,6 @@
       
       <div class="video-meta">
         <span class="upload-date">{{ formatDate(video.uploadedAt) }}</span>
-        <span class="video-id">ID: {{ video._id }}</span>
         <span class="category-badge" *ngIf="video.category">
           <span class="category-tag">{{ video.category }}</span>
         </span>
@@ -96,7 +95,7 @@
           <strong>Uploaded:</strong> {{ formatDate(video.uploadedAt) }}
         </div>
         <div class="detail-item">
-          <strong>User ID:</strong> {{ video.user_id }}
+          <strong>User Name:</strong> {{ video.userName }}
         </div>
       </div>
     </div>
