@@ -293,7 +293,19 @@ mat-card-content {
   padding: 20px;
   text-align: center;
 }
-
+.video-description {
+  font-size: 0.88rem;
+  color: #555;
+  line-height: 1.5;
+  margin: 6px 0 12px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  line-clamp: 4;
+  text-overflow: ellipsis;
+  text-align: center;
+}
 // ── Mobile ───────────────────────────────────────────────────────────────────
 @media (max-width: 600px) {
   .video-card {

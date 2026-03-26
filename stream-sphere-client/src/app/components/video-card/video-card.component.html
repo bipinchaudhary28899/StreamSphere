@@ -37,40 +37,38 @@
         </mat-card>
       </div>
 
-      <div class="flip-card-back">
-        <mat-card class="video-card">
-          <div class="video-card-inner">
-            <div class="flipped-content">
-              <h3 class="video-title">{{ video?.title || "Untitled Video" }}</h3>
-              <p>More info or actions here!</p>
-              <div class="video-info-section">
-                <!-- ← fixed: was still using old separate rows -->
-                <div class="uploader-likes-row">
-                  <div class="uploader-info">
-                    <span class="avatar-placeholder"><mat-icon>person</mat-icon></span>
-                    <span class="uploader-name">{{ video?.userName || "Unknown User" }}</span>
-                  </div>
-                  <div class="likes-info">
-                    <mat-icon class="like-icon">thumb_up</mat-icon>
-                    <span class="like-count">{{ video.likes || 0 }}</span>
-                    <span class="like-label">Likes</span>
-                  </div>
-                </div>
-                <div class="info-row category-row">
-                  <span class="category-tag" *ngIf="video?.category; else noCategory2">{{ video.category }}</span>
-                  <ng-template #noCategory2>
-                    <span class="category-tag category-tag--empty">Uncategorised</span>
-                  </ng-template>
-                </div>
-              </div>
-              <div class="flip-icon" (click)="onFlipClick($event)">
-                <mat-icon>swap_horiz</mat-icon>
-              </div>
+     <div class="flip-card-back">
+  <mat-card class="video-card">
+    <div class="video-card-inner">
+      <div class="flipped-content">
+        <h3 class="video-title">{{ video?.title || "Untitled Video" }}</h3>
+        <p class="video-description">{{ video?.description || "No description available." }}</p>
+        <div class="video-info-section">
+          <div class="uploader-likes-row">
+            <div class="uploader-info">
+              <span class="avatar-placeholder"><mat-icon>person</mat-icon></span>
+              <span class="uploader-name">{{ video?.userName || "Unknown User" }}</span>
+            </div>
+            <div class="likes-info">
+              <mat-icon class="like-icon">thumb_up</mat-icon>
+              <span class="like-count">{{ video.likes || 0 }}</span>
+              <span class="like-label">Likes</span>
             </div>
           </div>
-        </mat-card>
+          <div class="info-row category-row">
+            <span class="category-tag" *ngIf="video?.category; else noCategory2">{{ video.category }}</span>
+            <ng-template #noCategory2>
+              <span class="category-tag category-tag--empty">Uncategorised</span>
+            </ng-template>
+          </div>
+        </div>
+        <div class="flip-icon" (click)="onFlipClick($event)">
+          <mat-icon>swap_horiz</mat-icon>
+        </div>
       </div>
-
+    </div>
+  </mat-card>
+</div>
     </div>
   </div>
 </ng-container>
