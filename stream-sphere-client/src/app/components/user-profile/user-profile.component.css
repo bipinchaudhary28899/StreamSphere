@@ -206,16 +206,19 @@
 
 .mobile-actions {
   display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
   gap: 12px;
   margin-bottom: 20px;
-  flex-wrap: wrap;
 }
 
 .mobile-action-btn {
-  flex: 1;
-  min-width: 120px;
+  width: 140px;
+  min-width: unset;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 
@@ -247,15 +250,6 @@
 
 .mobile-panel .mat-expansion-panel-body {
   padding: 16px;
-}
-
-/* Reduce padding for dashboard section in mobile accordion */
-.mobile-panel[ng-reflect-expanded="true"] .dashboard-section {
-  padding: 8px 0 !important;
-}
-
-.mobile-panel .dashboard-section .mat-expansion-panel-body {
-  padding: 8px 0 !important;
 }
 
 /* Mobile styles */
@@ -304,7 +298,7 @@
   .profile-body .sidenav-container .main-content {
     border-radius: 16px;
     background: #fff;
-    padding: 32px 16px; /* was 32px 28px — less horizontal padding */
+    padding: 32px 16px;
     flex: 1;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     border: none;
@@ -313,10 +307,16 @@
 
   .welcome-section {
     padding: 20px 4px;
+    margin-bottom: 20px;
   }
 
   .welcome-section h2 {
     font-size: 1.3rem;
+    margin-bottom: 8px;
+  }
+
+  .welcome-section p {
+    font-size: 0.9rem;
   }
 
   /* Ensure sections are visible on mobile */
@@ -329,8 +329,8 @@
   }
 
   .video-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 16px;
+    grid-template-columns: 1fr;
+    gap: 12px;
     margin-top: 16px;
   }
 
@@ -344,6 +344,92 @@
     padding: 20px 10px;
     font-size: 1rem;
   }
+
+  /* Mobile action buttons — centered row with equal fixed width */
+  .mobile-actions {
+    flex-direction: row;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .mobile-action-btn {
+    width: 140px;
+    flex: unset;
+  }
+
+  .mobile-layout {
+    padding: 12px;
+  }
+
+  /* ── Dashboard mobile: zero spacing, show only checkbox + title ────────── */
+
+  /* Strip all padding/margin from the section wrapper */
+  .dashboard-section,
+  .mobile-panel .dashboard-section {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Hide the redundant h3 and subtitle — the accordion header already labels it */
+  .mobile-panel .dashboard-section h3,
+  .mobile-panel .dashboard-section > p {
+    display: none !important;
+  }
+
+  /* Hide description and uploaded-at columns — too cramped */
+  .mat-column-description,
+  .mat-column-uploadedAt {
+    display: none !important;
+  }
+
+  /* Table: full width, no margin, smaller font */
+  .mat-table {
+    width: 100% !important;
+    margin: 0 !important;
+    font-size: 0.78rem;
+  }
+
+  /* Zero out all cell padding */
+  .mat-header-cell,
+  .mat-cell {
+    padding: 6px 4px !important;
+    font-size: 0.78rem;
+    border-bottom-width: 1px;
+  }
+
+  /* Checkbox column: fixed narrow width */
+  .mat-column-select {
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    flex: 0 0 36px !important;
+    padding: 6px 2px !important;
+  }
+
+  /* Title column: takes all remaining space, truncates gracefully */
+  .mat-column-title {
+    flex: 1 1 auto !important;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* Delete button: full width, flush to edges */
+  .dashboard-section [mat-raised-button] {
+    width: 100% !important;
+    margin: 0 0 8px 0 !important;
+  }
+
+  /* Accordion panel body: no padding for dashboard */
+  .mobile-panel .mat-expansion-panel-body {
+    padding: 8px 0 !important;
+  }
+
+  /* Paginator: tighten up */
+  .mat-paginator {
+    font-size: 0.75rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -355,54 +441,12 @@
     padding: 8px 4px;
   }
 
-  .video-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
   .welcome-section h2 {
     font-size: 1.1rem;
   }
 
   .welcome-section p {
     font-size: 1rem;
-  }
-}
-
-/* Responsive adjustments for mobile */
-@media (max-width: 768px) {
-  .profile-body {
-    padding: 0;
-  }
-
-  .mobile-layout {
-    padding: 12px;
-  }
-
-  .mobile-actions {
-    flex-direction: column;
-  }
-
-  .mobile-action-btn {
-    width: 100%;
-  }
-
-  .video-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .welcome-section {
-    margin-bottom: 20px;
-  }
-
-  .welcome-section h2 {
-    font-size: 1.5rem;
-    margin-bottom: 8px;
-  }
-
-  .welcome-section p {
-    font-size: 0.9rem;
   }
 }
 
@@ -416,64 +460,21 @@
   opacity: 1 !important;
 }
 
-/* Fix spacing for mobile dashboard section */
 .mobile-panel .dashboard-section {
   padding: 0 !important;
   margin: 0 !important;
 }
 
-.mobile-panel .dashboard-section h3 {
-  margin-left: 0 !important;
-  padding-left: 0 !important;
-}
-
-.mobile-panel .dashboard-section p {
-  margin-left: 0 !important;
-  padding-left: 0 !important;
-}
-
-.mobile-panel .dashboard-section table {
-  margin-left: 0 !important;
-  padding-left: 0 !important;
-}
-
+.mobile-panel .dashboard-section h3,
+.mobile-panel .dashboard-section p,
+.mobile-panel .dashboard-section table,
 .mobile-panel .dashboard-section button {
   margin-left: 0 !important;
+  padding-left: 0 !important;
 }
-
-/* Mobile table adjustments */
 @media (max-width: 768px) {
-  .mat-table {
-    font-size: 0.8rem;
-  }
-
-  .mat-header-cell,
-  .mat-cell {
-    padding: 8px 4px;
-  }
-
-  .mat-column-description {
-    max-width: 100px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* Override accordion panel body padding for dashboard */
-  .mobile-panel .mat-expansion-panel-body {
-    padding: 8px !important;
-  }
-
-  /* Further reduce padding for dashboard content */
-  .mobile-panel .dashboard-section {
-    padding: 0 !important;
-  }
-
-  .mobile-panel .dashboard-section h3,
-  .mobile-panel .dashboard-section p,
-  .mobile-panel .dashboard-section button,
-  .mobile-panel .dashboard-section table {
-    margin-left: 0 !important;
-    padding-left: 0 !important;
+  ::ng-deep .mat-mdc-paginator-outer-container,
+  ::ng-deep .mat-mdc-paginator-container {
+    justify-content: center !important;
   }
 }

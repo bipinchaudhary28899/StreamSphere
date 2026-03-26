@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { VideoService } from '../../services/video.service';
 import { VideoCardComponent } from '../video-card/video-card.component';
@@ -15,7 +15,7 @@ export class WatchHistoryComponent implements OnInit {
   history: any[] = [];
   loading = true;
   error: string | null = null;
-
+  @Input() showHeader: boolean = true;
   constructor(private videoService: VideoService) {}
 
   ngOnInit() {

@@ -143,7 +143,7 @@
 }
 
 .hero-play-btn:hover {
-  background: #f40612;
+  background: #ff1a73;
   transform: translateY(-2px);
   box-shadow: 0 6px 12px rgba(0,0,0,0.4);
 }

@@ -21,6 +21,7 @@ import { Subscription } from 'rxjs';
 import { User } from '../../models/user';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { WatchHistoryComponent } from '../watch-history/watch-history.component';
 
 // Using shared User interface from models
 
@@ -34,6 +35,7 @@ import { catchError } from 'rxjs/operators';
     MatMenuModule,
     CommonModule,
     VideoCardComponent,
+    WatchHistoryComponent,
     MatTableModule,
     MatPaginatorModule,
     MatSortModule,
@@ -63,6 +65,7 @@ export class UserProfileComponent implements OnInit {
   selection = new Set<string>();
   isMobile: boolean = false;
   private loginSubscription: Subscription | null = null;
+  showHistorySection: boolean = false;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -227,6 +230,7 @@ export class UserProfileComponent implements OnInit {
     this.showMyVideosSection = section === 'myVideos';
     this.showLikedVideosSection = section === 'likedVideos';
     this.showDislikedVideosSection = section === 'dislikedVideos';
+    this.showHistorySection = section === 'history'; 
     this.dismissWelcome();
 
     if (section === 'myVideos' || section === 'dashboard') {
