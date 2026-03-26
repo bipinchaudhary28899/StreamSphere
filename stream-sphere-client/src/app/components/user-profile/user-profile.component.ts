@@ -130,8 +130,6 @@ export class UserProfileComponent implements OnInit {
         if (this.user?.profileImage) {
           this.profileImage = this.user.profileImage;
         }
-        console.log('Loaded user:', this.user);
-        console.log('Profile image set to:', this.profileImage);
       } else {
         this.router.navigate(['/login']);
       }

@@ -1,0 +1,23 @@
+<div class="history-container">
+  <div class="history-header">
+    <mat-icon>history</mat-icon>
+    <h2>Watch History</h2>
+  </div>
+
+  <div *ngIf="loading" class="state-message">Loading...</div>
+
+  <div *ngIf="error" class="state-message error">{{ error }}</div>
+
+  <div *ngIf="!loading && !error && history.length === 0" class="state-message">
+    <mat-icon>videocam_off</mat-icon>
+    <p>No watch history yet. Start watching some videos!</p>
+  </div>
+
+  <div *ngIf="!loading && history.length > 0" class="video-grid">
+    <app-video-card
+      *ngFor="let video of history"
+      [video]="video"
+      [flipEnabled]="false">
+    </app-video-card>
+  </div>
+</div>

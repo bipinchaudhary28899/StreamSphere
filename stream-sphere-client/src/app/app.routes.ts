@@ -43,6 +43,13 @@ export const routes: Routes = [
       import('./components/video-player/video-player.component')
         .then(c => c.VideoPlayerComponent)
   },
+  {
+  path: 'history',
+  loadComponent: () =>
+    import('./components/watch-history/watch-history.component')
+      .then(c => c.WatchHistoryComponent),
+  canActivate: [AuthGuard]
+},
 
   { path: '**', redirectTo: 'home' }
 ];

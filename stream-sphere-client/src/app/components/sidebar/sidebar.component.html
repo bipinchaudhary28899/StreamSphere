@@ -1,8 +1,14 @@
 <mat-nav-list class="sidebar-nav" [class.mobile-hidden]="isMobile">
-    <mat-list-item><mat-icon>home</mat-icon> Home</mat-list-item>
-    <mat-list-item><mat-icon>play_arrow</mat-icon> Shorts</mat-list-item>
-    <mat-list-item><mat-icon>subscriptions</mat-icon> Subscriptions</mat-list-item>
-    
-    <mat-list-item><mat-icon>person</mat-icon> You</mat-list-item>
-    <mat-list-item><mat-icon>history</mat-icon> History</mat-list-item>
-  </mat-nav-list>
+  <mat-list-item routerLink="/home" routerLinkActive="active-link">
+    <mat-icon>home</mat-icon> Home
+  </mat-list-item>
+  <mat-list-item routerLinkActive="active-link">
+    <mat-icon>subscriptions</mat-icon> Subscriptions
+  </mat-list-item>
+  <mat-list-item routerLink="/user-profile" routerLinkActive="active-link">
+    <mat-icon>person</mat-icon> You
+  </mat-list-item>
+  <mat-list-item routerLink="/history" routerLinkActive="active-link">
+    <mat-icon>history</mat-icon> History
+  </mat-list-item>
+</mat-nav-list>

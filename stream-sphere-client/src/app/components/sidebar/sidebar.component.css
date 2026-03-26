@@ -25,7 +25,16 @@
   margin-right: 12px;
   color: #606060;
 }
+.active-link {
+  background: linear-gradient(135deg, rgba(102,126,234,0.12) 0%, rgba(118,75,162,0.12) 100%);
+  border-radius: 8px;
+  color: #764ba2;
+  font-weight: 600;
+}
 
+.active-link mat-icon {
+  color: #764ba2;
+}
 /* Mobile styles */
 @media (max-width: 768px) {
   .mobile-hidden {

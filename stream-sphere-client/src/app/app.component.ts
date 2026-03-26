@@ -70,13 +70,11 @@ export class AppComponent {
   selectedCategory: string='All';
   
   handleSearch(term:string) {
-   console.log('App component received search term:', term);
    this.searchText = term.toLowerCase();
    this.videoService.setSearchTerm(term.toLowerCase());
   }
   
   handleCategory(category:string) {
-     console.log('App component received category:', category);
      this.selectedCategory = category;
      this.videoService.setCategory(category);
   }
