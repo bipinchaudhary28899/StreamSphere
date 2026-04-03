@@ -91,41 +91,23 @@ export class VideoListComponent implements OnInit, OnDestroy {
     this.myVideos = this.myVideos.filter(video => video._id !== videoId);
   }
 
-  loadUserVideos() {
-    const userId = JSON.parse(localStorage.getItem('user')!).userId;
-    this.myVideos = this.allVideos.filter(video => video.userId === userId);
-  }
-
   handleCategory(category: string): void {
     this.currentCategory = category;
     this.loadVideosByCategory(category);
   }
 
-  // Optional: Add filtering logic
   applyFilter(filterTerm: string): void {
-    if (!filterTerm || filterTerm.trim() === '') {
-      this.filteredVideos = [...this.allVideos];
-      return;
-    }
-    
-    const searchTerm = filterTerm.toLowerCase().trim();
-    
-    
-    this.filteredVideos = this.allVideos.filter(video => {
-      const title = video.title?.toLowerCase() || '';
-      const description = video.description?.toLowerCase() || '';
-      
-      // Check for word boundaries or exact matches
-      const titleMatch = title.includes(searchTerm) && 
-        (title.split(' ').some((word: string) => word.startsWith(searchTerm) || word.includes(searchTerm)));
-      const descriptionMatch = description.includes(searchTerm) && 
-        (description.split(' ').some((word: string) => word.startsWith(searchTerm) || word.includes(searchTerm)));
-      
-     
-      
-      return titleMatch || descriptionMatch;
-    });
-    
-    
+  if (!filterTerm || filterTerm.trim() === '') {
+    this.filteredVideos = [...this.allVideos];
+    return;
   }
+
+  const searchTerm = filterTerm.toLowerCase().trim();
+
+  this.filteredVideos = this.allVideos.filter(video => {
+    const title = video.title?.toLowerCase() || '';
+    const description = video.description?.toLowerCase() || '';
+    return title.includes(searchTerm) || description.includes(searchTerm);
+  });
+}
 }
