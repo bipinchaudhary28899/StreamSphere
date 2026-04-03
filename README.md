@@ -1,6 +1,8 @@
 # StreamSphere - Video Platform
 
-A full-stack video streaming platform built with Angular (Frontend) and Node.js/Express (Backend), featuring Google OAuth authentication, video upload, like/dislike functionality, and category-based video organization.
+A full-stack video streaming platform built with Angular (Frontend) and Node.js/Express (Backend), featuring Google OAuth authentication, video upload, like/dislike functionality, watch history, category-based video organization, and performance optimizations including lazy loading, CloudFront caching, and debounce-style request throttling.
+
+---
 
 ## 🚀 Quick Start
 
@@ -19,7 +21,25 @@ npm install
 npm start
 ```
 
-## 📋 FEATURES
+---
+
+## 📋 Features
+
+- [Feature 1: Google Login](#feature-1-google-login)
+- [Feature 2: Video Upload](#feature-2-video-upload)
+- [Feature 3: Video Display & Categorization](#feature-3-video-display--categorization)
+- [Feature 4: Like/Dislike Functionality](#feature-4-likedislike-functionality)
+- [Feature 5: Video Player & Details](#feature-5-video-player--details)
+- [Feature 6: Video Cards & Category Slider](#feature-6-video-cards--category-slider)
+- [Feature 7: User Profile & Video Management](#feature-7-user-profile--video-management)
+- [Feature 8: Video Deletion](#feature-8-video-deletion)
+- [Feature 9: Liked & Disliked Videos in User Profile](#feature-9-liked--disliked-videos-in-user-profile)
+- [Feature 10: Video Duration Limit (2 Minutes)](#feature-10-video-duration-limit-2-minutes)
+- [Feature 11: Video Carousel – Top Liked Videos](#feature-11-video-carousel--top-liked-videos)
+- [Feature 12: Hero Carousel – Netflix-Style Auto-Advance](#feature-12-hero-carousel--netflix-style-auto-advance)
+- [Feature 13: Watch History](#feature-13-watch-history)
+- [Optimizations](#-optimizations)
+- [Technical Architecture](#-technical-architecture)
 
 ---
 
@@ -27,10 +47,10 @@ npm start
 
 ### 🔄 Complete Flow
 
-#### Frontend Flow:
+#### Frontend Flow
 1. **Entry Point**: `stream-sphere-client/src/app/components/user-login/user-login.component.ts`
    - Component loads Google Sign-In script dynamically
-   - Initializes Google OAuth with client ID.
+   - Initializes Google OAuth with client ID
 
 2. **User Interaction**: User clicks "Continue with Google" button
    - Google OAuth popup appears
@@ -45,63 +65,63 @@ npm start
    - Sends POST request to: `http://localhost:3000/api/google-login`
    - Payload: `{ token: "google_credential_token" }`
 
-#### Backend Flow:
+#### Backend Flow
 1. **Route Handler**: `stream-sphere-backend/routes/centralRoute.route.ts`
    - Route: `POST /api/google-login`
    - Calls: `googleLogin` controller
 
 2. **Controller**: `stream-sphere-backend/controllers/auth.controller.ts`
-   - Receives Google token
-   - Calls: `handleGoogleLogin(token)` service
 
 3. **Service**: `stream-sphere-backend/services/auth.service.ts`
-   - **Variable**: `client` - OAuth2Client instance for Google token verification
-   - **Variable**: `ticket` - Verified Google token payload
-   - **Variable**: `payload` - User data from Google (name, email, picture)
-   - **Variable**: `user` - Database user object
-   - **Variable**: `isNewUser` - Boolean flag for new user registration
-   - **Variable**: `jwtPayload` - JWT token payload structure
-   - **Variable**: `jwtToken` - Generated JWT token
+   - `client` — OAuth2Client instance for Google token verification
+   - `ticket` — Verified Google token payload
+   - `payload` — User data from Google (name, email, picture)
+   - `user` — Database user object
+   - `isNewUser` — Boolean flag for new user registration
+   - `jwtPayload` — JWT token payload structure
+   - `jwtToken` — Generated JWT token
 
 4. **Database Operations**: `stream-sphere-backend/models/user.ts`
    - Checks if user exists by email
    - Creates new user if not found
    - Updates existing user's profile image
 
-5. **Response**: Returns JWT token and user data
-   ```json
-   {
-     "token": "eyJhbGciOiJIUzI1NiIs...",
-     "user": {
-       "userId": "67ffe6d78622bdc4703bdc29",
-       "userName": "Bipin Chaudhary",
-       "email": "bkumar28899@gmail.com",
-       "profileImage": "https://lh3.googleusercontent.com/...",
-       "role": "user",
-       "isVerified": true
-     },
-     "isNewUser": false
-   }
-   ```
+5. **Response**:
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "userId": "67ffe6d78622bdc4703bdc29",
+    "userName": "John Doe",
+    "email": "john@example.com",
+    "profileImage": "https://lh3.googleusercontent.com/...",
+    "role": "user",
+    "isVerified": true
+  },
+  "isNewUser": false
+}
+```
 
-#### Frontend Response Handling:
-1. **Token Storage**: Stores JWT token in `localStorage.setItem('token', res.token)`
-2. **User Data Storage**: Stores user data in `localStorage.setItem('user', JSON.stringify(res.user))`
-3. **Navigation**: Redirects to user's home page or saved redirect URL
+#### Frontend Response Handling
+- Stores JWT token: `localStorage.setItem('token', res.token)`
+- Stores user data: `localStorage.setItem('user', JSON.stringify(res.user))`
+- Redirects to home page or saved redirect URL
 
-### 🔧 Key Variables & Their Purpose:
-- **`token`**: Google credential token from OAuth
-- **`jwtPayload`**: Contains userId, email, subject for JWT generation
-- **`jwtToken`**: JWT token for subsequent API authentication
-- **`isNewUser`**: Boolean to track if user is newly registered
-- **`userData`**: Parsed user information from localStorage
+### 🔧 Key Variables
+| Variable | Purpose |
+|---|---|
+| `token` | Google credential token from OAuth |
+| `jwtPayload` | Contains userId, email, subject for JWT generation |
+| `jwtToken` | JWT token for subsequent API authentication |
+| `isNewUser` | Boolean to track if user is newly registered |
+| `userData` | Parsed user information from localStorage |
 
-### 🛠️ Services Used:
-- **`AuthService`**: Handles Google login API calls
-- **`OAuth2Client`**: Verifies Google tokens
-- **`jwt.sign()`**: Generates JWT tokens
-- **`User.findOne()`**: Database user lookup
-- **`User.save()`**: Database user creation/update
+### 🛠️ Services Used
+- `AuthService` — Handles Google login API calls
+- `OAuth2Client` — Verifies Google tokens
+- `jwt.sign()` — Generates JWT tokens
+- `User.findOne()` — Database user lookup
+- `User.save()` — Database user creation/update
 
 ---
 
@@ -109,66 +129,56 @@ npm start
 
 ### 🔄 Complete Flow
 
-#### Frontend Flow:
+#### Frontend Flow
 1. **Entry Point**: `stream-sphere-client/src/app/components/upload-video/upload-video.component.ts`
-   - User selects video file
-   - **Variable**: `selectedFile` - File object from input
-   - **Variable**: `uploadProgress` - Upload progress percentage
+   - `selectedFile` — File object from input
+   - `uploadProgress` — Upload progress percentage
 
-2. **File Validation**: Checks file size and type
-   - **Variable**: `maxFileSize` - 100MB limit
-   - **Variable**: `allowedTypes` - ['video/mp4', 'video/avi', 'video/mov']
+2. **File Validation**
+   - `maxFileSize` — 100MB limit
+   - `allowedTypes` — `['video/mp4', 'video/avi', 'video/mov']`
 
-3. **Upload Process**: `uploadVideo()` method
-   - Calls `UploadService.uploadVideo(file)`
+3. **Upload Process**: `uploadVideo()` → `UploadService.uploadVideo(file)`
 
-4. **Service Call**: `stream-sphere-client/src/app/services/upload.service.ts`
-   - Sends POST request to: `http://localhost:3000/api/upload-url`
+4. **API Call**: `POST /api/upload-url`
    - Payload: `{ fileName: "video.mp4", fileType: "video/mp4" }`
 
-#### Backend Flow:
-1. **Route Handler**: `stream-sphere-backend/routes/centralRoute.route.ts`
-   - Route: `POST /api/upload-url`
-   - Calls: `uploadController`
+#### Backend Flow
+1. **Route**: `POST /api/upload-url` → `uploadController`
 
 2. **Controller**: `stream-sphere-backend/controllers/upload.controller.ts`
-   - **Variable**: `fileName` - Original file name
-   - **Variable**: `fileType` - MIME type of video
-   - **Variable**: `s3Key` - S3 storage key
-   - **Variable**: `presignedUrl` - AWS S3 presigned URL
+   - `fileName` — Original file name
+   - `fileType` — MIME type of video
+   - `s3Key` — S3 storage key
+   - `presignedUrl` — AWS S3 presigned URL
 
 3. **Service**: `stream-sphere-backend/services/upload.service.ts`
-   - **Variable**: `s3Client` - AWS S3 client instance
-   - **Variable**: `bucketName` - S3 bucket name
-   - **Variable**: `uploadParams` - S3 upload parameters
-
-4. **AWS S3 Integration**:
    - Generates unique S3 key with timestamp
    - Creates presigned URL for direct upload
-   - Returns upload URL and S3 key
 
-#### Frontend Upload to S3:
-1. **Direct Upload**: Uploads file directly to S3 using presigned URL
-2. **Progress Tracking**: Monitors upload progress
-3. **Completion**: Calls `saveVideoMetadata()` after successful upload
+#### Frontend Upload to S3
+- Uploads file directly to S3 using presigned URL
+- Tracks upload progress
+- Calls `saveVideoMetadata()` after successful upload
 
-#### Video Metadata Saving:
-1. **Service Call**: `UploadService.saveVideoMetadata(metadata)`
-2. **API Endpoint**: `POST /api/save-video`
-3. **Payload**: Video metadata with S3 URL, user info, category
+#### Video Metadata Saving
+- Endpoint: `POST /api/save-video`
+- Payload: Video metadata with S3 URL, user info, category
 
-### 🔧 Key Variables & Their Purpose:
-- **`selectedFile`**: User's selected video file
-- **`uploadProgress`**: Upload progress percentage (0-100)
-- **`s3Key`**: Unique identifier for S3 storage
-- **`presignedUrl`**: Temporary URL for direct S3 upload
-- **`videoMetadata`**: Complete video information for database
+### 🔧 Key Variables
+| Variable | Purpose |
+|---|---|
+| `selectedFile` | User's selected video file |
+| `uploadProgress` | Upload progress percentage (0–100) |
+| `s3Key` | Unique identifier for S3 storage |
+| `presignedUrl` | Temporary URL for direct S3 upload |
+| `videoMetadata` | Complete video information for database |
 
-### 🛠️ Services Used:
-- **`UploadService`**: Handles file upload and metadata saving
-- **`S3Client`**: AWS S3 operations
-- **`PutObjectCommand`**: S3 upload command
-- **`getSignedUrl`**: Generates presigned URLs
+### 🛠️ Services Used
+- `UploadService` — Handles file upload and metadata saving
+- `S3Client` — AWS S3 operations
+- `PutObjectCommand` — S3 upload command
+- `getSignedUrl` — Generates presigned URLs
 
 ---
 
@@ -176,58 +186,37 @@ npm start
 
 ### 🔄 Complete Flow
 
-#### Frontend Flow:
+#### Frontend Flow
 1. **Entry Point**: `stream-sphere-client/src/app/components/video-list/video-list.component.ts`
-   - **Variable**: `videos` - Array of video objects
-   - **Variable**: `filteredVideos` - Videos filtered by category/search
-   - **Variable**: `selectedCategory` - Currently selected category
+   - `videos` — Array of video objects
+   - `filteredVideos` — Videos filtered by category/search
+   - `selectedCategory` — Currently selected category
 
-2. **Data Fetching**: `VideoService.getAllVideos()`
-   - Calls: `GET /api/home`
-   - Returns: Array of video objects with metadata
+2. **Data Fetching**: `VideoService.getAllVideos()` → `GET /api/home`
 
-3. **Category Filtering**: `VideoService.getVideosByCategory(category)`
-   - **Variable**: `category` - Selected category name
-   - Calls: `GET /api/videos/category/{category}`
+3. **Category Filtering**: `VideoService.getVideosByCategory(category)` → `GET /api/videos/category/{category}`
 
-#### Backend Flow:
-1. **Route Handler**: `stream-sphere-backend/routes/centralRoute.route.ts`
-   - Route: `GET /api/home` - All videos
-   - Route: `GET /api/videos/category/:category` - Category-specific videos
+#### Backend Flow
+1. **Routes**:
+   - `GET /api/home` — All videos
+   - `GET /api/videos/category/:category` — Category-specific videos
 
 2. **Controller**: `stream-sphere-backend/controllers/getVideo.controller.ts`
-   - **Method**: `getVideos()` - Returns all videos
-   - **Method**: `getVideosByCategory()` - Returns filtered videos
+   - `getVideos()` — Returns all videos
+   - `getVideosByCategory()` — Returns filtered videos
 
 3. **Service**: `stream-sphere-backend/services/getVideo.service.ts`
-   - **Variable**: `videos` - Database query results
-   - **Variable**: `category` - Filter category
-   - **Method**: `getAllVideos()` - Fetches all videos sorted by upload date
-   - **Method**: `getVideosByCategory()` - Fetches videos by category
+   - `getAllVideos()` — Fetches all videos sorted by upload date
+   - `getVideosByCategory()` — Fetches videos by category
 
-4. **Database Query**: `stream-sphere-backend/models/video.ts`
-   - **Schema Fields**:
-     - `title`: Video title
-     - `description`: Video description
-     - `S3_url`: AWS S3 video URL
-     - `user_id`: Uploader's user ID
-     - `user_name`: Uploader's name
-     - `category`: Video category
-     - `likes`: Number of likes
-     - `dislikes`: Number of dislikes
-     - `likedBy`: Array of user IDs who liked
-     - `dislikedBy`: Array of user IDs who disliked
+4. **Video Schema Fields** (`stream-sphere-backend/models/video.ts`):
+   - `title`, `description`, `S3_url`, `user_id`, `user_name`
+   - `category`, `likes`, `dislikes`, `likedBy`, `dislikedBy`
 
-### 🔧 Key Variables & Their Purpose:
-- **`videos`**: Array of all video objects from database
-- **`filteredVideos`**: Videos filtered by category or search
-- **`selectedCategory`**: Currently active category filter
-- **`category`**: Database field for video categorization
-
-### 🛠️ Services Used:
-- **`VideoService`**: Handles video data fetching and filtering
-- **`Video.find()`**: MongoDB query for video retrieval
-- **`Video.find().sort()`**: Sorted video retrieval by upload date
+### 🛠️ Services Used
+- `VideoService` — Handles video data fetching and filtering
+- `Video.find()` — MongoDB query for video retrieval
+- `Video.find().sort()` — Sorted video retrieval by upload date
 
 ---
 
@@ -235,89 +224,47 @@ npm start
 
 ### 🔄 Complete Flow
 
-#### Frontend Flow:
+#### Frontend Flow
 1. **Entry Point**: `stream-sphere-client/src/app/components/video-player/video-player.component.ts`
-   - **Variable**: `currentUserId` - Logged-in user's ID
-   - **Variable**: `userReaction` - User's current reaction ('liked', 'disliked', 'none')
-   - **Variable**: `isLiking` - Boolean to prevent double-clicks
-   - **Variable**: `isDisliking` - Boolean to prevent double-clicks
+   - `currentUserId` — Logged-in user's ID
+   - `userReaction` — User's current reaction (`'liked'`, `'disliked'`, `'none'`)
+   - `isLiking` / `isDisliking` — Booleans to prevent double-clicks
 
-2. **Authentication Check**: `checkUserAuthentication()`
-   - Reads JWT token from localStorage
-   - **Variable**: `userData` - Parsed user data from localStorage
-   - **Variable**: `token` - JWT token for API authentication
+2. **Actions**:
+   - `onLikeClick()` → `VideoService.likeVideo(videoId)`
+   - `onDislikeClick()` → `VideoService.dislikeVideo(videoId)`
 
-3. **Like Action**: `onLikeClick()`
-   - Calls: `VideoService.likeVideo(videoId)`
-   - **Variable**: `videoId` - Target video's unique ID
+3. **API Calls**:
+   - `POST /api/videos/{videoId}/like`
+   - `POST /api/videos/{videoId}/dislike`
+   - `GET /api/videos/{videoId}/reaction`
 
-4. **Dislike Action**: `onDislikeClick()`
-   - Calls: `VideoService.dislikeVideo(videoId)`
-
-#### Service Layer:
-1. **Video Service**: `stream-sphere-client/src/app/services/video.service.ts`
-   - **Method**: `likeVideo(videoId)`
-   - **Method**: `dislikeVideo(videoId)`
-   - **Method**: `getUserReaction(videoId)`
-   - **Variable**: `headers` - HTTP headers with JWT token
-   - **Variable**: `token` - JWT token from localStorage
-
-2. **API Calls**:
-   - `POST /api/videos/{videoId}/like` - Like video
-   - `POST /api/videos/{videoId}/dislike` - Dislike video
-   - `GET /api/videos/{videoId}/reaction` - Get user's reaction
-
-#### Backend Flow:
-1. **Route Handler**: `stream-sphere-backend/routes/centralRoute.route.ts`
-   - Routes protected by `authenticateJWT` middleware
-   - **Variable**: `videoId` - Video ID from URL parameter
+#### Backend Flow
+1. **Routes**: Protected by `authenticateJWT` middleware
 
 2. **JWT Authentication**: `stream-sphere-backend/services/auth.service.ts`
-   - **Method**: `authenticateJWT(req, res, next)`
-   - **Variable**: `authHeader` - Authorization header
-   - **Variable**: `token` - Extracted JWT token
-   - **Variable**: `decoded` - Decoded JWT payload
-   - **Variable**: `req.user` - User data attached to request
+   - `authenticateJWT(req, res, next)` middleware
+   - Extracts and verifies JWT from `Authorization` header
+   - Attaches decoded user to `req.user`
 
-3. **Controller**: `stream-sphere-backend/controllers/getVideo.controller.ts`
-   - **Method**: `likeVideo(req, res)`
-   - **Method**: `dislikeVideo(req, res)`
-   - **Method**: `getUserReaction(req, res)`
-   - **Variable**: `userId` - User ID from JWT token
-   - **Variable**: `videoId` - Target video ID
+3. **Database Logic**:
+   - **Like**: If already liked → unlike; if disliked → switch; else → add like
+   - **Dislike**: If already disliked → remove; if liked → switch; else → add dislike
 
-4. **Service**: `stream-sphere-backend/services/getVideo.service.ts`
-   - **Method**: `likeVideo(videoId, userId)`
-   - **Method**: `dislikeVideo(videoId, userId)`
-   - **Method**: `getUserReaction(videoId, userId)`
-   - **Variable**: `video` - Video document from database
-   - **Variable**: `likedBy` - Array of user IDs who liked
-   - **Variable**: `dislikedBy` - Array of user IDs who disliked
+### 🔧 Key Variables
+| Variable | Purpose |
+|---|---|
+| `currentUserId` | Logged-in user's unique identifier |
+| `userReaction` | Current user's reaction state |
+| `isLiking`/`isDisliking` | Flags to prevent double-clicks |
+| `likedBy`/`dislikedBy` | Arrays tracking which users reacted |
+| `likes`/`dislikes` | Count of total reactions |
 
-5. **Database Operations**:
-   - **Like Logic**: 
-     - If user already liked → unlike (remove from likedBy, decrease likes)
-     - If user disliked → remove dislike and add like
-     - If no reaction → add like
-   - **Dislike Logic**:
-     - If user already disliked → remove dislike
-     - If user liked → remove like and add dislike
-     - If no reaction → add dislike
-
-### 🔧 Key Variables & Their Purpose:
-- **`currentUserId`**: Logged-in user's unique identifier
-- **`userReaction`**: Current user's reaction state ('liked', 'disliked', 'none')
-- **`isLiking/isDisliking`**: Boolean flags to prevent double-clicks
-- **`likedBy/dislikedBy`**: Arrays tracking which users reacted
-- **`likes/dislikes`**: Count of total reactions
-- **`req.user.userId`**: User ID extracted from JWT token
-
-### 🛠️ Services Used:
-- **`VideoService`**: Frontend service for like/dislike API calls
-- **`authenticateJWT`**: Middleware for JWT token verification
-- **`jwt.verify()`**: JWT token verification
-- **`Video.findById()`**: Database video lookup
-- **`video.save()`**: Database video update
+### 🛠️ Services Used
+- `VideoService` — Frontend service for like/dislike API calls
+- `authenticateJWT` — Middleware for JWT token verification
+- `jwt.verify()` — JWT token verification
+- `Video.findById()` / `video.save()` — Database operations
 
 ---
 
@@ -325,68 +272,30 @@ npm start
 
 ### 🔄 Complete Flow
 
-#### Frontend Flow:
+#### Frontend Flow
 1. **Entry Point**: `stream-sphere-client/src/app/components/video-player/video-player.component.ts`
-   - **Variable**: `video` - Complete video object
-   - **Variable**: `safeVideoUrl` - Sanitized video URL
-   - **Variable**: `loading` - Loading state boolean
-   - **Variable**: `error` - Error message string
+   - `video` — Complete video object
+   - `safeVideoUrl` — Sanitized video URL
+   - `loading` / `error` — Loading and error state
+   - `isOwner` — Boolean if current user owns the video
 
-2. **Route Parameter**: Gets video ID from URL
-   - **Variable**: `videoId` - Video ID from route parameter
+2. **URL Sanitization**: `DomSanitizer.bypassSecurityTrustResourceUrl()`
 
-3. **Data Loading**: `loadVideo(videoId)`
-   - Calls: `VideoService.getAllVideos()`
-   - Finds specific video by ID
-   - **Variable**: `videos` - Array of all videos
-   - **Variable**: `video` - Found video object
+3. **Authentication Check**: `checkUserAuthentication()`
+   - Reads JWT token from localStorage
+   - Sets `currentUserId` and `isOwner`
 
-4. **URL Sanitization**: `DomSanitizer.bypassSecurityTrustResourceUrl()`
-   - **Variable**: `safeVideoUrl` - Safe video URL for Angular
+#### Video Display
+- HTML5 video player with controls
+- Video title, description, upload date, category, uploader name
+- Like/dislike section with counts and current user reaction
+- Delete button (owner only)
 
-5. **Authentication Check**: `checkUserAuthentication()`
-   - **Variable**: `userData` - User data from localStorage
-   - **Variable**: `token` - JWT token
-   - **Variable**: `currentUserId` - Logged-in user ID
-   - **Variable**: `isOwner` - Boolean if user owns the video
-
-#### Video Display:
-1. **Video Element**: HTML5 video player
-   - **Variable**: `safeVideoUrl` - Video source URL
-   - **Variable**: `controls` - Video controls enabled
-
-2. **Video Information**:
-   - **Variable**: `video.title` - Video title
-   - **Variable**: `video.description` - Video description
-   - **Variable**: `video.uploadedAt` - Upload date
-   - **Variable**: `video.category` - Video category
-   - **Variable**: `video.user_name` - Uploader name
-
-3. **Like/Dislike Section**:
-   - **Variable**: `video.likes` - Total like count
-   - **Variable**: `video.dislikes` - Total dislike count
-   - **Variable**: `userReaction` - User's current reaction
-   - **Variable**: `currentUserId` - User authentication status
-
-#### Delete Functionality (Owner Only):
-1. **Owner Check**: `isOwner` boolean
-2. **Delete Method**: `onDeleteClick()`
-   - **Variable**: `video._id` - Video ID to delete
-   - **Variable**: `currentUserId` - User ID for authorization
-
-### 🔧 Key Variables & Their Purpose:
-- **`video`**: Complete video object with all metadata
-- **`safeVideoUrl`**: Sanitized video URL for Angular security
-- **`loading`**: Boolean for loading state management
-- **`error`**: String for error message display
-- **`isOwner`**: Boolean indicating if current user owns the video
-- **`currentUserId`**: Logged-in user's ID for authentication
-
-### 🛠️ Services Used:
-- **`VideoService`**: Fetches video data
-- **`DomSanitizer`**: Sanitizes video URLs
-- **`ActivatedRoute`**: Gets route parameters
-- **`Router`**: Handles navigation
+### 🛠️ Services Used
+- `VideoService` — Fetches video data
+- `DomSanitizer` — Sanitizes video URLs
+- `ActivatedRoute` — Gets route parameters
+- `Router` — Handles navigation
 
 ---
 
@@ -394,50 +303,25 @@ npm start
 
 ### 🔄 Complete Flow
 
-#### Video Cards:
-1. **Component**: `stream-sphere-client/src/app/components/video-card/video-card.component.ts`
-   - **Variable**: `video` - Video object input
-   - **Variable**: `safeUrl` - Sanitized video URL
-   - **Variable**: `flipEnabled` - Boolean for flip card feature
-   - **Variable**: `flip` - Boolean for flip state
+#### Video Cards
+- **Component**: `stream-sphere-client/src/app/components/video-card/video-card.component.ts`
+- `video` — Video object input
+- `safeUrl` — Sanitized video URL
+- `flip` — Boolean for flip state (flip shows extra details)
+- `onVideoClick()` — Navigates to video player
+- `onFlipClick()` — Toggles card flip (stops propagation)
 
-2. **URL Sanitization**: `DomSanitizer.bypassSecurityTrustResourceUrl()`
-   - **Variable**: `safeUrl` - Safe video URL
+#### Category Slider
+- **Component**: `stream-sphere-client/src/app/components/category-slider/category-slider.component.ts`
+- `categories` — Array of available categories
+- `selectedCategory` — Currently selected category
+- `onCategorySelect(category)` → `VideoService.setCategory(category)`
+- Uses `BehaviorSubject` (`categorySubject`) for reactive category updates
 
-3. **Click Handling**: `onVideoClick()`
-   - **Variable**: `video._id` - Video ID for navigation
-   - Navigates to video player page
-
-4. **Flip Functionality**: `onFlipClick()`
-   - **Variable**: `flip` - Toggles flip state
-   - **Variable**: `event.stopPropagation()` - Prevents card click
-
-#### Category Slider:
-1. **Component**: `stream-sphere-client/src/app/components/category-slider/category-slider.component.ts`
-   - **Variable**: `categories` - Array of available categories
-   - **Variable**: `selectedCategory` - Currently selected category
-
-2. **Category Selection**: `onCategorySelect(category)`
-   - **Variable**: `category` - Selected category name
-   - Calls: `VideoService.setCategory(category)`
-
-3. **Service Communication**: `stream-sphere-client/src/app/services/video.service.ts`
-   - **Variable**: `categorySubject` - BehaviorSubject for category changes
-   - **Variable**: `category$` - Observable for category updates
-
-### 🔧 Key Variables & Their Purpose:
-- **`video`**: Input video object with all metadata
-- **`safeUrl`**: Sanitized video URL for preview
-- **`flipEnabled`**: Boolean to enable/disable flip feature
-- **`flip`**: Boolean for current flip state
-- **`categories`**: Array of available video categories
-- **`selectedCategory`**: Currently active category
-
-### 🛠️ Services Used:
-- **`VideoService`**: Manages category selection and video data
-- **`DomSanitizer`**: Sanitizes video URLs
-- **`Router`**: Handles navigation to video player
-- **`BehaviorSubject`**: Manages category state
+### 🛠️ Services Used
+- `VideoService` — Manages category selection and video data
+- `DomSanitizer` — Sanitizes video URLs
+- `BehaviorSubject` — Manages category state
 
 ---
 
@@ -445,47 +329,29 @@ npm start
 
 ### 🔄 Complete Flow
 
-#### User Profile:
-1. **Component**: `stream-sphere-client/src/app/components/user-profile/user-profile.component.ts`
-   - **Variable**: `user` - Current user object
-   - **Variable**: `userVideos` - Array of user's uploaded videos
-   - **Variable**: `displayedColumns` - Table column definitions
+#### User Profile
+- **Component**: `stream-sphere-client/src/app/components/user-profile/user-profile.component.ts`
+- Loads user data from localStorage on `ngOnInit()`
+- Fetches user's uploaded videos via `VideoService.getAllVideos()` filtered by `user_id`
 
-2. **Data Loading**: `ngOnInit()`
-   - **Variable**: `userData` - User data from localStorage
-   - **Variable**: `userId` - User ID for video filtering
+#### Video Management Table
+- Angular Material table with columns: `['title', 'category', 'uploadedAt', 'actions']`
+- `deleteVideo(videoId)` → `VideoService.deleteVideo(videoId, userId)`
+- `viewVideo(videoId)` → navigates to video player
 
-3. **Video Fetching**: `loadUserVideos()`
-   - Calls: `VideoService.getAllVideos()`
-   - Filters videos by `user_id`
-   - **Variable**: `userVideos` - Filtered video array
+### 🔧 Key Variables
+| Variable | Purpose |
+|---|---|
+| `user` | Current user object with profile information |
+| `userVideos` | Array of videos uploaded by current user |
+| `displayedColumns` | Array defining table column structure |
+| `dataSource` | `MatTableDataSource` for Material table |
 
-#### Video Management:
-1. **Video Table**: Material table with user's videos
-   - **Variable**: `displayedColumns` - ['title', 'category', 'uploadedAt', 'actions']
-   - **Variable**: `dataSource` - MatTableDataSource for table data
-
-2. **Delete Functionality**: `deleteVideo(videoId)`
-   - **Variable**: `videoId` - Video ID to delete
-   - **Variable**: `userId` - User ID for authorization
-   - Calls: `VideoService.deleteVideo(videoId, userId)`
-
-3. **Navigation**: `viewVideo(videoId)`
-   - **Variable**: `videoId` - Video ID for navigation
-   - Navigates to video player page
-
-### 🔧 Key Variables & Their Purpose:
-- **`user`**: Current user object with profile information
-- **`userVideos`**: Array of videos uploaded by current user
-- **`displayedColumns`**: Array defining table column structure
-- **`dataSource`**: MatTableDataSource for Material table
-- **`userId`**: Current user's ID for video filtering
-
-### 🛠️ Services Used:
-- **`VideoService`**: Fetches and manages video data
-- **`MatTableDataSource`**: Manages table data
-- **`Router`**: Handles navigation
-- **`localStorage`**: Stores user data
+### 🛠️ Services Used
+- `VideoService` — Fetches and manages video data
+- `MatTableDataSource` — Manages table data
+- `Router` — Handles navigation
+- `localStorage` — Stores user data
 
 ---
 
@@ -493,98 +359,29 @@ npm start
 
 ### 🔄 Complete Flow
 
-#### Frontend Flow:
-1. **Entry Points**: 
-   - **Video Player**: `stream-sphere-client/src/app/components/video-player/video-player.component.ts`
-   - **User Profile**: `stream-sphere-client/src/app/components/user-profile/user-profile.component.ts`
-   - **Video Card**: `stream-sphere-client/src/app/components/video-card/video-card.component.ts`
+#### Frontend Flow
+- Delete button shown only to video owners (checked via `currentUserId === video.user_id`)
+- Available from: Video Player, User Profile table, Video Card (flip view)
+- `onDeleteClick()` → `VideoService.deleteVideo(videoId, userId)`
 
-2. **Owner Verification**: 
-   - **Variable**: `isOwner` - Boolean indicating if current user owns the video
-   - **Variable**: `currentUserId` - Logged-in user's ID
-   - **Variable**: `video.user_id` - Video owner's ID
-   - Check: `currentUserId === video.user_id`
+#### Backend Flow
+1. **Route**: `DELETE /api/videos/:videoId`
 
-3. **Delete Button Display**: Only shown to video owners
-   - **Video Player**: Delete icon in video metadata section
-   - **User Profile**: Delete button in video management table
-   - **Video Card**: Delete button on card flip (if enabled)
+2. **Authorization Check**: `video.user_id !== userId` → 401 Unauthorized
 
-4. **Delete Confirmation**: `onDeleteClick()` method
-   - **Variable**: `video._id` - Video ID to delete
-   - **Variable**: `currentUserId` - User ID for authorization
-   - Calls: `VideoService.deleteVideo(videoId, userId)`
+3. **S3 File Deletion**: `DeleteObjectCommand` removes video from S3
 
-#### Backend Flow:
-1. **Route Handler**: `stream-sphere-backend/routes/centralRoute.route.ts`
-   - Route: `DELETE /api/videos/:videoId`
-   - Calls: `VideoController.deleteVideo(req, res)`
+4. **Database Deletion**: `Video.findByIdAndDelete(videoId)` — removes all metadata and reaction data (likes, dislikes, likedBy, dislikedBy)
 
-2. **Controller**: `stream-sphere-backend/controllers/getVideo.controller.ts`
-   - **Method**: `deleteVideo(req, res)`
-   - **Variable**: `videoId` - Video ID from route parameter
-   - **Variable**: `userId` - User ID from request body
-   - Calls: `videoService.deleteVideo(videoId, userId)`
+### ⚠️ Impact on Like/Dislike Data
+- All like/dislike counts and user arrays are permanently removed (hard delete)
+- No soft-delete or recovery mechanism
+- Re-uploaded videos start fresh with 0 likes/dislikes
 
-3. **Service**: `stream-sphere-backend/services/getVideo.service.ts`
-   - **Method**: `deleteVideo(videoId, userId)`
-   - **Variable**: `video` - Video document from database
-   - **Variable**: `s3Key` - S3 storage key extracted from S3_url
-   - **Variable**: `s3Url` - Complete S3 URL of video
-
-4. **Authorization Check**:
-   - **Variable**: `video.user_id` - Video owner's ID
-   - **Variable**: `userId` - Requesting user's ID
-   - Check: `video.user_id !== userId` → Unauthorized error
-
-5. **S3 File Deletion**:
-   - **Variable**: `s3Client` - AWS S3 client instance
-   - **Variable**: `bucketName` - S3 bucket name from environment
-   - **Variable**: `s3Key` - Extracted S3 key from URL
-   - **Command**: `DeleteObjectCommand` to remove video file from S3
-
-6. **Database Deletion**:
-   - **Method**: `Video.findByIdAndDelete(videoId)`
-   - **Impact**: Complete removal of video document and all associated data
-
-### 🔧 Key Variables & Their Purpose:
-- **`videoId`**: Unique identifier of video to delete
-- **`userId`**: ID of user requesting deletion (for authorization)
-- **`isOwner`**: Boolean indicating if user owns the video
-- **`s3Key`**: S3 storage key extracted from video URL
-- **`video.user_id`**: Original uploader's ID for ownership verification
-
-### 🛠️ Services Used:
-- **`VideoService.deleteVideo()`**: Handles video deletion API calls
-- **`S3Client`**: AWS S3 operations for file deletion
-- **`DeleteObjectCommand`**: S3 command to delete video files
-- **`Video.findByIdAndDelete()`**: MongoDB operation to remove video document
-
-### ⚠️ Impact on Like/Dislike Feature:
-
-#### What Gets Deleted:
-- **`likes` count** - Total number of likes
-- **`dislikes` count** - Total number of dislikes  
-- **`likedBy` array** - List of user IDs who liked the video
-- **`dislikedBy` array** - List of user IDs who disliked the video
-
-#### User Impact:
-- **Complete Data Loss**: All like/dislike data is permanently removed
-- **No Recovery**: No mechanism to recover deleted video data
-- **User Experience**: Users who previously liked/disliked the video lose that interaction history
-- **Fresh Start**: If same video is re-uploaded, it starts with 0 likes/dislikes
-
-#### Technical Considerations:
-- **Hard Delete**: Uses `findByIdAndDelete()` for complete removal
-- **No Soft Delete**: No option to mark as deleted instead of removing
-- **No Notifications**: Users aren't notified when videos they interacted with are deleted
-- **No Analytics**: No tracking of deleted videos or user reactions
-
-### 🔒 Security Features:
-- **Owner-Only Deletion**: Only video uploader can delete their videos
-- **Authorization Check**: Backend verifies user ownership before deletion
-- **S3 Cleanup**: Removes video files from cloud storage
-- **Database Cleanup**: Removes all video metadata and reaction data
+### 🔒 Security Features
+- Owner-only deletion enforced on both frontend and backend
+- S3 file cleanup on deletion
+- Full database cleanup of associated data
 
 ---
 
@@ -592,87 +389,21 @@ npm start
 
 ### 🔄 Complete Flow
 
-#### Backend Implementation:
-1. **Service Methods**: `stream-sphere-backend/services/getVideo.service.ts`
-   - **Method**: `getLikedVideos(userId: string)`
-   - **Method**: `getDislikedVideos(userId: string)`
-   - **Query**: `Video.find({ likedBy: userId })` / `Video.find({ dislikedBy: userId })`
-   - **Sorting**: `sort({ uploadedAt: -1 })` - Newest first
+#### Backend
+- `getLikedVideos(userId)` → `Video.find({ likedBy: userId }).sort({ uploadedAt: -1 })`
+- `getDislikedVideos(userId)` → `Video.find({ dislikedBy: userId }).sort({ uploadedAt: -1 })`
+- Routes: `GET /api/videos/liked` and `GET /api/videos/disliked` (both require `authenticateJWT`)
 
-2. **Controller Methods**: `stream-sphere-backend/controllers/getVideo.controller.ts`
-   - **Method**: `getLikedVideos(req, res)`
-   - **Method**: `getDislikedVideos(req, res)`
-   - **Authentication**: Uses JWT middleware for user verification
-   - **Variable**: `userId` - Extracted from JWT token
+#### Frontend
+- Sidebar buttons: "Liked Videos" and "Disliked Videos"
+- `loadLikedVideos()` and `loadDislikedVideos()` called in `ngOnInit()`
+- Sections shown/hidden via `showLikedVideosSection` and `showDislikedVideosSection` booleans
+- Videos displayed using `app-video-card` with flip animation disabled
+- Liked videos: green header (`#4caf50`); Disliked videos: red header (`#f44336`)
 
-3. **Routes**: `stream-sphere-backend/routes/centralRoute.route.ts`
-   - **Route**: `GET /api/videos/liked` - Requires authentication
-   - **Route**: `GET /api/videos/disliked` - Requires authentication
-   - **Middleware**: `authenticateJWT` for user verification
-
-#### Frontend Implementation:
-1. **Service Methods**: `stream-sphere-client/src/app/services/video.service.ts`
-   - **Method**: `getLikedVideos()` - Returns Observable<any[]>
-   - **Method**: `getDislikedVideos()` - Returns Observable<any[]>
-   - **Headers**: Includes JWT token in Authorization header
-
-2. **Component Properties**: `stream-sphere-client/src/app/components/user-profile/user-profile.component.ts`
-   - **Variable**: `likedVideos: any[]` - Array of liked videos
-   - **Variable**: `dislikedVideos: any[]` - Array of disliked videos
-   - **Variable**: `showLikedVideosSection: boolean` - Controls section visibility
-   - **Variable**: `showDislikedVideosSection: boolean` - Controls section visibility
-
-3. **Loading Methods**:
-   - **Method**: `loadLikedVideos()` - Fetches user's liked videos
-   - **Method**: `loadDislikedVideos()` - Fetches user's disliked videos
-   - **Called**: In `ngOnInit()` for automatic loading
-
-4. **Navigation Methods**:
-   - **Method**: `showLikedVideos()` - Shows liked videos section
-   - **Method**: `showDislikedVideos()` - Shows disliked videos section
-   - **Sidebar**: Added buttons for navigation
-
-#### UI Components:
-1. **Sidebar Navigation**: `stream-sphere-client/src/app/components/user-profile/user-profile.component.html`
-   - **Button**: "Liked Videos" - Triggers `showLikedVideos()`
-   - **Button**: "Disliked Videos" - Triggers `showDislikedVideos()`
-
-2. **Liked Videos Section**:
-   - **Condition**: `*ngIf="showLikedVideosSection"`
-   - **Empty State**: Shows "No liked videos yet." when empty
-   - **Video Grid**: Uses `app-video-card` component
-   - **Styling**: Green header color (`#4caf50`)
-
-3. **Disliked Videos Section**:
-   - **Condition**: `*ngIf="showDislikedVideosSection"`
-   - **Empty State**: Shows "No disliked videos yet." when empty
-   - **Video Grid**: Uses `app-video-card` component
-   - **Styling**: Red header color (`#f44336`)
-
-### 🔧 Key Variables & Their Purpose:
-- **`likedVideos`**: Array of videos liked by current user
-- **`dislikedVideos`**: Array of videos disliked by current user
-- **`showLikedVideosSection`**: Boolean to control liked videos section visibility
-- **`showDislikedVideosSection`**: Boolean to control disliked videos section visibility
-- **`userId`**: Current user's ID for filtering videos
-
-### 🛠️ Services Used:
-- **`VideoService.getLikedVideos()`**: Fetches user's liked videos from backend
-- **`VideoService.getDislikedVideos()`**: Fetches user's disliked videos from backend
-- **`JWT Authentication`**: Ensures only authenticated users can access their data
-- **`VideoCardComponent`**: Displays videos in grid format
-
-### 🎨 UI Features:
-- **Responsive Grid**: Videos displayed in responsive grid layout
-- **Color Coding**: Green for liked videos, red for disliked videos
-- **Empty States**: User-friendly messages when no videos exist
-- **Consistent Styling**: Matches existing user profile design
-- **Flip Disabled**: Video cards have flip animation disabled in profile view
-
-### 🔒 Security Features:
-- **JWT Authentication**: All requests require valid JWT token
-- **User Isolation**: Users can only see their own liked/disliked videos
-- **Backend Validation**: Server verifies user identity before returning data
+### 🔒 Security
+- JWT authentication required for all requests
+- Users can only access their own liked/disliked videos
 
 ---
 
@@ -680,301 +411,260 @@ npm start
 
 ### 🔄 Complete Flow
 
-#### Frontend Validation:
-1. **File Selection**: `stream-sphere-client/src/app/components/upload-video/upload-video.component.ts`
-   - **Method**: `onFileSelected(event: Event)`
-   - **Method**: `checkVideoDuration(file: File)`
-   - **Validation**: Checks if file is video type
-   - **Duration Check**: Uses HTML5 video element to get duration
-   - **Limit**: 120 seconds (2 minutes)
-   - **Variable**: `duration` - Video duration in seconds
-   - **Variable**: `selectedFile` - Selected video file
+#### Frontend Validation
+- `checkVideoDuration(file: File)` uses HTML5 `<video>` element to read metadata
+- Limit: 120 seconds
+- On violation: shows alert, clears file input
+- UI hint: `<small class="duration-limit">` displays limit text in italic gray
 
-2. **User Interface**: `stream-sphere-client/src/app/components/upload-video/upload-video.component.html`
-   - **Element**: `<small class="duration-limit">` - Shows duration limit
-   - **Styling**: `stream-sphere-client/src/app/components/upload-video/upload-video.component.css`
-   - **CSS Class**: `.duration-limit` - Italic gray text
+#### Backend Validation
+- `getVideoDuration(videoUrl)` uses `ffprobe-static` to analyze video
+- If `duration > 120` → throws error with message `'Video duration exceeds 2 minutes...'`
+- Controller returns `400` status with the error message
 
-3. **Error Handling**: Frontend shows alert for duration violations
-   - **Message**: "Video duration exceeds 2 minutes. Please select a shorter video."
-   - **Action**: Clears file input and selected file
+### 🔧 Key Variables
+| Variable | Purpose |
+|---|---|
+| `duration` | Video duration in seconds (frontend & backend) |
+| `selectedFile` | Selected video file object (frontend) |
+| `ffprobe` | FFmpeg binary for video analysis (backend) |
 
-#### Backend Validation:
-1. **Service Layer**: `stream-sphere-backend/services/saveVideo.service.ts`
-   - **Method**: `getVideoDuration(videoUrl: string)`
-   - **Tool**: Uses `ffprobe-static` to analyze video duration
-   - **Package**: `ffprobe-static` - FFmpeg binary for video analysis
-   - **Process**: Spawns ffprobe process to get duration
-   - **Variable**: `duration` - Video duration in seconds
-   - **Limit**: 120 seconds (2 minutes)
-
-2. **Validation Logic**:
-   ```typescript
-   if (duration > 120) {
-     throw new Error('Video duration exceeds 2 minutes (120 seconds). Please upload a shorter video.');
-   }
-   ```
-
-3. **Controller Handling**: `stream-sphere-backend/controllers/saveVideo.controller.ts`
-   - **Error Check**: `error.message.includes('duration exceeds')`
-   - **Response**: Returns 400 status with duration error message
-   - **Variable**: `error.message` - Duration violation message
-
-#### Key Variables & Services:
-- **`duration`**: Video duration in seconds (frontend & backend)
-- **`selectedFile`**: Selected video file object (frontend)
-- **`ffprobe`**: FFmpeg binary for video analysis (backend)
-- **`getVideoDuration()`**: Function to extract video duration (backend)
-- **`checkVideoDuration()`**: Function to check duration (frontend)
-- **Services Used**: HTML5 Video API, FFprobe, Error handling
-
-#### Error Flow:
-1. **Frontend**: User selects video > Duration check > Alert if > 2min
-2. **Backend**: Video upload > Duration analysis > Error if > 2min
-3. **Response**: 400 status with clear error message
-4. **User**: Sees error message and can try again
-
-#### Technical Implementation:
-- **Frontend**: Uses HTML5 video element for metadata extraction
-- **Backend**: Uses FFprobe for accurate video duration analysis
-- **Validation**: Double validation (frontend + backend)
-- **Error Handling**: Graceful fallback if duration check fails
-- **User Experience**: Clear messaging and visual indicators
+### 🛠️ Services Used
+- HTML5 Video API — Frontend duration check
+- `ffprobe-static` — Backend accurate duration analysis
+- Double validation (frontend + backend) for robustness
 
 ---
 
-## FEATURE 11: VIDEO CAROUSEL - TOP LIKED VIDEOS
+## FEATURE 11: VIDEO CAROUSEL – TOP LIKED VIDEOS
 
 ### 🔄 Complete Flow
 
-#### Backend Implementation:
-1. **Service Method**: `stream-sphere-backend/services/getVideo.service.ts`
-   - **Method**: `getTopLikedVideos()`
-   - **Query**: `Video.find({}).sort({ likes: -1 }).limit(3)`
-   - **Purpose**: Gets top 3 most liked videos from entire database
+#### Backend
+- `getTopLikedVideos()` → `Video.find({}).sort({ likes: -1 }).limit(3)`
+- Route: `GET /api/videos/top-liked` (public, no authentication required)
 
-2. **Controller Method**: `stream-sphere-backend/controllers/getVideo.controller.ts`
-   - **Method**: `getTopLikedVideos(req, res)`
-   - **Route**: `GET /api/videos/top-liked`
-   - **Authentication**: No authentication required (public endpoint)
+#### Frontend
+- **Component**: `stream-sphere-client/src/app/components/video-carousel/`
+- `topVideos` — Array of top 3 most liked videos
+- `currentIndex` — Current slide index (0–2)
+- Auto-rotation every 3 seconds via `setInterval`
+- Previous/Next buttons + dot indicators
+- Timer cleaned up in `ngOnDestroy`
 
-3. **Route**: `stream-sphere-backend/routes/centralRoute.route.ts`
-   - **Route**: `GET /api/videos/top-liked`
-   - **Middleware**: No authentication required
-
-#### Frontend Implementation:
-1. **Service Method**: `stream-sphere-client/src/app/services/video.service.ts`
-   - **Method**: `getTopLikedVideos()` - Returns Observable<any[]>
-   - **No Headers**: Public endpoint, no JWT token required
-
-2. **Carousel Component**: `stream-sphere-client/src/app/components/video-carousel/`
-   - **Component**: `VideoCarouselComponent`
-   - **Auto-rotation**: Every 3 seconds using `setInterval`
-   - **Navigation**: Previous/Next buttons and indicator dots
-   - **Lifecycle**: Proper cleanup in `ngOnDestroy`
-
-3. **Integration**: `stream-sphere-client/src/app/components/video-list/`
-   - **Position**: Carousel appears above category slider and video list
-   - **Independence**: Carousel is not affected by category filtering
-   - **Responsive**: Adapts to different screen sizes
-
-#### Key Variables & Services:
-- **`topVideos`**: Array of top 3 most liked videos
-- **`currentIndex`**: Current slide index (0-2)
-- **`interval`**: Auto-rotation timer reference
-- **`getTopLikedVideos()`**: Service method to fetch trending videos
-- **Services Used**: VideoService, setInterval, VideoCardComponent
-
-#### Auto-Rotation Features:
-- **Timer**: 3-second interval for automatic slide changes
-- **Loop**: Continuous rotation through all 3 videos
-- **Manual Override**: User can click navigation buttons
-- **Cleanup**: Timer cleared on component destruction
-
-#### UI Features:
-- **Gradient Background**: Purple gradient with modern styling
-- **Navigation Controls**: Previous/Next buttons with hover effects
-- **Indicators**: Dot indicators showing current slide
-- **Responsive Design**: Adapts to mobile and desktop screens
-- **Smooth Transitions**: CSS transitions for slide changes
-
-#### Technical Implementation:
-- **Component Lifecycle**: Proper initialization and cleanup
-- **Memory Management**: Timer cleanup prevents memory leaks
-- **Error Handling**: Graceful handling of API failures
-- **Performance**: Efficient rendering with minimal DOM updates
-- **Accessibility**: Keyboard navigation and screen reader support
+### 🎨 UI Features
+- Purple gradient background with modern styling
+- Navigation controls with hover effects
+- Dot indicators showing current slide
+- Smooth CSS transitions
+- Responsive for mobile and desktop
 
 ---
 
-## FEATURE 12: HERO CAROUSEL - NETFLIX-STYLE AUTO-ADVANCE
+## FEATURE 12: HERO CAROUSEL – NETFLIX-STYLE AUTO-ADVANCE
 
 ### 🔄 Complete Flow
 
-#### Backend Implementation:
-1. **Service Method**: `stream-sphere-backend/services/getVideo.service.ts`
-   - **Method**: `getTopLikedVideos()`
-   - **Query**: `Video.find({}).sort({ likes: -1 }).limit(3)`
-   - **Purpose**: Gets top 3 most liked videos from entire database
-   - **Response**: Array of video objects with metadata
+#### Backend
+- Same endpoint as Feature 11: `GET /api/videos/top-liked`
 
-2. **Controller Method**: `stream-sphere-backend/controllers/getVideo.controller.ts`
-   - **Method**: `getTopLikedVideos(req, res)`
-   - **Route**: `GET /api/videos/top-liked`
-   - **Authentication**: No authentication required (public endpoint)
+#### Frontend
+- **Component**: `stream-sphere-client/src/app/components/hero-carousel/hero-carousel.component.ts`
+- Standalone Angular 17 component
 
-3. **Route**: `stream-sphere-backend/routes/centralRoute.route.ts`
-   - **Route**: `GET /api/videos/top-liked`
-   - **Middleware**: No authentication required
+#### Key Variables
+| Variable | Purpose |
+|---|---|
+| `videos` | Array of top 3 most liked videos |
+| `currentIndex` | Current video index (0–2) |
+| `autoAdvanceTimer` | Timer reference for 8-second auto-advance |
+| `AUTO_ADVANCE_INTERVAL` | 8000ms auto-advance interval |
+| `intersectionObserver` | Detects carousel visibility in viewport |
+| `isLoading` / `error` | Loading and error state |
 
-#### Frontend Implementation:
-1. **Component**: `stream-sphere-client/src/app/components/hero-carousel/hero-carousel.component.ts`
-   - **Standalone Component**: Angular 17 standalone component
-   - **Imports**: CommonModule for Angular directives
-   - **ViewChild**: `@ViewChild('videoElement')` for video element reference
+#### Auto-Advance Behavior
+- Advances every 8 seconds when carousel is visible
+- Pauses when tab is switched; resumes on return
+- Manual navigation (arrows/thumbnails) resets the timer
+- `IntersectionObserver` with 30% threshold triggers play/pause
 
-2. **Key Variables**:
-   - **`videos: Video[]`**: Array of top 3 most liked videos
-   - **`currentIndex: number`**: Current video index (0-2)
-   - **`isLoading: boolean`**: Loading state for API calls
-   - **`error: string`**: Error message for failed requests
-   - **`autoAdvanceTimer: any`**: Timer reference for auto-advance
-   - **`AUTO_ADVANCE_INTERVAL: number`**: 8000ms (8 seconds) auto-advance interval
-   - **`intersectionObserver: IntersectionObserver`**: Visibility detection
-   - **`visibilityChangeHandler: () => void`**: Tab visibility change handler
+#### Navigation
+- Arrow buttons: `previousVideo()` / `nextVideo()` with `stopPropagation()`
+- Clickable thumbnail indicators for direct access
+- "Play Now" button navigates to `/video/:id`
 
-3. **Auto-Advance Features**:
-   - **Timer Management**: `startAutoAdvanceTimer()` and `stopAutoAdvanceTimer()`
-   - **Smart Timing**: Only advances when video is visible and playing
-   - **Tab Awareness**: Pauses on tab switch, resumes on return
-   - **Manual Override**: Resets timer when user navigates manually
-   - **Cleanup**: Proper timer cleanup on component destruction
+#### Lifecycle Management
+- `ngOnInit()`: loads videos, sets up IntersectionObserver and tab visibility listener
+- `ngOnDestroy()`: clears timer, disconnects observer, removes event listener
 
-4. **Intersection Observer**:
-   - **Purpose**: Detects when carousel is visible in viewport
-   - **Threshold**: 30% visibility triggers play/pause
-   - **Mobile Friendly**: Works on all devices without hover dependency
-   - **Performance**: Efficient visibility detection without polling
-
-5. **Video Control**:
-   - **Automatic Play**: Video plays when visible in viewport
-   - **Automatic Pause**: Video pauses when not visible
-   - **Tab Visibility**: Pauses on tab switch, resumes on return
-   - **Error Handling**: Graceful fallback for video loading issues
-
-#### Navigation Features:
-1. **Arrow Navigation**: `previousVideo()` and `nextVideo()` methods
-   - **Event Handling**: `(click)="previousVideo()"` and `(click)="nextVideo()"`
-   - **Event Prevention**: `event.stopPropagation()` and `event.preventDefault()`
-   - **Timer Reset**: Resets auto-advance timer on manual navigation
-   - **Loop Navigation**: Wraps around from last to first video
-
-2. **Thumbnail Navigation**: Clickable thumbnail indicators
-   - **Direct Access**: Click thumbnail to jump to specific video
-   - **Visual Feedback**: Active thumbnail highlighted
-   - **Timer Reset**: Resets auto-advance timer on thumbnail click
-
-3. **Progress Indicator**: Visual progress bar
-   - **Video Count**: Shows current video number (e.g., "1 of 3")
-   - **Auto-Update**: Updates as videos change
-   - **Visual Progress**: Indicates carousel progress
-
-#### Video Player Integration:
-1. **"Play Now" Button**: `playNow()` method
-   - **Navigation**: Uses Angular Router to navigate to video player
-   - **Route**: `/video/${this.videos[this.currentIndex]._id}`
-   - **User Experience**: Direct access to full video player
-
-2. **Video Element Management**:
-   - **Template Reference**: `#videoElement` for direct video control
-   - **Event Handlers**: `(loadstart)`, `(canplay)`, `(error)` events
-   - **State Sync**: Video state synchronized with visibility and navigation
-
-#### Lifecycle Management:
-1. **Initialization**: `ngOnInit()`
-   - **Data Loading**: Calls `loadVideos()` to fetch top liked videos
-   - **Observer Setup**: Initializes intersection observer
-   - **Visibility Handler**: Sets up tab visibility change listener
-
-2. **Cleanup**: `ngOnDestroy()`
-   - **Timer Cleanup**: Clears auto-advance timer
-   - **Observer Cleanup**: Disconnects intersection observer
-   - **Event Cleanup**: Removes visibility change listener
-
-#### Error Handling & States:
-1. **Loading State**: Shows spinner while fetching data
-2. **Error State**: Shows error message with retry option
-3. **Empty State**: Shows message when no videos available
-4. **Debug Info**: Console logs for development debugging
-
-### 🔧 Key Variables & Their Purpose:
-- **`videos`**: Array of top 3 most liked videos from backend
-- **`currentIndex`**: Current video index (0-2) for navigation
-- **`autoAdvanceTimer`**: Timer reference for 8-second auto-advance
-- **`AUTO_ADVANCE_INTERVAL`**: 8000ms interval for auto-advance
-- **`intersectionObserver`**: Detects carousel visibility in viewport
-- **`isLoading`**: Boolean for loading state management
-- **`error`**: String for error message display
-
-### 🛠️ Services Used:
-- **`VideoService.getTopLikedVideos()`**: Fetches top liked videos from backend
-- **`IntersectionObserver`**: Detects element visibility in viewport
-- **`setInterval/clearInterval`**: Manages auto-advance timer
-- **`document.addEventListener`**: Handles tab visibility changes
-- **`Router`**: Navigates to video player on "Play Now" click
-
-### 🎨 UI Features:
-- **Netflix-Style Design**: Full-width hero carousel with overlay text
-- **Responsive Layout**: Adapts to mobile, tablet, and desktop screens
-- **Smooth Transitions**: CSS transitions for video changes
-- **Visual Feedback**: Hover effects on navigation buttons
-- **Progress Indicator**: Shows current video position
-- **Loading States**: Spinner and error handling with retry options
-
-### 📱 Mobile & Accessibility:
-- **Touch-Friendly**: Large touch targets for mobile navigation
-- **Keyboard Accessible**: Tab navigation and keyboard controls
-- **Screen Reader Support**: Proper ARIA labels and semantic HTML
-- **Performance Optimized**: Efficient rendering and memory management
-
-### 🔒 Technical Features:
-- **Memory Management**: Proper cleanup prevents memory leaks
-- **Error Resilience**: Graceful handling of network and video errors
-- **Performance**: Efficient intersection observer and timer management
-- **Cross-Browser**: Works on all modern browsers
-- **Mobile Optimized**: Touch-friendly and responsive design
+### 🎨 UI Features
+- Full-width Netflix-style hero layout with overlay text
+- Progress indicator showing current video position (e.g., "1 of 3")
+- Loading spinner and error state with retry option
+- Touch-friendly and keyboard accessible
 
 ---
 
-## 🔧 TECHNICAL ARCHITECTURE
+## FEATURE 13: WATCH HISTORY
 
-### Frontend Architecture:
+### 🔄 Complete Flow
+
+#### Backend
+1. **Model**: `stream-sphere-backend/models/history.ts` (or history field on `User` model)
+   - Stores `userId`, `videoId`, `watchedAt` timestamp
+   - Capped or deduplicated to avoid duplicates on re-watch
+
+2. **Service**: `stream-sphere-backend/services/history.service.ts`
+   - `addToHistory(userId, videoId)` — Adds/updates watch entry
+   - `getHistory(userId)` — Returns user's watch history sorted by `watchedAt` descending
+
+3. **Controller**: `stream-sphere-backend/controllers/history.controller.ts`
+   - `addToHistory(req, res)` — Extracts `userId` from JWT, records video watch
+   - `getHistory(req, res)` — Returns paginated history for authenticated user
+
+4. **Routes**: `stream-sphere-backend/routes/centralRoute.route.ts`
+   - `POST /api/history` — Record a video watch (requires `authenticateJWT`)
+   - `GET /api/history` — Fetch watch history (requires `authenticateJWT`)
+
+#### Frontend
+1. **Triggering History**: `stream-sphere-client/src/app/components/video-player/video-player.component.ts`
+   - Calls `VideoService.addToHistory(videoId)` when video starts playing
+   - Only fires if user is authenticated (`currentUserId` is set)
+
+2. **History Page / Profile Section**:
+   - Displays recently watched videos using `app-video-card`
+   - Loaded via `VideoService.getHistory()` in `ngOnInit()`
+   - `historyVideos` — Array of recently watched video objects
+   - `showHistorySection` — Boolean to toggle section visibility
+
+3. **Sidebar Navigation**: "History" button in user profile sidebar
+
+### 🔧 Key Variables
+| Variable | Purpose |
+|---|---|
+| `historyVideos` | Array of recently watched videos |
+| `showHistorySection` | Boolean to toggle history section |
+| `watchedAt` | Timestamp of when video was watched |
+| `userId` | Used to isolate history per user |
+
+### 🔒 Security
+- JWT authentication required on all history endpoints
+- Users can only view their own history
+
+---
+
+## ⚡ Optimizations
+
+### 1. Request Throttling (setTimeout-based Debounce)
+
+To prevent excessive API calls on rapid user interactions (e.g., quickly clicking like/dislike or switching categories), a **3-second `setTimeout`** is used to delay sending requests until the user's action settles.
+
+**How it works:**
+- When the user triggers an action, a `setTimeout` is started
+- If the same action is triggered again before the timeout fires, the previous timer is cleared and restarted
+- The API call only fires once the user stops interacting for 3 seconds
+
+**Where it's used:**
+- Category filtering in the video list
+- Prevents a new API request on every single click when browsing categories rapidly
+
+```typescript
+let debounceTimer: any;
+
+onCategorySelect(category: string) {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    this.videoService.getVideosByCategory(category).subscribe(...);
+  }, 300); // adjust delay as needed
+}
+```
+
+> Note: This is a manual `setTimeout`-based approach rather than RxJS `debounceTime`, achieving the same effect without adding operator complexity.
+
+---
+
+### 2. Lazy Loading (Route-Level Code Splitting)
+
+All feature routes are **lazy loaded** in Angular, meaning their JavaScript bundles are only downloaded when the user navigates to that route.
+
+**Benefits:**
+- Significantly reduces initial bundle size and load time
+- Users only download code for pages they actually visit
+
+**Implementation** (`app.routes.ts`):
+```typescript
+{
+  path: 'upload',
+  loadComponent: () =>
+    import('./components/upload-video/upload-video.component')
+      .then(m => m.UploadVideoComponent)
+},
+{
+  path: 'profile',
+  loadComponent: () =>
+    import('./components/user-profile/user-profile.component')
+      .then(m => m.UserProfileComponent)
+},
+// ... all routes use loadComponent
+```
+
+---
+
+### 3. CloudFront CDN Caching
+
+Video files stored in **AWS S3** are served through **Amazon CloudFront**, Anthropic's global CDN, to improve video load times and reduce latency for users worldwide.
+
+**Benefits:**
+- Videos are cached at edge locations closer to the user
+- Reduces direct S3 bandwidth costs
+- Faster video start times, especially for popular/top-liked videos
+- The carousel and hero carousel (Features 11 & 12) benefit most, as they always show the same top 3 videos
+
+**Implementation:**
+- S3 bucket is configured as the CloudFront origin
+- Video `S3_url` fields in the database are replaced with CloudFront distribution URLs
+- Cache-control headers set appropriate TTLs for video content
+
+**Environment Variable:**
+```
+CLOUDFRONT_DOMAIN=https://xxxx.cloudfront.net
+```
+
+---
+
+## 🔧 Technical Architecture
+
+### Frontend
 - **Framework**: Angular 17 (Standalone Components)
 - **UI Library**: Angular Material
-- **State Management**: BehaviorSubject/Observables
+- **State Management**: BehaviorSubject / Observables
 - **HTTP Client**: Angular HttpClient
-- **Routing**: Angular Router
+- **Routing**: Angular Router with lazy loading
 
-### Backend Architecture:
+### Backend
 - **Framework**: Node.js with Express
 - **Database**: MongoDB with Mongoose
 - **Authentication**: JWT with Google OAuth
 - **File Storage**: AWS S3
+- **CDN**: Amazon CloudFront
 - **Language**: TypeScript
 
-### Key Environment Variables:
-- **`JWT_SECRET`**: Secret key for JWT token generation
-- **`GOOGLE_CLIENT_ID`**: Google OAuth client ID
-- **`MONGODB_URI`**: MongoDB connection string
-- **`AWS_REGION`**: AWS S3 region
-- **`AWS_ACCESS_KEY_ID`**: AWS access key
-- **`AWS_SECRET_ACCESS_KEY`**: AWS secret key
-- **`AWS_S3_BUCKET_NAME`**: S3 bucket name
+### Key Environment Variables
 
-### Database Schema:
+| Variable | Purpose |
+|---|---|
+| `JWT_SECRET` | Secret key for JWT token generation |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `MONGODB_URI` | MongoDB connection string |
+| `AWS_REGION` | AWS S3 region |
+| `AWS_ACCESS_KEY_ID` | AWS access key |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key |
+| `AWS_S3_BUCKET_NAME` | S3 bucket name |
+| `CLOUDFRONT_DOMAIN` | CloudFront distribution URL |
+
+### Database Schema
+
 - **User Model**: Stores user information and authentication data
-- **Video Model**: Stores video metadata, URLs, and reaction data
-- **Relationships**: Videos reference users via `user_id` field
-
-This comprehensive documentation ensures that even beginners can understand the codebase structure, debug issues, and extend functionality effectively.
-
+- **Video Model**: Stores video metadata, S3/CloudFront URLs, and reaction data (`likes`, `dislikes`, `likedBy`, `dislikedBy`)
+- **History Model**: Stores per-user watch history with timestamps
+- **Relationships**: Videos reference users via `user_id`; history references both users and videos
