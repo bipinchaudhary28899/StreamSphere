@@ -159,7 +159,8 @@ export class VideoController {
   static async deleteVideo(req: Request, res: Response) {
     try {
       const { videoId } = req.params;
-      const { userId } = req.body; // Get userId from request body
+      const userId = req.query.userId as string;
+      console.log("[deleteVideo controller] videoId:", videoId, "userId:", userId); // Get userId from request body
       
       if (!userId) {
         return res.status(400).json({ message: 'User ID is required' });

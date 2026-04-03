@@ -30,10 +30,10 @@ export class VideoService {
   }
 
   deleteVideo(videoId: string, userId: string): Observable<any> {
-    return this.http.delete<any>(`${this.apiUrl}/videos/${videoId}`, {
-      body: { userId },
-    });
-  }
+  return this.http.delete<any>(
+    `${this.apiUrl}/videos/${videoId}?userId=${encodeURIComponent(userId)}`
+  );
+}
 
   likeVideo(videoId: string) {
     const token = localStorage.getItem('token');

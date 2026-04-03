@@ -10,29 +10,20 @@ const s3 = new S3Client({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   },
-  requestChecksumCalculation: "WHEN_REQUIRED",  // ✅ add this
-  responseChecksumValidation: "WHEN_REQUIRED",  // ✅ add this
+  requestChecksumCalculation: "WHEN_REQUIRED",  
+  responseChecksumValidation: "WHEN_REQUIRED",  
 });
 
 // Updated: Accept filename and filetype as parameters
-export const generateSignedUrl = async (filename: string, filetype: string): Promise<string> => {
-    if (!process.env.AWS_S3_BUCKET_NAME) {
-      throw new Error('Bucket name is missing in the environment variables');
-    }
-  
-    const command = new PutObjectCommand({
-      Bucket: process.env.AWS_S3_BUCKET_NAME,
-      Key: `Videos/${Date.now()}-${filename}`,
-      ContentType: filetype,
-    });
-  
-    try {
-      const url = await getSignedUrl(s3, command, { expiresIn: 3600 });
-      return url;
-    } catch (error) {
-      console.error('Error generating signed URL:', error);
-      throw new Error('Error generating signed URL');
-    }
-  };
+export const generateSignedUrl = async (filename: string, filetype: string): Promise<{ signedUrl: string, key: string }> => {
+  const key = `Videos/${Date.now()}-${filename}`;
+  const command = new PutObjectCommand({
+    Bucket: process.env.AWS_S3_BUCKET_NAME,
+    Key: key,
+    ContentType: filetype,
+  });
+  const signedUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
+  return { signedUrl, key };  // return key too
+};
   
   

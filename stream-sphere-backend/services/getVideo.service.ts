@@ -174,7 +174,12 @@ export class VideoService {
 
     // Extract S3 key from S3_url
     const s3Url = video.S3_url;
-    const s3Key = s3Url.split('.amazonaws.com/')[1];
+console.log('[deleteVideo] s3Url from DB:', s3Url);
+console.log('[deleteVideo] includes cloudfront:', s3Url.includes('cloudfront.net'));
+console.log('[deleteVideo] includes amazonaws:', s3Url.includes('.amazonaws.com/'));
+    const s3Key = s3Url.includes('cloudfront.net') 
+  ? s3Url.split('cloudfront.net/')[1]
+  : s3Url.split('.amazonaws.com/')[1];
     if (!s3Key) {
       throw new Error('Could not extract S3 key from S3_url');
     }
