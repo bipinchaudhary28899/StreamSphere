@@ -27,6 +27,9 @@
 .app-header.scrolled {
   background: var(--bg-surface);
   box-shadow: var(--shadow-header);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .app-header.scrolled::before {

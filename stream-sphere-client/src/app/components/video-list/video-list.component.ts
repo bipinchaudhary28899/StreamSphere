@@ -54,6 +54,13 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     this.loadFirstPage();
 
+    // Refresh feed after a new video is uploaded
+    this.subs.push(
+      this.videoService.feedRefresh$.subscribe(() => {
+        this.resetAndLoad();
+      }),
+    );
+
     // React to category changes from the header.
     // If a search is already active, re-run it scoped to the new category
     // instead of switching back to the paginated feed.

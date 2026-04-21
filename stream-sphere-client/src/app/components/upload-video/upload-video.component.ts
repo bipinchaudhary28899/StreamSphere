@@ -1,6 +1,7 @@
 import { Component, Optional } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { UploadService } from '../../services/upload.service';
+import { VideoService } from '../../services/video.service';
 import { HttpEventType, HttpProgressEvent } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
@@ -32,6 +33,7 @@ export class UploadVideoComponent {
   constructor(
     private fb: FormBuilder,
     private uploadService: UploadService,
+    private videoService: VideoService,
     private router: Router,
     @Optional() public dialogRef: MatDialogRef<UploadVideoComponent> | null,
   ) {
@@ -130,6 +132,7 @@ export class UploadVideoComponent {
                 S3_url: cloudFrontUrl,  // CloudFront URL saved to MongoDB
                 user_id: user?.userId ?? 'UNKNOWN USER',
                 userName: user?.name ?? 'Unknown User',
+                user_profile_image: user?.profileImage ?? null,
               };
 
               this.uploadService.saveVideoMetadata(metadata).subscribe({
@@ -139,6 +142,8 @@ export class UploadVideoComponent {
                   this.uploadForm.reset();
                   this.selectedFile = null;
                   this.uploadProgress = 0;
+                  // Signal the video list to reload so the new video appears immediately
+                  this.videoService.triggerFeedRefresh();
                   setTimeout(() => {
                     if (this.dialogRef) {
                       this.dialogRef.close('uploaded');

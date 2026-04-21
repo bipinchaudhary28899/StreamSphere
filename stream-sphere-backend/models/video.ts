@@ -7,6 +7,7 @@ interface IVideo extends Document {
   S3_url: string;
   user_id: string;
   userName?: string;
+  user_profile_image?: string;
   uploadedAt: Date;
   category: string;
   likes: number;
@@ -23,6 +24,7 @@ const videoSchema: Schema = new Schema(
     S3_url: { type: String, required: true },
     user_id: { type: String, required: true },
     userName: { type: String },
+    user_profile_image: { type: String, default: null },
     uploadedAt: { type: Date, required: true },
     category: { type: String, default: 'Uncategorized' },
     likes: { type: Number, default: 0 },

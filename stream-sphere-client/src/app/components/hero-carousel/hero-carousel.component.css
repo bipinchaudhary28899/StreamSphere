@@ -431,31 +431,53 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .hero-carousel {
-    height: 68vh;
-    min-height: 420px;
+    height: calc(88vh + 60px);
+    min-height: calc(560px + 60px);
   }
 
-  .hero-content {
-    /* Keep buttons above the 80px card overlap on mobile */
-    padding: 0 2rem 130px 2rem;
-  }
-
-  .hero-title {
-    font-size: 2.2rem;
-  }
-
-  .hero-description {
-    font-size: 0.95rem;
-    -webkit-line-clamp: 2;
-  }
-
+  /* Hide description, read-more toggle, and meta — mobile shows title + buttons only */
+  .hero-description,
+  .desc-toggle-btn,
   .hero-meta {
-    gap: 1rem;
-    font-size: 0.9rem;
+    display: none !important;
   }
 
+  /* Span full usable area below the navbar; flex-center the title */
+  .hero-content {
+    top: 60px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    padding: 0 2rem 5rem 2rem;   /* bottom gap reserves room for pinned actions */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: visible;
+  }
+
+  /* Title: max 2 lines then ellipsis — buttons never shift with title length */
+  .hero-title {
+    font-size: 2rem;
+    margin-bottom: 0;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+  }
+
+  /* Pin action buttons to the bottom of the carousel regardless of title length.
+     bottom must exceed the card-section overlap (80px at ≤900px) so buttons
+     are never covered by the content-section z-index:5 overlay.
+     .hero-text is position:static, so this absolute is relative to .hero-content. */
   .hero-actions {
+    position: absolute;
+    bottom: 100px;   /* 80px card overlap + 20px breathing room */
+    left: 2rem;
+    right: 2rem;
     gap: 0.75rem;
+    flex-wrap: wrap;
   }
 
   .hero-play-btn {
@@ -493,24 +515,24 @@
   /* Hide thumbnail indicators — they fall inside the mini-card overlap zone */
   .hero-indicators { display: none; }
 
-  /* Tighter hero for mini-card list view */
   .hero-carousel {
-    height: 60vh;
-    min-height: 360px;
+    height: calc(60vh + 56px);
+    min-height: calc(360px + 56px);
   }
 
   .hero-content {
-    padding: 0 1.25rem 120px 1.25rem;
+    top: 56px;
+    padding: 0 1.25rem 5rem 1.25rem;
   }
 
   .hero-title {
-    font-size: 2.2rem;
+    font-size: 2rem;
   }
 
-  .hero-meta {
-    gap: 0.75rem;
-    font-size: 0.85rem;
-    margin-bottom: 1.25rem;
+  .hero-actions {
+    left: 1.25rem;
+    right: 1.25rem;
+    bottom: 80px;   /* 60px card overlap + 20px breathing room */
   }
 
   .hero-play-btn {
@@ -546,14 +568,14 @@
     font-size: 1.75rem;
   }
 
-  .hero-description {
-    font-size: 0.88rem;
-    /* On very small screens only show 2 lines to preserve button space */
-    -webkit-line-clamp: 2;
+  .hero-content {
+    padding: 0 1rem 5rem 1rem;
   }
 
-  .hero-content {
-    padding: 0 1rem 105px 1rem;
+  .hero-actions {
+    left: 1rem;
+    right: 1rem;
+    bottom: 80px;   /* 60px card overlap + 20px breathing room */
   }
 
   .hero-controls {

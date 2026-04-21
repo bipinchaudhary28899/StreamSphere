@@ -24,7 +24,6 @@ import { Subscription } from 'rxjs';
 import { User } from '../../models/user';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { WatchHistoryComponent } from '../watch-history/watch-history.component';
 
 // Using shared User interface from models
 
@@ -38,7 +37,6 @@ import { WatchHistoryComponent } from '../watch-history/watch-history.component'
     MatMenuModule,
     CommonModule,
     VideoCardComponent,
-    WatchHistoryComponent,
     MatTableModule,
     MatPaginatorModule,
     MatSortModule,
@@ -52,9 +50,29 @@ import { WatchHistoryComponent } from '../watch-history/watch-history.component'
 })
 export class UserProfileComponent implements OnInit {
   user: User | null = null;
-  profileImage: string = 'assets/default-avatar.png';
-  userName: string = 'Username';
-  userEmail: string = '';
+  // Initialise from localStorage immediately so there's no flash on load
+  profileImage: string = (() => {
+    try {
+      const u = localStorage.getItem('user');
+      if (u) {
+        const parsed = JSON.parse(u);
+        return parsed.profileImage || 'assets/thumbs/default-avatar.png';
+      }
+    } catch {}
+    return 'assets/thumbs/default-avatar.png';
+  })();
+  userName: string = (() => {
+    try {
+      const u = localStorage.getItem('user');
+      return u ? (JSON.parse(u).name || 'Username') : 'Username';
+    } catch { return 'Username'; }
+  })();
+  userEmail: string = (() => {
+    try {
+      const u = localStorage.getItem('user');
+      return u ? (JSON.parse(u).email || '') : '';
+    } catch { return ''; }
+  })();
   myVideos: any[] = [];
   likedVideos: any[] = [];
   dislikedVideos: any[] = [];
@@ -69,7 +87,6 @@ export class UserProfileComponent implements OnInit {
   selection = new Set<string>();
   isMobile: boolean = false;
   private loginSubscription: Subscription | null = null;
-  showHistorySection: boolean = false;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -147,6 +164,14 @@ export class UserProfileComponent implements OnInit {
     }
   }
 
+  get totalLikes(): number {
+    return this.myVideos.reduce((sum, v) => sum + (v.likes || 0), 0);
+  }
+
+  get totalViews(): number {
+    return this.myVideos.reduce((sum, v) => sum + (v.views || 0), 0);
+  }
+
   loadMyVideos(): void {
     if (!this.user) {
       return;
@@ -193,7 +218,7 @@ export class UserProfileComponent implements OnInit {
   }
 
   toggleDashboard() {
-    this.showDashboard = !this.showDashboard;
+    this.showDashboard = true;
     this.showMyVideosSection = false;
     this.showLikedVideosSection = false;
     this.showDislikedVideosSection = false;
@@ -233,7 +258,6 @@ export class UserProfileComponent implements OnInit {
     this.showMyVideosSection = section === 'myVideos';
     this.showLikedVideosSection = section === 'likedVideos';
     this.showDislikedVideosSection = section === 'dislikedVideos';
-    this.showHistorySection = section === 'history'; 
     this.dismissWelcome();
 
     if (section === 'myVideos' || section === 'dashboard') {
@@ -302,8 +326,10 @@ export class UserProfileComponent implements OnInit {
   }
 
   onImageError(event: Event): void {
-    console.log('Image failed to load, using default avatar:', event);
-    (event.target as HTMLImageElement).src = 'assets/thumbs/default-avatar.png';
+    const img = event.target as HTMLImageElement;
+    // Prevent infinite error loop if the fallback itself is missing
+    img.onerror = null;
+    img.src = 'assets/thumbs/default-avatar.png';
   }
 
   openUploadPage(): void {

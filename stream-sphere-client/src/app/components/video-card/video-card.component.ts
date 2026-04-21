@@ -69,6 +69,11 @@ export class VideoCardComponent implements OnInit {
     this.videoDeleted.emit(this.video._id);
   }
 
+  onAvatarError(event: Event): void {
+    // Hide broken image and fall through to the ng-template initialsAvatar
+    (event.target as HTMLImageElement).style.display = 'none';
+  }
+
   formatViews(count: number): string {
     if (!count) return '0';
     if (count >= 1_000_000) return (count / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';

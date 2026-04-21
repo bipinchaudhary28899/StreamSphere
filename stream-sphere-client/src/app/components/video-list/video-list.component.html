@@ -1,14 +1,15 @@
 <!-- video-list.component.html -->
 <div class="video-section-container">
 
-  <!-- Hero carousel — fills viewport edge to edge -->
-  <div class="hero-wrapper">
+  <!-- Hero carousel — hidden during search so only results fill the screen -->
+  <div class="hero-wrapper" *ngIf="!isSearchMode">
     <app-hero-carousel></app-hero-carousel>
     <div class="hero-bottom-fade"></div>
   </div>
 
-  <!-- Content section — overlaps hero fade for "submerged" look -->
-  <div class="content-section">
+  <!-- Content section — overlaps hero fade for "submerged" look;
+       margin-top reset when hero is hidden (search mode) -->
+  <div class="content-section" [class.no-hero]="isSearchMode">
 
     <!-- ── Initial loading skeletons ───────────────────────────────────────── -->
     <div *ngIf="isLoading" class="loading-state">

@@ -88,9 +88,22 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   // ── Scroll listener (transparent → solid) ────────────────────────────────
+  // Listen to BOTH window and document scroll events.
+  // When body is the scroll container (can happen with overflow-x:hidden on body),
+  // only the document scroll event fires. Covering both ensures it always works.
   @HostListener('window:scroll')
+  @HostListener('document:scroll')
   onWindowScroll(): void {
-    this.isScrolled = window.scrollY > 60;
+    const scrollY =
+      window.scrollY ||
+      document.documentElement.scrollTop ||
+      document.body.scrollTop ||
+      0;
+    const scrolled = scrollY > 30;
+    if (scrolled !== this.isScrolled) {
+      this.isScrolled = scrolled;
+      this.cdr.detectChanges(); // force update — scroll fires outside zone on some builds
+    }
   }
 
   // ── Close search when clicking outside the header ────────────────────────

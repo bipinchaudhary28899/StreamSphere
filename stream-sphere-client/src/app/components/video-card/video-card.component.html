@@ -30,7 +30,12 @@
             <!-- Card info area -->
             <mat-card-content class="card-body">
               <div class="card-info-row">
-                <span class="avatar-circle">{{ (video?.userName || 'U')[0].toUpperCase() }}</span>
+                <ng-container *ngIf="video?.user_profile_image; else initialsAvatar1">
+                  <img class="avatar-img" [src]="video.user_profile_image" [alt]="video?.userName" (error)="onAvatarError($event)" referrerpolicy="no-referrer" />
+                </ng-container>
+                <ng-template #initialsAvatar1>
+                  <span class="avatar-circle">{{ (video?.userName || 'U')[0].toUpperCase() }}</span>
+                </ng-template>
                 <div class="text-block">
                   <h3 class="video-title">{{ video?.title || "Untitled Video" }}</h3>
                   <div class="video-meta">
@@ -62,7 +67,12 @@
               <p class="video-description">{{ video?.description || "No description available." }}</p>
 
               <div class="flip-back-meta">
-                <span class="avatar-circle avatar-circle--sm">{{ (video?.userName || 'U')[0].toUpperCase() }}</span>
+                <ng-container *ngIf="video?.user_profile_image; else initialsBack">
+                  <img class="avatar-img avatar-img--sm" [src]="video.user_profile_image" [alt]="video?.userName" (error)="onAvatarError($event)" />
+                </ng-container>
+                <ng-template #initialsBack>
+                  <span class="avatar-circle avatar-circle--sm">{{ (video?.userName || 'U')[0].toUpperCase() }}</span>
+                </ng-template>
                 <span class="uploader-name">{{ video?.userName || "Unknown User" }}</span>
                 <span class="meta-dot">·</span>
                 <mat-icon class="like-icon">thumb_up</mat-icon>
@@ -103,7 +113,12 @@
       </div>
       <mat-card-content class="card-body">
         <div class="card-info-row">
-          <span class="avatar-circle">{{ (video?.userName || 'U')[0].toUpperCase() }}</span>
+          <ng-container *ngIf="video?.user_profile_image; else initialsNormal">
+            <img class="avatar-img" [src]="video.user_profile_image" [alt]="video?.userName" (error)="onAvatarError($event)" referrerpolicy="no-referrer" />
+          </ng-container>
+          <ng-template #initialsNormal>
+            <span class="avatar-circle">{{ (video?.userName || 'U')[0].toUpperCase() }}</span>
+          </ng-template>
           <div class="text-block">
             <h3 class="video-title">{{ video?.title || "Untitled Video" }}</h3>
             <div class="video-meta">

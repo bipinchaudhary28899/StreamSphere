@@ -215,6 +215,22 @@ mat-card-content.card-body {
   min-width: 0;
 }
 
+// Real profile picture
+.avatar-img {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+  background: var(--bg-surface-2);
+
+  &--sm {
+    width: 26px;
+    height: 26px;
+  }
+}
+
 // Coloured initial circle
 .avatar-circle {
   flex-shrink: 0;
@@ -505,7 +521,7 @@ mat-card-content.card-body {
   }
 
   // Smaller avatar
-  .avatar-circle {
+  .avatar-circle, .avatar-img {
     width: 22px !important;
     height: 22px !important;
     font-size: 0.68rem !important;

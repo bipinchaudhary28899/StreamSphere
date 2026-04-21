@@ -31,6 +31,12 @@
   padding-bottom: 40px;
 }
 
+/* Search mode — hero is gone, reset overlap margin */
+.content-section.no-hero {
+  margin-top: 0;
+  padding-top: 24px;
+}
+
 /* ── Video grid ───────────────────────────────────────────────────────── */
 .video-grid {
   display: grid;
@@ -201,6 +207,7 @@
     margin-top: -60px; // less overlap — mini cards are 88px tall, not 380px
     padding-bottom: 80px; // room for bottom nav
   }
+
 
   // ── Grid becomes a single-column list with tight gap ──────────────────
   .video-grid {

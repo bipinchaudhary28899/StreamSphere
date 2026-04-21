@@ -72,9 +72,9 @@ const getVideoDuration = async (videoUrl: string): Promise<number> => {
   });
 };
 
-export const saveVideoService = async (title: string, description: string, S3_url: string, user_id: string, userName?: string) => {
+export const saveVideoService = async (title: string, description: string, S3_url: string, user_id: string, userName?: string, user_profile_image?: string) => {
   try {
-    console.log('Saving video with data:', { title, description, S3_url, user_id, userName });  // Log the incoming data
+    console.log('Saving video with data:', { title, description, S3_url, user_id, userName, user_profile_image });  // Log the incoming data
 
     // Check video duration (2 minutes = 120 seconds)
     try {
@@ -100,6 +100,7 @@ export const saveVideoService = async (title: string, description: string, S3_ur
       S3_url,
       user_id,
       userName,
+      user_profile_image: user_profile_image || null,
       uploadedAt: new Date(),
       category,
     });

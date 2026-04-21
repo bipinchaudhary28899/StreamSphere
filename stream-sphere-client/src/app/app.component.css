@@ -27,6 +27,7 @@
     padding-top: 60px;
     padding-bottom: 64px;
   }
+  /* Hero fills from the very top on mobile too (transparent navbar sits on top) */
   .main-body.home-page {
     padding-top: 0;
   }

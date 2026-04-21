@@ -1,6 +1,6 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, BehaviorSubject, Subject } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface FeedPage {
@@ -18,6 +18,12 @@ export class VideoService {
   private categorySubject = new BehaviorSubject<string>('All');
   public  search$   = this.searchSubject.asObservable();
   public  category$ = this.categorySubject.asObservable();
+
+  // ── Feed refresh signal — emitted after a successful upload ─────────────────
+  private feedRefreshSubject = new Subject<void>();
+  public  feedRefresh$ = this.feedRefreshSubject.asObservable();
+
+  triggerFeedRefresh(): void { this.feedRefreshSubject.next(); }
 
   constructor(private http: HttpClient) {}
 
