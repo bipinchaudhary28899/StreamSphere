@@ -5,12 +5,20 @@
 
     <!-- Logo -->
     <div class="logo" (click)="navigateToHome()">
-      <img src="assets/thumbs/Stream Sphere Icon.png"
-           alt="StreamSphere"
-           class="app-logo desktop-logo" />
-      <img src="assets/thumbs/ss_icon_mobile.png"
-           alt="StreamSphere"
-           class="app-logo mobile-logo" />
+      <picture>
+        <source srcset="assets/thumbs/Stream Sphere Icon.webp" type="image/webp" />
+        <img src="assets/thumbs/Stream Sphere Icon.png"
+             alt="StreamSphere"
+             width="64" height="64"
+             class="app-logo desktop-logo" />
+      </picture>
+      <picture>
+        <source srcset="assets/thumbs/ss_icon_mobile.webp" type="image/webp" />
+        <img src="assets/thumbs/ss_icon_mobile.png"
+             alt="StreamSphere"
+             width="44" height="44"
+             class="app-logo mobile-logo" />
+      </picture>
     </div>
 
     <!-- Spacer -->

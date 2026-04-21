@@ -257,3 +257,10 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0,0,0,0.2);
 }
+
+/* ── Upload dialog panel ────────────────────────────────────────────────── */
+.ss-upload-dialog .mat-mdc-dialog-container .mdc-dialog__surface {
+  border-radius: 20px !important;
+  overflow: hidden;
+  padding: 0 !important;
+}

@@ -5,6 +5,8 @@ import {
 import { DOCUMENT } from '@angular/common';
 import { CommonModule }        from '@angular/common';
 import { RouterModule }        from '@angular/router';
+import { MatDialog }           from '@angular/material/dialog';
+import { UploadVideoComponent } from '../upload-video/upload-video.component';
 import { MatButtonModule }     from '@angular/material/button';
 import { MatIconModule }       from '@angular/material/icon';
 import { MatMenuModule }       from '@angular/material/menu';
@@ -68,6 +70,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private videoService: VideoService,
     private cdr:          ChangeDetectorRef,
     public  themeService: ThemeService,
+    private dialog:       MatDialog,
   ) { }
 
   // ── Lifecycle ────────────────────────────────────────────────────────────
@@ -127,7 +130,16 @@ export class HeaderComponent implements OnInit, OnDestroy {
   // ── Navigation ───────────────────────────────────────────────────────────
   navigateToHome():    void { this.router.navigate(['/home']); }
   navigateToProfile(): void { this.router.navigate(['/user-profile']); this.closeSearch(); }
-  navigateToUpload():  void { this.router.navigate(['/upload']); this.closeSearch(); }
+  navigateToUpload(): void {
+    this.closeSearch();
+    this.dialog.open(UploadVideoComponent, {
+      width: '560px',
+      maxWidth: '96vw',
+      panelClass: 'ss-upload-dialog',
+      autoFocus: true,
+      restoreFocus: true,
+    });
+  }
   navigateToHistory(): void { this.router.navigate(['/history']); this.closeSearch(); }
 
   logout(): void {

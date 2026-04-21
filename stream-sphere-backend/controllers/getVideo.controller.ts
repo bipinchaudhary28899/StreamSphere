@@ -161,7 +161,12 @@ export class VideoController {
   static async recordView(req: Request, res: Response) {
     try {
       const { videoId } = req.params;
-      const userId = (req as any).user?.userId;
+
+      // Prefer authenticated userId; fall back to the browser's anon session UUID
+      // sent in the X-Anon-Session header so each browser gets its own dedup key.
+      const userId: string | undefined =
+        (req as any).user?.userId
+        ?? (req.headers['x-anon-session'] as string | undefined);
 
       const viewCount = await videoService.recordView(videoId, userId);
       res.json({ views: viewCount });

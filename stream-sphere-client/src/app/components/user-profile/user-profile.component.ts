@@ -1,4 +1,7 @@
 import { Component, OnInit, ViewChild, HostListener } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
+import { MatDialogModule } from '@angular/material/dialog';
+import { UploadVideoComponent } from '../upload-video/upload-video.component';
 import { MatCardModule } from '@angular/material/card';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatButtonModule } from '@angular/material/button';
@@ -42,6 +45,7 @@ import { WatchHistoryComponent } from '../watch-history/watch-history.component'
     MatCheckboxModule,
     MatExpansionModule,
     MatIconModule,
+    MatDialogModule,
   ],
   templateUrl: './user-profile.component.html',
   styleUrl: './user-profile.component.css',
@@ -74,6 +78,7 @@ export class UserProfileComponent implements OnInit {
     private router: Router,
     private videoService: VideoService,
     private authService: AuthService,
+    private dialog: MatDialog,
   ) {}
 
   ngOnInit(): void {
@@ -302,7 +307,13 @@ export class UserProfileComponent implements OnInit {
   }
 
   openUploadPage(): void {
-    this.router.navigate(['/upload']);
+    this.dialog.open(UploadVideoComponent, {
+      width: '560px',
+      maxWidth: '96vw',
+      panelClass: 'ss-upload-dialog',
+      autoFocus: true,
+      restoreFocus: true,
+    });
   }
 
   logout() {

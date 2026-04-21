@@ -1,114 +1,122 @@
-<div class="video-player-container">
-  <!-- Loading state -->
-  <div *ngIf="loading" class="loading">
-    <div class="spinner"></div>
-    <p>Loading video...</p>
+<div class="vp-container">
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="vp-state">
+    <div class="vp-spinner"></div>
+    <p>Loading video…</p>
   </div>
 
-  <!-- Error state -->
-  <div *ngIf="error" class="error">
-    <h2>Error</h2>
+  <!-- Error -->
+  <div *ngIf="error && !loading" class="vp-state vp-error">
+    <mat-icon class="vp-state-icon">error_outline</mat-icon>
+    <h2>Something went wrong</h2>
     <p>{{ error }}</p>
-    <button (click)="retryLoad()">Try Again</button>
+    <button class="vp-retry-btn" (click)="retryLoad()">Try Again</button>
   </div>
 
-  <!-- Video content -->
-  <div *ngIf="video && !loading && !error" class="video-content">
-    <!-- Video player -->
-    <div class="video-section">
-      <video 
-        [src]="safeVideoUrl" 
-        controls 
+  <!-- Main content -->
+  <div *ngIf="video && !loading && !error" class="vp-content">
+
+    <!-- ── Player ──────────────────────────────────────────────────────── -->
+    <div class="vp-player-wrap">
+      <video
+        [src]="safeVideoUrl"
+        controls
         controlsList="nodownload"
-        class="main-video-player"
+        class="vp-player"
         preload="metadata">
         Your browser does not support the video tag.
       </video>
     </div>
 
-    <!-- Video information -->
-    <div class="video-info">
-      <h1 class="video-title">{{ video.title }}</h1>
-      
-      <div class="video-meta">
-        <span class="upload-date">{{ formatDate(video.uploadedAt) }}</span>
-        <span class="category-badge" *ngIf="video.category">
-          <span class="category-tag">{{ video.category }}</span>
-        </span>
-        <span class="view-count">
-          <mat-icon style="font-size:16px;width:16px;height:16px;vertical-align:middle">visibility</mat-icon>
-          {{ formatViews(video.views || 0) }} views
-        </span>
+    <!-- ── Below-player panel ─────────────────────────────────────────── -->
+    <div class="vp-panel">
+
+      <!-- Title row -->
+      <div class="vp-title-row">
+        <h1 class="vp-title">{{ video.title }}</h1>
         <mat-icon
           *ngIf="isOwner"
-          class="delete-btn"
+          class="vp-delete-btn"
           (click)="onDeleteClick()"
-          style="cursor: pointer;"
           matTooltip="Delete video"
           (mouseenter)="isDeleteHovered = true"
-          (mouseleave)="isDeleteHovered = false"
-        >
+          (mouseleave)="isDeleteHovered = false">
           {{ isDeleteHovered ? 'delete' : 'delete_outline' }}
         </mat-icon>
       </div>
 
-      <!-- Like/Dislike Section -->
-      <div class="like-dislike-section">
-        <div class="counts-display">
-          <span class="count-item">
-            <mat-icon>visibility</mat-icon>
-            <span>{{ formatViews(video.views || 0) }}</span>
-          </span>
-          <span class="count-item">
-            <mat-icon>thumb_up</mat-icon>
-            <span>{{ video.likes || 0 }}</span>
-          </span>
-          <span class="count-item">
-            <mat-icon>thumb_down</mat-icon>
-            <span>{{ video.dislikes || 0 }}</span>
-          </span>
+      <!-- Meta chips row -->
+      <div class="vp-meta-row">
+        <span class="vp-chip vp-chip--date">
+          <mat-icon>calendar_today</mat-icon>
+          {{ formatDate(video.uploadedAt) }}
+        </span>
+        <span class="vp-chip vp-chip--category" *ngIf="video.category">
+          {{ video.category }}
+        </span>
+        <span class="vp-chip vp-chip--views">
+          <mat-icon>visibility</mat-icon>
+          {{ formatViews(video.views || 0) }} views
+        </span>
+      </div>
+
+      <!-- ── Action bar ──────────────────────────────────────────────── -->
+      <div class="vp-action-bar">
+
+        <!-- Uploader info -->
+        <div class="vp-uploader">
+          <div class="vp-uploader-avatar">{{ (video.userName || 'U')[0].toUpperCase() }}</div>
+          <div class="vp-uploader-info">
+            <span class="vp-uploader-name">{{ video.userName }}</span>
+            <span class="vp-uploader-label">Creator</span>
+          </div>
         </div>
-        
-        <!-- Interactive buttons for logged-in users -->
-        <div *ngIf="currentUserId" class="interactive-buttons">
-          <button mat-icon-button 
-                  (click)="onLikeClick()" 
-                  [disabled]="isLiking"
-                  [class.liked]="userReaction === 'liked'"
-                  matTooltip="Like video">
-            <mat-icon>{{ userReaction === 'liked' ? 'thumb_up' : 'thumb_up_outline' }}</mat-icon>
-          </button>
-          <button mat-icon-button 
-                  (click)="onDislikeClick()" 
-                  [disabled]="isDisliking"
-                  [class.disliked]="userReaction === 'disliked'"
-                  matTooltip="Dislike video">
-            <mat-icon>{{ userReaction === 'disliked' ? 'thumb_down' : 'thumb_down_outline' }}</mat-icon>
-          </button>
-        </div>
-        
-        <!-- Login prompt for non-logged-in users -->
-        <div *ngIf="!currentUserId" class="login-prompt">
-          <p>Login to like or dislike this video</p>
+
+        <!-- Like / dislike buttons -->
+        <div class="vp-reactions">
+          <ng-container *ngIf="currentUserId; else loginPrompt">
+            <button
+              class="vp-react-btn"
+              [class.vp-react-btn--liked]="userReaction === 'liked'"
+              [disabled]="isLiking"
+              (click)="onLikeClick()"
+              matTooltip="Like">
+              <mat-icon>{{ userReaction === 'liked' ? 'thumb_up' : 'thumb_up_off_alt' }}</mat-icon>
+              <span>{{ video.likes || 0 }}</span>
+            </button>
+            <div class="vp-react-divider"></div>
+            <button
+              class="vp-react-btn"
+              [class.vp-react-btn--disliked]="userReaction === 'disliked'"
+              [disabled]="isDisliking"
+              (click)="onDislikeClick()"
+              matTooltip="Dislike">
+              <mat-icon>{{ userReaction === 'disliked' ? 'thumb_down' : 'thumb_down_off_alt' }}</mat-icon>
+              <span>{{ video.dislikes || 0 }}</span>
+            </button>
+          </ng-container>
+          <ng-template #loginPrompt>
+            <span class="vp-login-hint">Sign in to like this video</span>
+          </ng-template>
         </div>
       </div>
 
-      <div class="video-description" *ngIf="video.description">
-        <h3>Description</h3>
-        <p>{{ video.description }}</p>
+      <!-- ── Description ─────────────────────────────────────────────── -->
+      <div class="vp-description" *ngIf="video.description" [class.vp-description--expanded]="descOpen">
+        <div class="vp-description-body">
+          <p>{{ video.description }}</p>
+        </div>
+        <button class="vp-desc-toggle" (click)="descOpen = !descOpen">
+          {{ descOpen ? 'Show less' : 'Show more' }}
+          <mat-icon>{{ descOpen ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </button>
       </div>
 
-      <div class="video-details">
-        <div class="detail-item">
-          <strong>Uploaded:</strong> {{ formatDate(video.uploadedAt) }}
-        </div>
-        <div class="detail-item">
-          <strong>User Name:</strong> {{ video.userName }}
-        </div>
-      </div>
-    </div>
+    </div><!-- /vp-panel -->
 
-    <!-- Comment Section -->
+    <!-- ── Comments ───────────────────────────────────────────────────── -->
     <app-comment-section [videoId]="video._id"></app-comment-section>
-  </div>
+
+  </div><!-- /vp-content -->
 </div>
