@@ -1,8 +1,11 @@
+/* Ensure component renders as a block element — prevents the 1px gap line */
+:host { display: block; }
+
 .hero-carousel {
   position: relative;
   width: 100%;
-  height: 70vh;
-  min-height: 500px;
+  height: 82vh;
+  min-height: 540px;
   overflow: hidden;
   background: #000;
 }
@@ -64,17 +67,19 @@
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 50%;
-  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 50%, transparent 100%);
+  height: 55%;
+  background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.65) 40%, transparent 100%);
 }
 
-/* Content Overlay */
+/* Content Overlay
+   padding-bottom must exceed the card overlap (100px) so buttons stay
+   above the card section — 160px gives comfortable clearance.          */
 .hero-content {
   position: absolute;
   bottom: 0;
   left: 0;
   width: 100%;
-  padding: 0 4rem 4rem 4rem;
+  padding: 0 4rem 160px 4rem;
   z-index: 3;
   color: white;
 }
@@ -127,7 +132,7 @@
 }
 
 .hero-play-btn {
-  background: #ff1a73;
+  background: var(--accent);
   color: white;
   border: none;
   padding: 1rem 2rem;
@@ -143,7 +148,7 @@
 }
 
 .hero-play-btn:hover {
-  background: #ff1a73;
+  background: var(--accent-hover);
   transform: translateY(-2px);
   box-shadow: 0 6px 12px rgba(0,0,0,0.4);
 }
@@ -221,37 +226,6 @@
   font-weight: bold;
 }
 
-/* Progress Bar */
-.hero-progress {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 4px;
-  background: rgba(255,255,255,0.3);
-  z-index: 5;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 100%;
-  background: rgba(255,255,255,0.2);
-}
-
-.progress-fill {
-  height: 100%;
-  background: #ff1a73;
-  transition: width 0.3s ease;
-}
-
-.progress-text {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  color: white;
-  font-size: 0.8rem;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-}
 
 /* Thumbnail Indicators */
 .hero-indicators {
@@ -280,7 +254,7 @@
 }
 
 .hero-indicator.active {
-  border-color: #e50914;
+  border-color: var(--accent);
   transform: scale(1.1);
 }
 
@@ -332,7 +306,7 @@
   width: 50px;
   height: 50px;
   border: 4px solid rgba(255,255,255,0.3);
-  border-top: 4px solid #e50914;
+  border-top: 4px solid var(--accent);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 1rem;
@@ -368,7 +342,7 @@
 }
 
 .error-message button {
-  background: #e50914;
+  background: var(--accent);
   color: white;
   border: none;
   padding: 0.8rem 1.5rem;
@@ -379,7 +353,7 @@
 }
 
 .error-message button:hover {
-  background: #f40612;
+  background: var(--accent-hover);
 }
 
 /* Empty State */
@@ -403,7 +377,7 @@
 }
 
 .empty-message button {
-  background: #e50914;
+  background: var(--accent);
   color: white;
   border: none;
   padding: 0.8rem 1.5rem;
@@ -414,18 +388,19 @@
 }
 
 .empty-message button:hover {
-  background: #f40612;
+  background: var(--accent-hover);
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
   .hero-carousel {
-    height: 60vh;
-    min-height: 400px;
+    height: 68vh;
+    min-height: 420px;
   }
 
   .hero-content {
-    padding: 0 2rem 2rem 2rem;
+    /* Keep buttons above the 80px card overlap on mobile */
+    padding: 0 2rem 130px 2rem;
   }
 
   .hero-title {
@@ -476,36 +451,80 @@
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
+  /* Hide thumbnail indicators — they fall inside the mini-card overlap zone */
+  .hero-indicators { display: none; }
+
+  /* Tighter hero for mini-card list view */
   .hero-carousel {
-    height: 50vh;
-    min-height: 300px;
-  }
-
-  .hero-title {
-    font-size: 2rem;
-  }
-
-  .hero-description {
-    font-size: 0.9rem;
+    height: 60vh;
+    min-height: 360px;
   }
 
   .hero-content {
-    padding: 0 1rem 1rem 1rem;
+    padding: 0 1.25rem 120px 1.25rem;
   }
 
-  .hero-controls {
-    padding: 0 1rem;
+  .hero-title {
+    font-size: 2.2rem;
+  }
+
+  .hero-meta {
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .hero-play-btn {
+    padding: 0.85rem 1.6rem;
+    font-size: 1rem;
   }
 
   .hero-sound-btn,
   .hero-mute-btn {
-    padding: 0.7rem 1rem;
-    font-size: 0.85rem;
+    padding: 0.75rem 1.1rem;
+    font-size: 0.9rem;
   }
 
-  .hero-indicators {
-    bottom: 0.5rem;
-    right: 0.5rem;
+  .hero-controls {
+    padding: 0 1.25rem;
+  }
+
+  .nav-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .arrow { font-size: 1.4rem; }
+}
+
+@media (max-width: 480px) {
+  .hero-carousel {
+    height: 54vh;
+    min-height: 320px;
+  }
+
+  .hero-title {
+    font-size: 1.75rem;
+  }
+
+  .hero-description {
+    font-size: 0.88rem;
+    /* Hide on very small screens to give more room to buttons */
+    display: none;
+  }
+
+  .hero-content {
+    padding: 0 1rem 105px 1rem;
+  }
+
+  .hero-controls {
+    padding: 0 0.75rem;
+  }
+
+  .hero-sound-btn,
+  .hero-mute-btn {
+    padding: 0.65rem 0.9rem;
+    font-size: 0.82rem;
   }
 }

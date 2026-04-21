@@ -1,62 +1,87 @@
-// controllers/video.controller.ts
+// controllers/getVideo.controller.ts
 import { Request, Response } from 'express';
 import { VideoService } from '../services/getVideo.service';
 
 const videoService = new VideoService();
 
 export class VideoController {
+
+  // ── Feed (cursor-based pagination + Redis cache) ──────────────────────────────
   /**
-   * GET /api/videos
-   * Fetch all videos
+   * GET /api/feed?cursor=<id>&limit=<n>&category=<cat>
+   *
+   * cursor   — last _id seen by the client (omit for first page)
+   * limit    — page size (default 12, max 40)
+   * category — filter by category, 'All' or omit for global feed
    */
-  static async getVideos(req: Request, res: Response) {
+  static async getFeed(req: Request, res: Response) {
     try {
-      const videos = await videoService.getAllVideos();
-      res.json(videos);
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch videos', error });
+      const cursor   = req.query.cursor   as string | undefined;
+      const category = req.query.category as string | undefined;
+      // Only override the service's PAGE_SIZE default when the client
+      // explicitly sends a ?limit= param (used for testing / power users).
+      const rawLimit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const limit    = rawLimit ? Math.min(Math.max(rawLimit, 1), 40) : undefined;
+
+      const page = await videoService.getPaginatedFeed(cursor, category, limit);
+      res.json(page);
+    } catch (error: any) {
+      if (error.message === 'Invalid cursor') {
+        return res.status(400).json({ message: 'Invalid cursor value' });
+      }
+      res.status(500).json({ message: 'Failed to fetch feed', error: error.message });
     }
   }
 
   /**
-   * GET /api/videos/:s3Url
-   * Fetch a single video by S3 URL
+   * GET /api/feed/search?q=<term>
+   * Server-side search with Redis caching (60 s TTL).
    */
-  static async getVideo(req: Request, res: Response) {
+  static async searchFeed(req: Request, res: Response) {
     try {
-      const video = await videoService.getVideoByUrl(req.params.s3Url);
-      if (!video) {
-        return res.status(404).json({ message: 'Video not found' });
+      const term     = (req.query.q        as string || '').trim();
+      const category = (req.query.category as string || '').trim() || undefined;
+
+      if (!term || term.length < 2) {
+        return res.status(400).json({ message: 'Search term must be at least 2 characters' });
       }
+      if (term.length > 100) {
+        return res.status(400).json({ message: 'Search term too long' });
+      }
+      const videos = await videoService.searchVideos(term, category);
+      res.json({ videos });
+    } catch (error: any) {
+      res.status(500).json({ message: 'Search failed', error: error.message });
+    }
+  }
+
+  // ── Top-liked (hero carousel) ─────────────────────────────────────────────────
+  static async getTopLikedVideos(req: Request, res: Response) {
+    try {
+      const videos = await videoService.getTopLikedVideos();
+      res.json(videos);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to get top liked videos', error });
+    }
+  }
+
+  // ── Single video ──────────────────────────────────────────────────────────────
+  static async getVideoById(req: Request, res: Response) {
+    try {
+      const video = await videoService.getVideoById(req.params.videoId);
+      if (!video) return res.status(404).json({ message: 'Video not found' });
       res.json(video);
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch video', error });
     }
   }
 
-  /**
-   * GET /api/videos/category/:category
-   * Fetch videos by category
-   */
-  static async getVideosByCategory(req: Request, res: Response) {
-    try {
-      const { category } = req.params;
-      const videos = await videoService.getVideosByCategory(category);
-      res.json(videos);
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch videos by category', error });
-    }
-  }
-
+  // ── Reactions ─────────────────────────────────────────────────────────────────
   static async likeVideo(req: Request, res: Response) {
     try {
       const { videoId } = req.params;
-      // Use userId from JWT middleware
       const userId = (req as any).user?.userId;
-
-      if (!userId) {
-        return res.status(401).json({ message: 'User not authenticated' });
-      }
+      if (!userId) return res.status(401).json({ message: 'User not authenticated' });
 
       const updatedVideo = await videoService.likeVideo(videoId, userId);
       res.json(updatedVideo);
@@ -68,12 +93,8 @@ export class VideoController {
   static async dislikeVideo(req: Request, res: Response) {
     try {
       const { videoId } = req.params;
-      // Use userId from JWT middleware
       const userId = (req as any).user?.userId;
-
-      if (!userId) {
-        return res.status(401).json({ message: 'User not authenticated' });
-      }
+      if (!userId) return res.status(401).json({ message: 'User not authenticated' });
 
       const updatedVideo = await videoService.dislikeVideo(videoId, userId);
       res.json(updatedVideo);
@@ -85,12 +106,8 @@ export class VideoController {
   static async getUserReaction(req: Request, res: Response) {
     try {
       const { videoId } = req.params;
-      // Use userId from JWT middleware
       const userId = (req as any).user?.userId;
-
-      if (!userId) {
-        return res.status(401).json({ message: 'User not authenticated' });
-      }
+      if (!userId) return res.status(401).json({ message: 'User not authenticated' });
 
       const reaction = await videoService.getUserReaction(videoId, userId);
       res.json({ reaction });
@@ -99,19 +116,11 @@ export class VideoController {
     }
   }
 
-  /**
-   * GET /api/videos/liked
-   * Get videos liked by the authenticated user
-   */
+  // ── User lists ────────────────────────────────────────────────────────────────
   static async getLikedVideos(req: Request, res: Response) {
     try {
-      // Use userId from JWT middleware
       const userId = (req as any).user?.userId;
-
-      if (!userId) {
-        return res.status(401).json({ message: 'User not authenticated' });
-      }
-
+      if (!userId) return res.status(401).json({ message: 'User not authenticated' });
       const videos = await videoService.getLikedVideos(userId);
       res.json(videos);
     } catch (error) {
@@ -119,19 +128,10 @@ export class VideoController {
     }
   }
 
-  /**
-   * GET /api/videos/disliked
-   * Get videos disliked by the authenticated user
-   */
   static async getDislikedVideos(req: Request, res: Response) {
     try {
-      // Use userId from JWT middleware
       const userId = (req as any).user?.userId;
-
-      if (!userId) {
-        return res.status(401).json({ message: 'User not authenticated' });
-      }
-
+      if (!userId) return res.status(401).json({ message: 'User not authenticated' });
       const videos = await videoService.getDislikedVideos(userId);
       res.json(videos);
     } catch (error) {
@@ -139,42 +139,20 @@ export class VideoController {
     }
   }
 
-  /**
-   * GET /api/videos/top-liked
-   * Get top 3 most liked videos for carousel
-   */
-  static async getTopLikedVideos(req: Request, res: Response) {
-    try {
-      const videos = await videoService.getTopLikedVideos();
-      res.json(videos);
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to get top liked videos', error });
-    }
-  }
-
-  /**
-   * DELETE /api/videos/:videoId
-   * Delete a video (only by the uploader)
-   */
+  // ── Delete ────────────────────────────────────────────────────────────────────
   static async deleteVideo(req: Request, res: Response) {
     try {
       const { videoId } = req.params;
       const userId = req.query.userId as string;
-      console.log("[deleteVideo controller] videoId:", videoId, "userId:", userId); // Get userId from request body
-      
-      if (!userId) {
-        return res.status(400).json({ message: 'User ID is required' });
-      }
+      if (!userId) return res.status(400).json({ message: 'User ID is required' });
 
       await videoService.deleteVideo(videoId, userId);
       res.json({ message: 'Video deleted successfully' });
     } catch (error: any) {
-      if (error.message === 'Video not found') {
+      if (error.message === 'Video not found')
         return res.status(404).json({ message: 'Video not found' });
-      }
-      if (error.message === 'Unauthorized: You can only delete your own videos') {
-        return res.status(403).json({ message: 'Unauthorized: You can only delete your own videos' });
-      }
+      if (error.message.startsWith('Unauthorized'))
+        return res.status(403).json({ message: error.message });
       res.status(500).json({ message: 'Failed to delete video', error: error.message });
     }
   }

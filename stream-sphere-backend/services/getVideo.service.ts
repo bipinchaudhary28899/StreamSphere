@@ -1,6 +1,8 @@
-// services/video.service.ts
+// services/getVideo.service.ts
+import mongoose from 'mongoose';
 import { Video } from '../models/video';
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { redisService, CK, TTL } from './redis.service';
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION!,
@@ -10,187 +12,237 @@ const s3 = new S3Client({
   },
 });
 
+const PAGE_SIZE = 6; // cards per page
+
+export interface FeedPage {
+  videos:     any[];
+  nextCursor: string | null;  // _id of the last item, null when no more pages
+  hasMore:    boolean;
+}
+
 export class VideoService {
-  /**
-   * Get all videos sorted by upload date (newest first)
-   */
-  async getAllVideos() {
-    return await Video.find().sort({ uploadedAt: -1 }).exec();
+
+  async getPaginatedFeed(
+    cursor?: string,
+    category?: string,
+    limit = PAGE_SIZE,
+  ): Promise<FeedPage> {
+    const cursorKey = cursor || 'first';
+    const cacheKey  = category && category !== 'All'
+      ? CK.feedCat(category, cursorKey)
+      : CK.feedAll(cursorKey);
+
+    console.log(`[FEED] getPaginatedFeed  cursor=${cursor ?? 'none'}  category=${category ?? 'All'}  limit=${limit}  cacheKey=${cacheKey}`);
+
+    const cached = await redisService.get<FeedPage>(cacheKey);
+    if (cached) {
+      console.log(`[FEED] → served from Redis cache  (${cached.videos.length} videos, hasMore=${cached.hasMore}, nextCursor=${cached.nextCursor})`);
+      return cached;
+    }
+
+    console.log(`[FEED] → cache miss, querying MongoDB…`);
+
+    const filter: Record<string, any> = {};
+
+    if (category && category !== 'All') {
+      filter.category = category;
+    }
+
+    if (cursor) {
+      if (!mongoose.Types.ObjectId.isValid(cursor)) {
+        throw new Error('Invalid cursor');
+      }
+      filter._id = { $lt: new mongoose.Types.ObjectId(cursor) };
+    }
+
+    const docs = await Video
+      .find(filter)
+      .sort({ _id: -1 })
+      .limit(limit + 1)
+      .lean()
+      .exec();
+
+    console.log(`[FEED] MongoDB returned ${docs.length} doc(s) (fetched limit+1=${limit + 1})`);
+
+    const hasMore    = docs.length > limit;
+    const videos     = hasMore ? docs.slice(0, limit) : docs;
+    const nextCursor = hasMore ? String(videos[videos.length - 1]._id) : null;
+
+    console.log(`[FEED] page built: ${videos.length} video(s), hasMore=${hasMore}, nextCursor=${nextCursor ?? 'null'}`);
+
+    const page: FeedPage = { videos, nextCursor, hasMore };
+
+    await redisService.set(cacheKey, page, TTL.feed);
+
+    return page;
   }
 
-  /**
-   * Get a single video by S3 URL
-   */
+  async searchVideos(term: string, category?: string): Promise<any[]> {
+    // Build a cache key that incorporates the active category so that
+    // "football" in Sports and "football" in All are cached separately.
+    const catSuffix = category && category !== 'All'
+      ? `:${encodeURIComponent(category)}`
+      : '';
+    const cacheKey = CK.search(term) + catSuffix;
+
+    console.log(`[SEARCH] searchVideos  term="${term}"  category=${category ?? 'All'}  cacheKey=${cacheKey}`);
+
+    const cached = await redisService.get<any[]>(cacheKey);
+    if (cached) {
+      console.log(`[SEARCH] → served from Redis cache  (${cached.length} results)`);
+      return cached;
+    }
+
+    console.log(`[SEARCH] → cache miss, querying MongoDB…`);
+    const regex = new RegExp(term.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+
+    const filter: Record<string, any> = {
+      $or: [{ title: regex }, { description: regex }],
+    };
+
+    if (category && category !== 'All') {
+      filter.category = category;
+    }
+
+    const results = await Video
+      .find(filter)
+      .sort({ _id: -1 })
+      .limit(60)
+      .lean()
+      .exec();
+
+    console.log(`[SEARCH] MongoDB returned ${results.length} result(s)`);
+    await redisService.set(cacheKey, results, TTL.search);
+    return results;
+  }
+
+  // ── Top-liked (hero carousel) ────────────────────────────────────────────────
+
+  async getTopLikedVideos(): Promise<any[]> {
+    const cached = await redisService.get<any[]>(CK.topLiked());
+    if (cached) return cached;
+
+    const videos = await Video.find({}).sort({ likes: -1 }).limit(3).lean().exec();
+    await redisService.set(CK.topLiked(), videos, TTL.topLiked);
+    return videos;
+  }
+
+  // ── Single video ─────────────────────────────────────────────────────────────
+
+  async getVideoById(id: string): Promise<any | null> {
+    const cached = await redisService.get<any>(CK.singleVideo(id));
+    if (cached) return cached;
+
+    const video = await Video.findById(id).lean().exec();
+    if (video) await redisService.set(CK.singleVideo(id), video, TTL.video);
+    return video;
+  }
+
   async getVideoByUrl(S3_url: string) {
     return await Video.findOne({ S3_url }).exec();
   }
 
-  /**
-   * Get videos by category
-   */
-  async getVideosByCategory(category: string) {
-    try {
-      return await Video.find({ category }).sort({ uploadedAt: -1 });
-    } catch (error) {
-      console.error('Error fetching videos by category:', error);
-      throw error;
-    }
+  // ── User-specific lists (not cached — personalised data) ─────────────────────
+
+  async getLikedVideos(userId: string) {
+    return await Video.find({ likedBy: userId }).sort({ _id: -1 }).lean().exec();
   }
 
+  async getDislikedVideos(userId: string) {
+    return await Video.find({ dislikedBy: userId }).sort({ _id: -1 }).lean().exec();
+  }
+
+  // ── Like / Dislike ────────────────────────────────────────────────────────────
+
   async likeVideo(videoId: string, userId: string) {
-    try {
-      const video = await Video.findById(videoId);
-      if (!video) {
-        throw new Error('Video not found');
-      }
+    const video = await Video.findById(videoId);
+    if (!video) throw new Error('Video not found');
 
-      // Check if user already liked
-      if (video.likedBy.includes(userId)) {
-        // Unlike
-        video.likedBy = video.likedBy.filter(id => id !== userId);
-        video.likes = Math.max(0, video.likes - 1);
-      } else {
-        // Like
-        video.likedBy.push(userId);
-        video.likes += 1;
-        
-        // Remove from disliked if user had disliked
-        if (video.dislikedBy.includes(userId)) {
-          video.dislikedBy = video.dislikedBy.filter(id => id !== userId);
-          video.dislikes = Math.max(0, video.dislikes - 1);
-        }
+    if (video.likedBy.includes(userId)) {
+      video.likedBy = video.likedBy.filter(id => id !== userId);
+      video.likes   = Math.max(0, video.likes - 1);
+    } else {
+      video.likedBy.push(userId);
+      video.likes += 1;
+      if (video.dislikedBy.includes(userId)) {
+        video.dislikedBy = video.dislikedBy.filter(id => id !== userId);
+        video.dislikes   = Math.max(0, video.dislikes - 1);
       }
-
-      await video.save();
-      return video;
-    } catch (error) {
-      console.error('Error liking video:', error);
-      throw error;
     }
+
+    await video.save();
+
+    // Bust single-video cache + top-liked (likes changed)
+    await Promise.all([
+      redisService.del(CK.singleVideo(videoId)),
+      redisService.del(CK.topLiked()),
+    ]);
+
+    return video;
   }
 
   async dislikeVideo(videoId: string, userId: string) {
-    try {
-      const video = await Video.findById(videoId);
-      if (!video) {
-        throw new Error('Video not found');
-      }
+    const video = await Video.findById(videoId);
+    if (!video) throw new Error('Video not found');
 
-      // Check if user already disliked
-      if (video.dislikedBy.includes(userId)) {
-        // Remove dislike
-        video.dislikedBy = video.dislikedBy.filter(id => id !== userId);
-        video.dislikes = Math.max(0, video.dislikes - 1);
-      } else {
-        // Dislike
-        video.dislikedBy.push(userId);
-        video.dislikes += 1;
-        
-        // Remove from liked if user had liked
-        if (video.likedBy.includes(userId)) {
-          video.likedBy = video.likedBy.filter(id => id !== userId);
-          video.likes = Math.max(0, video.likes - 1);
-        }
+    if (video.dislikedBy.includes(userId)) {
+      video.dislikedBy = video.dislikedBy.filter(id => id !== userId);
+      video.dislikes   = Math.max(0, video.dislikes - 1);
+    } else {
+      video.dislikedBy.push(userId);
+      video.dislikes += 1;
+      if (video.likedBy.includes(userId)) {
+        video.likedBy = video.likedBy.filter(id => id !== userId);
+        video.likes   = Math.max(0, video.likes - 1);
       }
-
-      await video.save();
-      return video;
-    } catch (error) {
-      console.error('Error disliking video:', error);
-      throw error;
     }
+
+    await video.save();
+
+    await Promise.all([
+      redisService.del(CK.singleVideo(videoId)),
+      redisService.del(CK.topLiked()),
+    ]);
+
+    return video;
   }
 
   async getUserReaction(videoId: string, userId: string) {
-    try {
-      const video = await Video.findById(videoId);
-      if (!video) {
-        return null;
-      }
-
-      if (video.likedBy.includes(userId)) {
-        return 'liked';
-      } else if (video.dislikedBy.includes(userId)) {
-        return 'disliked';
-      } else {
-        return 'none';
-      }
-    } catch (error) {
-      console.error('Error getting user reaction:', error);
-      throw error;
-    }
+    const video = await Video.findById(videoId);
+    if (!video) return null;
+    if (video.likedBy.includes(userId))    return 'liked';
+    if (video.dislikedBy.includes(userId)) return 'disliked';
+    return 'none';
   }
 
-  /**
-   * Get videos liked by a specific user
-   */
-  async getLikedVideos(userId: string) {
-    try {
-      return await Video.find({ likedBy: userId }).sort({ uploadedAt: -1 });
-    } catch (error) {
-      console.error('Error fetching liked videos:', error);
-      throw error;
-    }
-  }
+  // ── Delete ────────────────────────────────────────────────────────────────────
 
-  /**
-   * Get videos disliked by a specific user
-   */
-  async getDislikedVideos(userId: string) {
-    try {
-      return await Video.find({ dislikedBy: userId }).sort({ uploadedAt: -1 });
-    } catch (error) {
-      console.error('Error fetching disliked videos:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get top 3 most liked videos for carousel
-   */
-  async getTopLikedVideos() {
-    try {
-      return await Video.find({})
-        .sort({ likes: -1 })
-        .limit(3);
-    } catch (error) {
-      console.error('Error fetching top liked videos:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Delete a video by ID (only if user is the uploader)
-   * Also deletes the video file from S3
-   */
   async deleteVideo(videoId: string, userId: string) {
     const video = await Video.findById(videoId);
-    if (!video) {
-      throw new Error('Video not found');
-    }
-    if (video.user_id !== userId) {
-      throw new Error('Unauthorized: You can only delete your own videos');
-    }
+    if (!video) throw new Error('Video not found');
+    if (video.user_id !== userId) throw new Error('Unauthorized: You can only delete your own videos');
 
-    // Extract S3 key from S3_url
+    // Extract S3 key from stored CloudFront URL
     const s3Url = video.S3_url;
-console.log('[deleteVideo] s3Url from DB:', s3Url);
-console.log('[deleteVideo] includes cloudfront:', s3Url.includes('cloudfront.net'));
-console.log('[deleteVideo] includes amazonaws:', s3Url.includes('.amazonaws.com/'));
-    const s3Key = s3Url.includes('cloudfront.net') 
-  ? s3Url.split('cloudfront.net/')[1]
-  : s3Url.split('.amazonaws.com/')[1];
-    if (!s3Key) {
-      throw new Error('Could not extract S3 key from S3_url');
-    }
+    const s3Key = s3Url.includes('cloudfront.net')
+      ? s3Url.split('cloudfront.net/')[1]
+      : s3Url.split('.amazonaws.com/')[1];
 
-    // Delete from S3
+    if (!s3Key) throw new Error('Could not extract S3 key from S3_url');
+
     await s3.send(new DeleteObjectCommand({
       Bucket: process.env.AWS_S3_BUCKET_NAME!,
       Key: s3Key,
     }));
 
-    // Delete from DB
-    return await Video.findByIdAndDelete(videoId);
+    await Video.findByIdAndDelete(videoId);
+
+    // Bust all feed caches for this video's category + all-feed
+    await Promise.all([
+      redisService.delPattern('ss:feed:all:*'),
+      redisService.delPattern(`ss:feed:cat:${encodeURIComponent(video.category)}:*`),
+      redisService.del(CK.singleVideo(videoId)),
+      redisService.del(CK.topLiked()),
+    ]);
   }
 }

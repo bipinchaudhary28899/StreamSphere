@@ -1,312 +1,360 @@
-.header-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-    background-color: white;
-    border-bottom: none !important;
-    /* Optional: add a subtle shadow for separation */
-    box-shadow: 0 2px 8px rgba(120,120,180,0.04);
-    position: relative;
-    min-height: 80px;
+/* ═══════════════════════════════════════════════════════════════════════════
+   Header — Netflix-style transparent → solid on scroll
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Shell ─────────────────────────────────────────────────────────────── */
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  background: transparent;
+  transition: background 0.35s ease, box-shadow 0.35s ease;
 }
 
+/* Transparent gradient so content below is still readable */
+.app-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%);
+  pointer-events: none;
+  transition: opacity 0.35s;
+}
+
+/* Once scrolled → solid surface */
+.app-header.scrolled {
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-header);
+}
+
+.app-header.scrolled::before {
+  opacity: 0;
+}
+
+/* When search panel is open, force solid so the panel sits on a background */
+.app-header.search-active {
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-header);
+}
+.app-header.search-active::before { opacity: 0; }
+
+/* ── Inner row ─────────────────────────────────────────────────────────── */
+.header-inner {
+  display: flex;
+  align-items: center;
+  height: 68px;
+  padding: 0 24px;
+  gap: 12px;
+}
+
+.header-spacer { flex: 1; }
+
+/* ── Logo ──────────────────────────────────────────────────────────────── */
 .logo {
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .app-logo {
-    height: 80px;
-    width: auto;
-    cursor: pointer;
-    transition: transform 0.2s ease;
-    object-fit: contain;
+  height: 64px;
+  width: auto;
+  object-fit: contain;
+  transition: transform 0.2s, opacity 0.2s;
+}
+.app-logo:hover { transform: scale(1.04); opacity: 0.88; }
+.desktop-logo { display: block; }
+.mobile-logo  { display: none;  }
+
+/* ── Right-side action buttons ─────────────────────────────────────────── */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
-/* Show desktop logo by default, hide mobile logo */
-.desktop-logo {
-    display: block;
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  color: #fff;
+  transition: background 0.2s, color 0.2s, transform 0.2s;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.mobile-logo {
-    display: none;
+/* On scrolled (solid bg), switch icon colour to match the surface */
+.app-header.scrolled .action-btn,
+.app-header.search-active .action-btn {
+  color: var(--text-secondary);
 }
 
-.app-logo:hover {
-    transform: scale(1.05);
+.action-btn:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+}
+.app-header.scrolled .action-btn:hover,
+.app-header.search-active .action-btn:hover {
+  background: var(--bg-surface-2);
+  color: var(--accent);
 }
 
-.search-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: 1;
-    margin: 0 16px;
-    min-height: 40px;
+.action-btn mat-icon {
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
 }
 
-.search-box {
-    width: 100%;
-    max-width: 400px;
-    height: 36px;
-    border: none;
-    border-radius: 18px;
-    background: #f5f7fa;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-    padding: 0 12px;
-    display: flex;
-    align-items: center;
-    font-size: 1rem;
-    color: #222;
-    outline: none;
-    min-width: 120px;
+.theme-btn:hover { transform: rotate(20deg); }
+
+/* ── Avatar button ─────────────────────────────────────────────────────── */
+.avatar-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.5);
+  overflow: hidden;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  flex-shrink: 0;
 }
 
-.search-box:focus {
-    border: 2px solid #3498db;
-    background: #fff;
+.avatar-btn:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  transform: scale(1.06);
 }
 
-.search-box input {
-    border-radius: 18px;
-    height: 32px;
-    padding: 0 8px;
+.app-header.scrolled .avatar-btn,
+.app-header.search-active .avatar-btn {
+  border-color: var(--border-strong);
 }
 
-.search-box mat-label {
-    font-size: 14px;
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
-.search-box.mat-form-field {
-    background: #f5f7fa !important;
-    border-radius: 18px !important;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04) !important;
-    border: none !important;
-    padding: 0 12px !important;
-    min-width: 0 !important;
+/* ── Search panel ──────────────────────────────────────────────────────── */
+.search-panel {
+  background: var(--bg-surface);
+  /* Border kept transparent when closed so it never bleeds as a visible
+     line under the transparent header.  Colour is applied only when open. */
+  border-top: 1px solid transparent;
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease, padding 0.3s ease, border-color 0.3s ease;
+  padding: 0 24px;
 }
 
-.search-box .mat-form-field-outline,
-.search-box .mat-form-field-outline-thick,
-.search-box .mat-form-field-underline {
-    display: none !important;
+.search-panel.open {
+  max-height: 300px;
+  padding: 16px 24px 20px;
+  border-top-color: var(--border);
 }
 
-.search-box .mat-form-field-flex {
-    background: transparent !important;
-    border-radius: 18px !important;
-    box-shadow: none !important;
-    border: none !important;
-    min-height: 0 !important;
+/* Search input row */
+.search-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-surface-2);
+  border: 1.5px solid var(--border-strong);
+  border-radius: 12px;
+  padding: 0 14px;
+  height: 48px;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.search-box input.mat-input-element {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    outline: none !important;
-    color: #222;
-    font-size: 1rem;
-    padding: 0 8px;
-    height: 32px;
-    border-radius: 18px;
+.search-input-row:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-/* User Menu Styles */
-.user-menu {
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
+.search-lead-icon {
+  color: var(--text-muted);
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
-.user-profile-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 2px solid #e0e0e0;
-    transition: border-color 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    margin: 0;
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 1rem;
+  outline: none;
+  min-width: 0;
 }
 
-.user-profile-btn:hover {
-    border-color: #3498db;
+.search-input::placeholder { color: var(--text-placeholder); }
+
+.search-clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px;
+  border-radius: 50%;
+  transition: color 0.2s, background 0.2s;
+}
+.search-clear-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface-3);
+}
+.search-clear-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+/* Category chips inside search panel */
+.search-categories {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 10px 0 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.search-categories::-webkit-scrollbar { display: none; }
+
+.cat-chip {
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg-surface-2);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.user-profile-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-    display: block;
-    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-    padding: 0;
-    margin: 0;
+.cat-chip:hover {
+  background: var(--accent-pill-bg);
+  color: var(--accent);
+  border-color: var(--accent-pill-border);
 }
 
-.user-profile-btn:hover .user-profile-img,
-.user-profile-btn:focus .user-profile-img,
-.user-profile-btn:active .user-profile-img {
-    transform: scale(1.12);
+.cat-chip.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 600;
+  box-shadow: 0 2px 8px var(--accent-soft-2);
 }
 
-.user-dropdown-menu {
-    min-width: 280px;
-    max-width: 320px;
+/* ── Search backdrop ───────────────────────────────────────────────────── */
+.search-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 490;
+  background: rgba(0,0,0,0.35);
+  opacity: 0;
+  /* Never intercept pointer events — closing on outside-click is handled
+     by the document:click HostListener in the component.  This lets the
+     user scroll the page freely while the search panel is open. */
+  pointer-events: none;
+  transition: opacity 0.25s;
 }
 
-.user-info {
-    display: flex;
-    align-items: center;
-    padding: 16px;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    border-radius: 8px 8px 0 0;
+.search-backdrop.visible {
+  opacity: 1;
 }
 
-.user-profile-img-large {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid #fff;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    margin-right: 12px;
+/* ── User dropdown menu overrides ──────────────────────────────────────── */
+::ng-deep .ss-user-menu .mat-mdc-menu-panel {
+  min-width: 260px !important;
+  max-width: 300px !important;
+  border-radius: 14px !important;
+  overflow: hidden;
 }
 
-.user-details {
-    flex: 1;
+.menu-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--accent-pill-bg);
+  pointer-events: none;
 }
 
-.user-name {
-    font-weight: 600;
-    font-size: 16px;
-    color: #222;
-    margin-bottom: 4px;
+.menu-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
 }
 
-.user-email {
-    font-size: 14px;
-    color: #666;
-    font-weight: 400;
+.menu-user-info { min-width: 0; }
+
+.menu-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Responsive adjustments */
+.menu-email {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+::ng-deep .sign-out-item {
+  color: #e74c3c !important;
+}
+::ng-deep .sign-out-item mat-icon {
+  color: #e74c3c !important;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-    .header-toolbar {
-        padding: 0 8px;
-    }
-    
-    .app-logo {
-        height: 65px;
-    }
-    
-    /* Switch to mobile logo on tablet and below */
-    .desktop-logo {
-        display: none;
-    }
-    
-    .mobile-logo {
-        display: block;
-    }
-    
-    .search-container {
-        margin: 0 8px;
-    }
-    
-    .search-box {
-        max-width: 200px;
-        height: 32px;
-        font-size: 0.95rem;
-    }
-    
-    .user-profile-btn {
-        width: 36px;
-        height: 36px;
-        padding: 0;
-        margin: 0;
-    }
-    .user-profile-img {
-        width: 100% !important;
-        height: 100% !important;
-        object-fit: cover !important;
-        border-radius: 50% !important;
-        display: block;
-        transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    .user-profile-btn:active .user-profile-img,
-    .user-profile-btn:focus .user-profile-img {
-        transform: scale(1.12);
-    }
+  .header-inner { height: 60px; padding: 0 14px; gap: 6px; }
+
+  .app-logo { height: 52px; }
+  .desktop-logo { display: none; }
+  .mobile-logo  { display: block; }
+
+  .action-btn { width: 36px; height: 36px; }
+  .avatar-btn { width: 34px; height: 34px; }
+
+  .search-panel.open { padding: 12px 14px 16px; }
+  .search-input-row  { height: 44px; }
 }
 
 @media (max-width: 480px) {
-    .header-toolbar {
-        padding: 0 8px;
-        min-height: 70px;
-    }
-    
-    .app-logo {
-        height: 55px;
-    }
-    
-    .search-container {
-        margin: 0 4px;
-    }
-    
-    .search-box {
-        max-width: 150px;
-        height: 28px;
-        font-size: 0.9rem;
-    }
-    
-    .user-profile-btn {
-        width: 32px;
-        height: 32px;
-        padding: 0;
-        margin: 0;
-    }
-    .user-profile-img {
-        width: 100% !important;
-        height: 100% !important;
-        object-fit: cover !important;
-        border-radius: 50% !important;
-        display: block;
-        transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    .user-profile-btn:active .user-profile-img,
-    .user-profile-btn:focus .user-profile-img {
-        transform: scale(1.12);
-    }
-}
+  .header-inner { height: 56px; padding: 0 10px; }
 
-@media (max-width: 360px) {
-    .header-toolbar {
-        padding: 0 4px;
-        min-height: 60px;
-    }
-    
-    .app-logo {
-        height: 45px;
-    }
-    
-    .search-box {
-        max-width: 120px;
-        font-size: 0.85rem;
-    }
-    
-    .user-profile-btn {
-        width: 28px;
-        height: 28px;
-    }
+  .app-logo { height: 44px; }
+  .action-btn { width: 34px; height: 34px; }
+  .action-btn mat-icon { font-size: 20px; }
 }
-  

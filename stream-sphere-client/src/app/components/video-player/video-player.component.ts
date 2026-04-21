@@ -53,16 +53,16 @@ export class VideoPlayerComponent implements OnInit {
     this.loading = true;
     this.error = null;
 
-    this.videoService.getAllVideos().subscribe({
-      next: (videos: any[]) => {
-        this.video = videos.find((v) => v._id === videoId);
+    this.videoService.getVideoById(videoId).subscribe({
+      next: (video: any) => {
+        this.video = video;
         if (this.video) {
           this.safeVideoUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
             this.video.S3_url,
           );
           this.checkUserAuthentication();
           this.loading = false;
-          this.recordWatchHistory(videoId); // ← add here, after video is confirmed found
+          this.recordWatchHistory(videoId);
         } else {
           this.error = 'Video not found';
           this.loading = false;

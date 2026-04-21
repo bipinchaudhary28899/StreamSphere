@@ -1,8 +1,15 @@
+# ── Secrets — NEVER commit these ─────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Common ────────────────────────────────────────────────────────────
 .DS_Store
+Thumbs.db
 node_modules/
 dist/
-.env
-*.log# Logs
+
+# ── Logs ──────────────────────────────────────────────────────────────
 logs
 *.log
 npm-debug.log*

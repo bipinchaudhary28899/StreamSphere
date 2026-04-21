@@ -8,7 +8,7 @@ A full-stack video streaming platform built with Angular (Frontend) and Node.js/
 ```bash
 cd stream-sphere-backend
 npm install
-export JWT_SECRET="123456789876543231"
+cp .env.example .env   # then fill in your own values
 npm run dev
 ```
 
@@ -30,7 +30,7 @@ npm start
 #### Frontend Flow:
 1. **Entry Point**: `stream-sphere-client/src/app/components/user-login/user-login.component.ts`
    - Component loads Google Sign-In script dynamically
-   - Initializes Google OAuth with client ID: `696274223099-m83j37fcauhli1or0a4afjt6eut6f4or.apps.googleusercontent.com`
+   - Initializes Google OAuth with the client ID from `GOOGLE_CLIENT_ID` environment variable
 
 2. **User Interaction**: User clicks "Continue with Google" button
    - Google OAuth popup appears
@@ -73,9 +73,9 @@ npm start
    {
      "token": "eyJhbGciOiJIUzI1NiIs...",
      "user": {
-       "userId": "67ffe6d78622bdc4703bdc29",
-       "userName": "Bipin Chaudhary",
-       "email": "bkumar28899@gmail.com",
+       "userId": "<mongo-object-id>",
+       "userName": "Jane Doe",
+       "email": "jane@example.com",
        "profileImage": "https://lh3.googleusercontent.com/...",
        "role": "user",
        "isVerified": true

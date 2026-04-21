@@ -1,70 +1,163 @@
-import express, { Router, Request, Response } from 'express';  // Use import here
-import { googleLogin } from '../controllers/auth.controller';
-import { uploadController } from '../controllers/upload.controller';
-import { saveVideoController } from '../controllers/saveVideo.controller';
-import { VideoController } from '../controllers/getVideo.controller';
-import { CommentController } from '../controllers/comment.controller';
-import { authenticateJWT } from '../services/auth.service';
+import express, { Router, Request, Response } from 'express';
+import { googleLogin }            from '../controllers/auth.controller';
+import { uploadController }       from '../controllers/upload.controller';
+import { saveVideoController }    from '../controllers/saveVideo.controller';
+import { VideoController }        from '../controllers/getVideo.controller';
+import { CommentController }      from '../controllers/comment.controller';
+import { authenticateJWT }        from '../services/auth.service';
 import { WatchHistoryController } from '../controllers/watchHistory.controller';
 
-const watchHistoryController = new WatchHistoryController();
-const router: Router = express.Router();
-const commentController = new CommentController();
+// ── Middleware ────────────────────────────────────────────────────────────────
+import { validate }        from '../middleware/validate.middleware';
+import { authLimiter, uploadLimiter, writeLimiter } from '../middleware/rateLimiter.middleware';
 
-router.post('/google-login', googleLogin);
-router.post('/upload-url', uploadController);
-router.post('/save-video', saveVideoController);
-router.get('/home', VideoController.getVideos);
-router.get('/videos/category/:category', VideoController.getVideosByCategory);
+// ── Schemas ───────────────────────────────────────────────────────────────────
+import {
+  googleLoginSchema,
+  uploadUrlSchema,
+  saveVideoSchema,
+  videoIdParamSchema,
+  createCommentSchema,
+  updateCommentSchema,
+  commentIdParamSchema,
+  watchHistorySchema,
+} from '../validators/schemas';
 
-// Specific routes must come before parameterized routes
-router.get('/videos/top-liked', async (req: Request, res: Response) => {
-  await VideoController.getTopLikedVideos(req, res);
-});
-router.get('/videos/liked', authenticateJWT, async (req: Request, res: Response) => {
-  await VideoController.getLikedVideos(req, res);
-});
-router.get('/videos/disliked', authenticateJWT, async (req: Request, res: Response) => {
-  await VideoController.getDislikedVideos(req, res);
-});
+// ── Setup ─────────────────────────────────────────────────────────────────────
+const router: Router          = express.Router();
+const commentController       = new CommentController();
+const watchHistoryController  = new WatchHistoryController();
 
-// Parameterized routes come after specific routes
-router.post('/videos/:videoId/like', authenticateJWT, async (req: Request, res: Response) => {
-  await VideoController.likeVideo(req, res);
-});
-router.post('/videos/:videoId/dislike', authenticateJWT, async (req: Request, res: Response) => {
-  await VideoController.dislikeVideo(req, res);
-});
-router.get('/videos/:videoId/reaction', authenticateJWT, async (req: Request, res: Response) => {
-  await VideoController.getUserReaction(req, res);
-});
-router.delete('/videos/:videoId', async (req: Request, res: Response) => {
-  await VideoController.deleteVideo(req, res);
-});
+// Express v5 requires handlers to return void | Promise<void>.
+// Controllers that use early `return res.json(...)` return Response, so we
+// wrap them in a void-returning async function to satisfy the type checker
+// without touching the controller implementations.
+type H = (req: Request, res: Response) => Promise<any>;
+const wrap = (fn: H) => async (req: Request, res: Response): Promise<void> => {
+  await fn(req, res);
+};
 
-// Comment routes
-router.get('/videos/:videoId/comments', async (req: Request, res: Response) => {
-  await commentController.getCommentsByVideoId(req, res);
-});
-router.post('/videos/:videoId/comments', authenticateJWT, async (req: Request, res: Response) => {
-  await commentController.createComment(req, res);
-});
-router.put('/comments/:commentId', authenticateJWT, async (req: Request, res: Response) => {
-  await commentController.updateComment(req, res);
-});
-router.delete('/comments/:commentId', authenticateJWT, async (req: Request, res: Response) => {
-  await commentController.deleteComment(req, res);
-});
-router.get('/videos/:videoId/comments/count', async (req: Request, res: Response) => {
-  await commentController.getCommentCount(req, res);
-});
-router.get('/user/comments', authenticateJWT, async (req: Request, res: Response) => {
-  await commentController.getCommentsByUserId(req, res);
-});
-router.post('/history/:videoId', authenticateJWT,  async (req: Request, res: Response) => { /* upsertWatchHistory */ 
-  await watchHistoryController.upsertWatchHistory(req, res);
-});
-router.get('/history', authenticateJWT, async (req: Request, res: Response) => { /* getWatchHistory */ 
-  await watchHistoryController.getWatchHistory(req, res);
-});
+// ── Auth ──────────────────────────────────────────────────────────────────────
+router.post(
+  '/google-login',
+  authLimiter,
+  validate(googleLoginSchema),
+  googleLogin,
+);
+
+// ── Upload ────────────────────────────────────────────────────────────────────
+router.post(
+  '/upload-url',
+  authenticateJWT,
+  uploadLimiter,
+  validate(uploadUrlSchema),
+  uploadController,
+);
+
+router.post(
+  '/save-video',
+  authenticateJWT,
+  uploadLimiter,
+  validate(saveVideoSchema),
+  saveVideoController,
+);
+
+// ── Feed — cursor-paginated + Redis cached ─────────────────────────────────────
+// GET /api/feed?cursor=<id>&category=<cat>&limit=<n>
+router.get('/feed',        wrap(VideoController.getFeed.bind(VideoController)));
+// GET /api/feed/search?q=<term>
+router.get('/feed/search', wrap(VideoController.searchFeed.bind(VideoController)));
+
+// Legacy /home — redirects to /feed for backward compatibility
+router.get('/home', wrap(VideoController.getFeed.bind(VideoController)));
+
+// ── Video reads — SPECIFIC routes MUST come before /:videoId ─────────────────
+router.get('/videos/top-liked', wrap(VideoController.getTopLikedVideos.bind(VideoController)));
+
+router.get('/videos/liked',
+  authenticateJWT,
+  wrap(VideoController.getLikedVideos.bind(VideoController)),
+);
+router.get('/videos/disliked',
+  authenticateJWT,
+  wrap(VideoController.getDislikedVideos.bind(VideoController)),
+);
+
+// Parameterised routes after all literal-segment routes
+router.get('/videos/:videoId/reaction',
+  authenticateJWT,
+  validate(videoIdParamSchema),
+  wrap(VideoController.getUserReaction.bind(VideoController)),
+);
+
+router.get('/videos/:videoId', wrap(VideoController.getVideoById.bind(VideoController)));
+
+// ── Video writes ──────────────────────────────────────────────────────────────
+router.post('/videos/:videoId/like',
+  authenticateJWT,
+  writeLimiter,
+  validate(videoIdParamSchema),
+  wrap(VideoController.likeVideo.bind(VideoController)),
+);
+
+router.post('/videos/:videoId/dislike',
+  authenticateJWT,
+  writeLimiter,
+  validate(videoIdParamSchema),
+  wrap(VideoController.dislikeVideo.bind(VideoController)),
+);
+
+router.delete('/videos/:videoId',
+  authenticateJWT,
+  validate(videoIdParamSchema),
+  wrap(VideoController.deleteVideo.bind(VideoController)),
+);
+
+// ── Comments ──────────────────────────────────────────────────────────────────
+router.get('/videos/:videoId/comments',
+  wrap((req, res) => commentController.getCommentsByVideoId(req, res)),
+);
+
+router.get('/videos/:videoId/comments/count',
+  wrap((req, res) => commentController.getCommentCount(req, res)),
+);
+
+router.post('/videos/:videoId/comments',
+  authenticateJWT,
+  writeLimiter,
+  validate(createCommentSchema),
+  wrap((req, res) => commentController.createComment(req, res)),
+);
+
+router.put('/comments/:commentId',
+  authenticateJWT,
+  writeLimiter,
+  validate(updateCommentSchema),
+  wrap((req, res) => commentController.updateComment(req, res)),
+);
+
+router.delete('/comments/:commentId',
+  authenticateJWT,
+  validate(commentIdParamSchema),
+  wrap((req, res) => commentController.deleteComment(req, res)),
+);
+
+router.get('/user/comments',
+  authenticateJWT,
+  wrap((req, res) => commentController.getCommentsByUserId(req, res)),
+);
+
+// ── Watch history ─────────────────────────────────────────────────────────────
+router.post('/history/:videoId',
+  authenticateJWT,
+  writeLimiter,
+  validate(watchHistorySchema),
+  wrap((req, res) => watchHistoryController.upsertWatchHistory(req, res)),
+);
+
+router.get('/history',
+  authenticateJWT,
+  wrap((req, res) => watchHistoryController.getWatchHistory(req, res)),
+);
+
 export default router;

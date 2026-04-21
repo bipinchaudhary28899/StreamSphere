@@ -1,111 +1,92 @@
-/* Ensure the app takes full viewport height */
+/* ── Host ──────────────────────────────────────────────────────────────── */
 :host {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
 }
 
-html, body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
-
-.main-container {
-  display: flex;
-  flex: 1 0 auto;
-  min-height: 0;
-}
-
+/* ── Main body ─────────────────────────────────────────────────────────── */
 .main-body {
   flex: 1 1 auto;
   min-width: 0;
-  margin-left: 240px;
-  overflow-y: auto;
-  height: calc(100vh - 80px);
-  padding-bottom: 0;
+  width: 100%;
+  background: var(--bg-base);
+  transition: background var(--transition);
+  /* On non-home pages: add top padding to clear the fixed header */
+  padding-top: 68px;
 }
 
-.main-container.no-sidebar .main-body {
-  margin-left: 0;
+/* Home page: hero carousel fills from the top behind the transparent header */
+.main-body.home-page {
+  padding-top: 0;
 }
 
-.app-footer {
-  display: none;
-}
-
-app-video-section {
-    flex-grow: 1;
-}
-
-app-category-slider {
-    display: block;
-    margin: 12px 0;
-}
-
-.footer-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.footer-links a {
-  color: #764ba2;
-  text-decoration: none;
-  margin: 0 6px;
-  font-weight: 500;
-  transition: color 0.2s;
-}
-.footer-links a:hover {
-  color: #3498db;
-}
-
-/* Responsive Design */
+/* Mobile: account for bottom nav when logged in */
 @media (max-width: 768px) {
-    html, body {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100vw !important;
-        box-sizing: border-box;
-        overflow-x: hidden;
-    }
-    .main-container, .main-body {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100vw !important;
-        box-sizing: border-box;
-        overflow-x: hidden;
-    }
-    
-    app-sidebar {
-        display: none; /* Hide sidebar on mobile */
-    }
+  .main-body {
+    padding-top: 60px;
+    padding-bottom: 64px;
+  }
+  .main-body.home-page {
+    padding-top: 0;
+  }
 }
 
 @media (max-width: 480px) {
+  .main-body { padding-top: 56px; }
+  .main-body.home-page { padding-top: 0; }
 }
 
-@media (max-width: 600px) {
-  .app-footer {
-    font-size: 0.92rem;
-    padding: 12px 0 8px 0;
-  }
-  .footer-content {
-    gap: 2px;
-  }
-  .footer-links a {
-    margin: 0 2px;
-  }
+/* ── Mobile bottom navigation ──────────────────────────────────────────── */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.1);
+  height: 60px;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0 4px;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.mobile-bottom-nav .nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  text-decoration: none;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 6px 0;
+  border-radius: 10px;
+  transition: color var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-bottom-nav .nav-item mat-icon {
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
+  transition: transform 0.2s;
+}
+
+.mobile-bottom-nav .nav-item:active mat-icon { transform: scale(0.88); }
+
+.mobile-bottom-nav .nav-item.active,
+.mobile-bottom-nav .nav-item.active mat-icon {
+  color: var(--accent);
 }
 
 @media (max-width: 768px) {
-  .main-body {
-    margin-left: 0 !important;
-    width: 100vw !important;
-  }
-  .main-container.no-sidebar .main-body {
-    margin-left: 0 !important;
-    width: 100vw !important;
-  }
+  .mobile-bottom-nav { display: flex; }
 }

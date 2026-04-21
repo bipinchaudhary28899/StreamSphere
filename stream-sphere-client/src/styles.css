@@ -1,12 +1,117 @@
-/* You can add global styles to this file, and also import other style files */
+/* ═══════════════════════════════════════════════════════════════════════════
+   StreamSphere — Global Styles & Design Tokens
+   Light theme is the default (:root).  Dark theme is toggled via
+   [data-theme="dark"] on <html>, managed by ThemeService.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Design Tokens — Light ───────────────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --bg-base:      #f7f8fa;
+  --bg-surface:   #ffffff;
+  --bg-surface-2: #f4f4f6;
+  --bg-surface-3: #fafafa;
+
+  /* Text */
+  --text-primary:     #1a1a1a;
+  --text-secondary:   #555555;
+  --text-muted:       #888888;
+  --text-placeholder: #aaaaaa;
+
+  /* Borders */
+  --border:        #ececec;
+  --border-strong: #e0e0e0;
+
+  /* Brand accent */
+  --accent:            #ff1963;
+  --accent-hover:      #e0154f;
+  --accent-soft:       rgba(255, 25, 99, 0.08);
+  --accent-soft-2:     rgba(255, 25, 99, 0.12);
+  --accent-pill-bg:    #fff0f5;
+  --accent-pill-border:#ffbdd2;
+
+  /* Shadows */
+  --shadow-xs:     0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sm:     0 1px 4px rgba(0,0,0,0.06);
+  --shadow-md:     0 2px 12px rgba(0,0,0,0.08);
+  --shadow-lg:     0 4px 24px rgba(0,0,0,0.10);
+  --shadow-header: 0 1px 0 #f0f0f0, 0 2px 8px rgba(0,0,0,0.04);
+
+  /* Category tag gradient */
+  --tag-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  /* Skeleton shimmer colors */
+  --skeleton-base:     #f0f0f0;
+  --skeleton-shine:    #e4e4e4;
+
+  /* Transition speed */
+  --transition: 0.2s ease;
+}
+
+/* ── Design Tokens — Dark ────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg-base:      #0d0d15;
+  --bg-surface:   #13131f;
+  --bg-surface-2: #1c1c2a;
+  --bg-surface-3: #181826;
+
+  --text-primary:     #edeef5;
+  --text-secondary:   #a8a8c0;
+  --text-muted:       #6c6c9a;
+  --text-placeholder: #525278;
+
+  --border:        rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.14);
+
+  --accent:            #ff1963;
+  --accent-hover:      #ff4080;
+  --accent-soft:       rgba(255, 25, 99, 0.12);
+  --accent-soft-2:     rgba(255, 25, 99, 0.18);
+  --accent-pill-bg:    rgba(255, 25, 99, 0.12);
+  --accent-pill-border:rgba(255, 25, 99, 0.30);
+
+  --shadow-xs:     0 1px 2px rgba(0,0,0,0.25);
+  --shadow-sm:     0 1px 4px rgba(0,0,0,0.35);
+  --shadow-md:     0 2px 12px rgba(0,0,0,0.45);
+  --shadow-lg:     0 4px 24px rgba(0,0,0,0.55);
+  --shadow-header: 0 1px 0 rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.4);
+
+  --tag-gradient: linear-gradient(135deg, #4f5ec8 0%, #6b39a0 100%);
+
+  --skeleton-base:  #1e1e2e;
+  --skeleton-shine: #262638;
+}
+
+/* ── Reset / Base ────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
 html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
   max-width: 100vw;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+body {
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  transition: background var(--transition), color var(--transition);
+}
+
+/* ── Smooth scrolling ────────────────────────────────────────────────────── */
+* { scroll-behavior: smooth; }
+
+/* ── Focus visible (accessibility) ──────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Sidebar active-link text override (Material) ────────────────────────── */
 .sidebar-nav .active-link .mdc-list-item__primary-text,
 .sidebar-nav .active-link span,
 .sidebar-nav mat-list-item.active-link .mdc-list-item__primary-text {
@@ -15,5 +120,140 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 
 .sidebar-nav mat-list-item:hover .mdc-list-item__primary-text,
 .sidebar-nav mat-list-item:hover span {
-  color: #fff !important;
+  color: var(--accent) !important;
+}
+
+/* ── Angular Material global dark-mode overrides ─────────────────────────── */
+
+/* mat-toolbar (header) */
+[data-theme="dark"] mat-toolbar {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+/* mat-menu overlay panel */
+[data-theme="dark"] .mat-mdc-menu-panel {
+  background: var(--bg-surface-2) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+[data-theme="dark"] .mat-mdc-menu-content {
+  background: var(--bg-surface-2) !important;
+}
+[data-theme="dark"] .mat-mdc-menu-item {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .mat-mdc-menu-item:hover:not([disabled]) {
+  background: rgba(255,255,255,0.06) !important;
+}
+[data-theme="dark"] .mat-mdc-menu-item .mat-icon {
+  color: var(--text-secondary) !important;
+}
+
+/* mat-divider */
+[data-theme="dark"] .mat-divider {
+  border-color: var(--border) !important;
+}
+
+/* mat-expansion-panel (user-profile mobile accordion) */
+[data-theme="dark"] .mat-expansion-panel {
+  background: var(--bg-surface-2) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+[data-theme="dark"] .mat-expansion-panel-header {
+  background: var(--bg-surface-2) !important;
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .mat-expansion-panel-header:hover {
+  background: var(--bg-surface-3) !important;
+}
+[data-theme="dark"] .mat-expansion-indicator::after {
+  color: var(--text-secondary) !important;
+  border-color: var(--text-secondary) !important;
+}
+
+/* mat-list-item */
+[data-theme="dark"] mat-list-item {
+  color: var(--text-primary) !important;
+}
+
+/* mat-table */
+[data-theme="dark"] .mat-mdc-table {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .mat-mdc-header-row {
+  background: var(--bg-surface-2) !important;
+}
+[data-theme="dark"] .mat-mdc-header-cell {
+  color: var(--text-secondary) !important;
+  border-bottom-color: var(--border) !important;
+}
+[data-theme="dark"] .mat-mdc-row {
+  background: var(--bg-surface) !important;
+}
+[data-theme="dark"] .mat-mdc-row:hover {
+  background: var(--bg-surface-2) !important;
+}
+[data-theme="dark"] .mat-mdc-cell {
+  color: var(--text-primary) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+/* mat-paginator */
+[data-theme="dark"] .mat-mdc-paginator {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .mat-mdc-paginator-icon {
+  fill: var(--text-secondary) !important;
+}
+[data-theme="dark"] .mat-mdc-select-value {
+  color: var(--text-primary) !important;
+}
+
+/* mat-progress-bar */
+[data-theme="dark"] .mat-mdc-progress-bar {
+  --mdc-linear-progress-track-color: var(--bg-surface-2);
+}
+
+/* mat-checkbox */
+[data-theme="dark"] .mat-mdc-checkbox .mdc-checkbox__background {
+  border-color: var(--border-strong) !important;
+}
+
+/* Snackbar / toasts */
+[data-theme="dark"] .mat-mdc-snack-bar-container {
+  background: var(--bg-surface-2) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Scrollbar styling (dark mode) */
+[data-theme="dark"] {
+  scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+[data-theme="dark"] ::-webkit-scrollbar { width: 8px; height: 8px; }
+[data-theme="dark"] ::-webkit-scrollbar-track { background: transparent; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 4px;
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+/* Light mode scrollbar */
+:root {
+  scrollbar-color: rgba(0,0,0,0.12) transparent;
+}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.2);
 }

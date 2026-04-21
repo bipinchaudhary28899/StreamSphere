@@ -147,19 +147,17 @@ export class UserProfileComponent implements OnInit {
       return;
     }
 
-    this.videoService.getAllVideos().subscribe({
-      next: (videos) => {
-        this.myVideos = videos.filter((video: any) => {
-          const matches = video.user_id === this.user?.userId;
-
-          return matches;
-        });
-
+    // Fetch first page; my videos are filtered client-side by user_id.
+    // For a user who has uploaded many videos, this could be extended to a
+    // dedicated /api/videos/mine endpoint — acceptable for current scale.
+    this.videoService.getFeed(undefined, 'All').subscribe({
+      next: (page: any) => {
+        const videos: any[] = page.videos ?? page; // handle both FeedPage and plain array
+        this.myVideos = videos.filter((video: any) => video.user_id === this.user?.userId);
         this.dataSource.data = this.myVideos;
-
         setTimeout(() => this.attachTableHelpers());
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error loading user videos:', err);
       },
     });

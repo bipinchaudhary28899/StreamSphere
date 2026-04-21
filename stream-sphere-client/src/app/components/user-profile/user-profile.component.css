@@ -1,9 +1,10 @@
 .profile-header {
   padding: 0;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  background: linear-gradient(135deg, var(--bg-surface-2) 0%, var(--bg-surface-3) 100%);
+  box-shadow: var(--shadow-md);
   border-radius: 0 0 24px 24px;
   overflow: hidden;
+  transition: background var(--transition);
 }
 
 .profile-header .background-image {
@@ -12,9 +13,13 @@
   height: 220px;
   border: none;
   background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+  box-shadow: var(--shadow-sm);
   border-radius: 0 0 24px 24px;
   overflow: hidden;
+}
+
+[data-theme="dark"] .profile-header .background-image {
+  background: linear-gradient(120deg, #1a2740 0%, #0d1f38 100%);
 }
 
 .profile-header .background-image img {
@@ -32,25 +37,30 @@
   display: flex;
   align-items: center;
   gap: 24px;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.88);
   padding: 20px 32px;
   border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
+}
+
+[data-theme="dark"] .profile-header .background-image .profile-info {
+  background: rgba(19, 19, 31, 0.88);
+  border: 1px solid rgba(255,255,255,0.08);
 }
 
 .profile-header .background-image .profile-info .profile-pic {
   width: 110px;
   height: 110px;
   border-radius: 50%;
-  border: 4px solid #fff;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border: 4px solid var(--bg-surface);
+  box-shadow: var(--shadow-md);
   object-fit: cover;
   transition: transform 0.2s;
 }
 
 .profile-header .background-image .profile-info .profile-pic:hover {
   transform: scale(1.05) rotate(-2deg);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--shadow-lg);
 }
 
 .profile-header .background-image .profile-info .user-details {
@@ -62,15 +72,14 @@
 .profile-header .background-image .profile-info .user-details .username {
   font-weight: 700;
   font-size: 2rem;
-  color: #222;
+  color: var(--text-primary);
   letter-spacing: 0.5px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .profile-header .background-image .profile-info .user-details .user-email {
   font-weight: 500;
   font-size: 1rem;
-  color: #666;
+  color: var(--text-secondary);
   letter-spacing: 0.3px;
 }
 
@@ -80,10 +89,11 @@
   justify-content: center;
   align-items: flex-start;
   min-height: 500px;
-  background: #f7fafc;
+  background: var(--bg-base);
   border-radius: 24px;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
+  box-shadow: var(--shadow-sm);
   padding: 32px 0;
+  transition: background var(--transition);
 }
 
 .profile-body .sidenav-container {
@@ -95,29 +105,30 @@
 
 .profile-body .sidenav-container .upload-sidebar {
   width: 220px;
-  color: #222;
+  color: var(--text-primary);
   padding: 24px 18px;
   border-radius: 16px;
-  background: linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: none;
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
   font-weight: 500;
   font-size: 1.1rem;
-  transition: box-shadow 0.2s;
+  transition: background var(--transition), box-shadow var(--transition);
 }
 
 .profile-body .sidenav-container .upload-sidebar:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-md);
 }
 
 .profile-body .sidenav-container .main-content {
   border-radius: 16px;
-  background: #fff;
+  background: var(--bg-surface);
   padding: 32px 28px;
   flex: 1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: none;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
   min-height: 400px;
+  transition: background var(--transition);
 }
 
 .welcome-section {
@@ -128,9 +139,9 @@
 .welcome-section h2 {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #222;
+  color: var(--text-primary);
   margin-bottom: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--tag-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -138,7 +149,7 @@
 
 .welcome-section p {
   font-size: 1.2rem;
-  color: #666;
+  color: var(--text-secondary);
   font-weight: 400;
   line-height: 1.6;
 }
@@ -155,10 +166,10 @@
 .dashboard-section h3 {
   font-size: 1.8rem;
   font-weight: 600;
-  color: #222;
+  color: var(--text-primary);
   margin-bottom: 24px;
   padding-bottom: 12px;
-  border-bottom: 2px solid #e1e5e9;
+  border-bottom: 2px solid var(--border);
 }
 
 .liked-videos-section h3 {
@@ -170,11 +181,11 @@
 }
 
 .dashboard-section h3 {
-  color: #2196f3;
+  color: var(--accent);
 }
 
 .dashboard-section p {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 1.1rem;
   margin-bottom: 20px;
 }
@@ -182,7 +193,7 @@
 .no-videos {
   text-align: center;
   padding: 40px 20px;
-  color: #666;
+  color: var(--text-muted);
   font-size: 1.1rem;
 }
 
@@ -228,13 +239,16 @@
 
 .mobile-panel {
   margin-bottom: 8px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  overflow: hidden;
 }
 
 .mobile-panel mat-expansion-panel-header {
   padding: 16px;
-  background-color: #f5f5f5;
+  background: var(--bg-surface-2);
 }
 
 .mobile-panel mat-panel-title {
@@ -242,14 +256,16 @@
   align-items: center;
   gap: 12px;
   font-weight: 500;
+  color: var(--text-primary);
 }
 
 .mobile-panel mat-icon {
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .mobile-panel .mat-expansion-panel-body {
   padding: 16px;
+  background: var(--bg-surface);
 }
 
 /* Mobile styles */
@@ -297,11 +313,8 @@
 
   .profile-body .sidenav-container .main-content {
     border-radius: 16px;
-    background: #fff;
     padding: 32px 16px;
     flex: 1;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    border: none;
     min-height: 400px;
   }
 
@@ -330,8 +343,8 @@
 
   .video-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
-    margin-top: 16px;
+    gap: 8px;
+    margin-top: 12px;
   }
 
   .liked-videos-section h3,
@@ -345,7 +358,6 @@
     font-size: 1rem;
   }
 
-  /* Mobile action buttons — centered row with equal fixed width */
   .mobile-actions {
     flex-direction: row;
     justify-content: center;
@@ -362,35 +374,29 @@
     padding: 12px;
   }
 
-  /* ── Dashboard mobile: zero spacing, show only checkbox + title ────────── */
-
-  /* Strip all padding/margin from the section wrapper */
+  /* Dashboard mobile: zero spacing */
   .dashboard-section,
   .mobile-panel .dashboard-section {
     padding: 0 !important;
     margin: 0 !important;
   }
 
-  /* Hide the redundant h3 and subtitle — the accordion header already labels it */
   .mobile-panel .dashboard-section h3,
   .mobile-panel .dashboard-section > p {
     display: none !important;
   }
 
-  /* Hide description and uploaded-at columns — too cramped */
   .mat-column-description,
   .mat-column-uploadedAt {
     display: none !important;
   }
 
-  /* Table: full width, no margin, smaller font */
   .mat-table {
     width: 100% !important;
     margin: 0 !important;
     font-size: 0.78rem;
   }
 
-  /* Zero out all cell padding */
   .mat-header-cell,
   .mat-cell {
     padding: 6px 4px !important;
@@ -398,7 +404,6 @@
     border-bottom-width: 1px;
   }
 
-  /* Checkbox column: fixed narrow width */
   .mat-column-select {
     width: 36px !important;
     min-width: 36px !important;
@@ -407,7 +412,6 @@
     padding: 6px 2px !important;
   }
 
-  /* Title column: takes all remaining space, truncates gracefully */
   .mat-column-title {
     flex: 1 1 auto !important;
     overflow: hidden;
@@ -415,20 +419,25 @@
     text-overflow: ellipsis;
   }
 
-  /* Delete button: full width, flush to edges */
   .dashboard-section [mat-raised-button] {
     width: 100% !important;
     margin: 0 0 8px 0 !important;
   }
 
-  /* Accordion panel body: no padding for dashboard */
   .mobile-panel .mat-expansion-panel-body {
     padding: 8px 0 !important;
   }
 
-  /* Paginator: tighten up */
   .mat-paginator {
     font-size: 0.75rem;
+  }
+}
+
+/* ── Mini-card grid at 600px breakpoint ────────────────────────────────── */
+@media (max-width: 600px) {
+  .video-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 }
 
@@ -441,13 +450,8 @@
     padding: 8px 4px;
   }
 
-  .welcome-section h2 {
-    font-size: 1.1rem;
-  }
-
-  .welcome-section p {
-    font-size: 1rem;
-  }
+  .welcome-section h2 { font-size: 1.1rem; }
+  .welcome-section p  { font-size: 1rem; }
 }
 
 /* Ensure content is visible in mobile accordion */
@@ -472,6 +476,7 @@
   margin-left: 0 !important;
   padding-left: 0 !important;
 }
+
 @media (max-width: 768px) {
   ::ng-deep .mat-mdc-paginator-outer-container,
   ::ng-deep .mat-mdc-paginator-container {

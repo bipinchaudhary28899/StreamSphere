@@ -1,76 +1,67 @@
+/* ── Sidebar container ─────────────────────────────────────────────────── */
 .sidebar-nav {
   width: 240px;
-  background-color: #fff;
-  border-right: 1px solid #e0e0e0;
+  background-color: var(--bg-surface);
+  border-right: 1px solid var(--border);
   position: fixed;
-  top: 56px;
+  top: 72px;
   left: 0;
-  height: calc(100vh - 80px);
-  margin-top: 24px;
+  height: calc(100vh - 72px);
   z-index: 200;
+  padding-top: 12px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  transition: background-color var(--transition), border-color var(--transition);
 }
-/* Mobile styles */
-@media (max-width: 768px) {
-  .mobile-hidden {
-    display: none !important;
-  }
-  
-  .sidebar-nav {
-    width: 100%;
-    left: 0;
-    top: 56px;
-    height: auto;
-    position: static;
-    border-right: none;
-    border-bottom: 1px solid #e0e0e0;
-    margin-top: 0;
-  }
+.sidebar-nav::-webkit-scrollbar { display: none; }
+
+/* ── Items ─────────────────────────────────────────────────────────────── */
+.sidebar-nav mat-list-item {
+  height: 48px;
+  margin: 4px 10px;
+  border-radius: 10px;
+  transition: background-color 0.18s, color 0.18s;
+  color: var(--text-secondary);
 }
 
-
-/* Fix icon + text vertical alignment */
 .sidebar-nav mat-list-item ::ng-deep .mdc-list-item__content,
 .sidebar-nav mat-list-item ::ng-deep .mat-mdc-list-item-unscoped-content {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-
-
-.sidebar-nav mat-list-item {
-  height: 48px;
-  margin: 12px 8px;
-  border-radius: 8px;
-  transition: background-color 0.2s, color 0.2s;
-  color: #222;
+  gap: 14px;
 }
 
 .sidebar-nav mat-icon {
-  margin-right: 0;
-  color: #ff1963;
-  transition: color 0.2s;
+  color: var(--text-muted);
+  transition: color 0.18s;
   flex-shrink: 0;
-  line-height: 1;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
 }
 
+/* Hover */
 .sidebar-nav mat-list-item:hover {
-  background-color: #ff1963;
-  color: #fff;
+  background-color: var(--accent-pill-bg);
+  color: var(--accent);
 }
-
 .sidebar-nav mat-list-item:hover mat-icon {
-  color: #fff;
+  color: var(--accent);
 }
 
+/* Active */
 .active-link {
-  background-color: #ff1963;
-  border-radius: 8px;
-  color: #fff;
-  
+  background-color: var(--accent) !important;
+  color: #fff !important;
   font-weight: 600;
 }
-
 .active-link mat-icon {
-  color: #fff;
+  color: #fff !important;
+}
+
+/* ── Hide on mobile ────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar-nav {
+    display: none !important;
+  }
 }
