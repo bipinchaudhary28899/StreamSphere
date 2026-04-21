@@ -31,8 +31,23 @@
     <!-- Content -->
     <div class="hero-content">
       <div class="hero-text">
-        <h1 class="hero-title">{{ currentVideo?.title }}</h1>
-        <p class="hero-description">{{ currentVideo?.description }}</p>
+
+        <!-- Title — hidden when description is fully expanded to save space -->
+        <h1 class="hero-title" *ngIf="!descriptionExpanded">{{ currentVideo?.title }}</h1>
+
+        <!-- Description — clamped to 3 lines by default -->
+        <p class="hero-description" [class.expanded]="descriptionExpanded">
+          {{ currentVideo?.description }}
+        </p>
+
+        <!-- Read more / Read less toggle (only shown when text is long) -->
+        <button
+          *ngIf="(currentVideo?.description?.length ?? 0) > DESC_THRESHOLD"
+          class="desc-toggle-btn"
+          (click)="toggleDescription($event)">
+          {{ descriptionExpanded ? 'Read less ▲' : 'Read more ▼' }}
+        </button>
+
         <div class="hero-meta">
           <span class="hero-likes">{{ currentVideo?.likes }} likes</span>
           <span class="hero-timestamp">

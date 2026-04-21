@@ -13,6 +13,7 @@ interface IVideo extends Document {
   dislikes: number;
   likedBy: string[];
   dislikedBy: string[];
+  views: number;
 }
 
 const videoSchema: Schema = new Schema(
@@ -28,6 +29,7 @@ const videoSchema: Schema = new Schema(
     dislikes: { type: Number, default: 0 },
     likedBy: [{ type: String }],
     dislikedBy: [{ type: String }],
+    views: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
@@ -42,6 +44,9 @@ videoSchema.index({ category: 1, _id: -1 });
 
 // Top-liked carousel
 videoSchema.index({ likes: -1 });
+
+// Top views
+videoSchema.index({ views: -1 });
 
 // Full-text search on title + description
 videoSchema.index({ title: 'text', description: 'text' });

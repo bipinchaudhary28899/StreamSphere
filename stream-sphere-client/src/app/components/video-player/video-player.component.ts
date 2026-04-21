@@ -86,6 +86,11 @@ export class VideoPlayerComponent implements OnInit {
     this.videoService.addToHistory(videoId, user.userId).subscribe({
       error: (err) => console.error('Failed to record watch history:', err),
     });
+
+    this.videoService.recordView(videoId).subscribe({
+      next: (res) => { if (res.views > 0) this.video.views = res.views; },
+      error: () => {} // silently ignore
+    });
   }
 
   checkUserAuthentication() {
@@ -231,5 +236,12 @@ export class VideoPlayerComponent implements OnInit {
     if (videoId) {
       this.loadVideo(videoId);
     }
+  }
+
+  formatViews(count: number): string {
+    if (!count) return '0';
+    if (count >= 1_000_000) return (count / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (count >= 1_000) return (count / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
+    return count.toLocaleString();
   }
 }

@@ -303,6 +303,21 @@ mat-card-content.card-body {
   flex-shrink: 0;
 }
 
+.view-icon {
+  font-size: 13px !important;
+  width: 13px !important;
+  height: 13px !important;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.view-count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
 // ── Faded ─────────────────────────────────────────────────────────────────────
 .video-card.faded {
   filter: grayscale(0.6) brightness(0.9);

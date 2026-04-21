@@ -35,6 +35,10 @@
         <span class="category-badge" *ngIf="video.category">
           <span class="category-tag">{{ video.category }}</span>
         </span>
+        <span class="view-count">
+          <mat-icon style="font-size:16px;width:16px;height:16px;vertical-align:middle">visibility</mat-icon>
+          {{ formatViews(video.views || 0) }} views
+        </span>
         <mat-icon
           *ngIf="isOwner"
           class="delete-btn"
@@ -51,6 +55,10 @@
       <!-- Like/Dislike Section -->
       <div class="like-dislike-section">
         <div class="counts-display">
+          <span class="count-item">
+            <mat-icon>visibility</mat-icon>
+            <span>{{ formatViews(video.views || 0) }}</span>
+          </span>
           <span class="count-item">
             <mat-icon>thumb_up</mat-icon>
             <span>{{ video.likes || 0 }}</span>

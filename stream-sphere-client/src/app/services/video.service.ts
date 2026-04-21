@@ -100,6 +100,11 @@ export class VideoService {
     return this.http.get<any[]>(`${this.apiUrl}/history`);
   }
 
+  // ── View count ──────────────────────────────────────────────────────────
+  recordView(videoId: string): Observable<{ views: number }> {
+    return this.http.post<{ views: number }>(`${this.apiUrl}/videos/${videoId}/view`, {});
+  }
+
   // ── Header reactive subjects ────────────────────────────────────────────────
   setSearchTerm(term: string): void   { this.searchSubject.next(term); }
   setCategory(category: string): void { this.categorySubject.next(category); }

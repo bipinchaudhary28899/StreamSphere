@@ -38,6 +38,9 @@
                     <span class="meta-dot">·</span>
                     <mat-icon class="like-icon">thumb_up</mat-icon>
                     <span class="like-count">{{ video.likes || 0 }}</span>
+                    <span class="meta-dot">·</span>
+                    <mat-icon class="view-icon">visibility</mat-icon>
+                    <span class="view-count">{{ formatViews(video.views || 0) }}</span>
                   </div>
                 </div>
               </div>
@@ -64,6 +67,9 @@
                 <span class="meta-dot">·</span>
                 <mat-icon class="like-icon">thumb_up</mat-icon>
                 <span class="like-count">{{ video.likes || 0 }}</span>
+                <span class="meta-dot">·</span>
+                <mat-icon class="view-icon">visibility</mat-icon>
+                <span class="view-count">{{ formatViews(video.views || 0) }}</span>
               </div>
 
               <button class="flip-trigger flip-trigger--back" (click)="onFlipClick($event)" title="Back to video">
@@ -105,6 +111,9 @@
               <span class="meta-dot">·</span>
               <mat-icon class="like-icon">thumb_up</mat-icon>
               <span class="like-count">{{ video.likes || 0 }}</span>
+              <span class="meta-dot">·</span>
+              <mat-icon class="view-icon">visibility</mat-icon>
+              <span class="view-count">{{ formatViews(video.views || 0) }}</span>
             </div>
           </div>
         </div>

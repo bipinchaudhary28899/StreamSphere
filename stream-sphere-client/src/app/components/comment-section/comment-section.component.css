@@ -1,344 +1,141 @@
 .comment-section {
-  margin-top: 24px;
-  padding: 20px;
+  margin-top: 28px;
+  padding: 24px;
   background: var(--bg-surface);
-  border-radius: 12px;
+  border-radius: 16px;
   box-shadow: var(--shadow-sm);
-  transition: background var(--transition);
 }
 
-.comment-section-title {
-  font-size: 1.2rem;
-  font-weight: 600;
+/* ── Header ───────────────────────────────────────────────────────────── */
+.cs-header { margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
+.cs-title { font-size: 1.05rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; margin: 0; }
+.cs-icon { font-size: 1.1rem; }
+
+/* ── Avatar sizes ─────────────────────────────────────────────────────── */
+.cs-avatar { border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.cs-avatar--sm  { width: 34px; height: 34px; }
+.cs-avatar--xs  { width: 26px; height: 26px; }
+/* default (new comment form) */
+.cs-form .cs-avatar { width: 38px; height: 38px; }
+
+/* ── New comment form ─────────────────────────────────────────────────── */
+.cs-form { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 24px; }
+.cs-input-wrap { flex: 1; }
+
+.cs-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--bg-surface-2);
   color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 70px;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.cs-textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.cs-textarea:disabled { opacity: 0.6; cursor: not-allowed; }
+.cs-textarea::placeholder { color: var(--text-placeholder); }
+.cs-textarea--edit  { min-height: 60px; }
+.cs-textarea--reply { min-height: 55px; font-size: 0.85rem; }
+
+.cs-form-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.cs-char { font-size: 11px; color: var(--text-muted); margin-right: auto; }
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+.cs-btn { padding: 6px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: none; transition: background 0.2s, transform 0.15s; }
+.cs-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.cs-btn--primary { background: var(--accent); color: #fff; }
+.cs-btn--primary:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); }
+.cs-btn--ghost { background: var(--bg-surface-2); color: var(--text-secondary); border: 1px solid var(--border); }
+.cs-btn--ghost:hover:not(:disabled) { background: var(--border-strong); }
+
+/* ── Login nudge ───────────────────────────────────────────────────────── */
+.cs-login-nudge {
+  background: var(--bg-surface-2);
+  border-radius: 10px;
+  padding: 14px 18px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
   margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-/* Comment Form */
-.comment-form {
-  margin-bottom: 24px;
-}
-
-.comment-input-container {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.comment-input-wrapper {
-  flex: 1;
-}
-
-.comment-input {
-  width: 100%;
-  padding: 12px;
-  border: 1.5px solid var(--border-strong);
-  border-radius: 10px;
-  background: var(--bg-surface-2);
-  color: var(--text-primary);
-  font-size: 14px;
-  font-family: inherit;
-  resize: vertical;
-  min-height: 80px;
-  transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
-  box-sizing: border-box;
-}
-
-.comment-input::placeholder {
-  color: var(--text-placeholder);
-}
-
-.comment-input:focus {
-  outline: none;
-  border-color: var(--accent);
-  background: var(--bg-surface);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.comment-input:disabled {
-  background-color: var(--bg-surface-2);
-  color: var(--text-muted);
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.comment-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 8px;
-}
-
-.char-count {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.submit-btn {
-  background: var(--accent);
-  color: white;
-  border: none;
-  padding: 8px 18px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--transition), transform 0.15s;
-}
-
-.submit-btn:hover:not(:disabled) {
-  background: var(--accent-hover);
-  transform: translateY(-1px);
-}
-
-.submit-btn:disabled {
-  background: var(--border-strong);
-  color: var(--text-muted);
-  cursor: not-allowed;
-}
-
-.submit-btn.loading {
-  background: var(--accent-hover);
-  cursor: not-allowed;
-}
-
-/* Login Prompt */
-.login-prompt {
   text-align: center;
-  padding: 20px;
-  background: var(--bg-surface-2);
-  border-radius: 10px;
-  margin-bottom: 24px;
-  transition: background var(--transition);
 }
 
-.login-prompt p {
-  color: var(--text-muted);
-  margin: 0;
-}
+/* ── Loading / Empty ───────────────────────────────────────────────────── */
+.cs-loading, .cs-empty { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 32px; color: var(--text-muted); font-size: 0.9rem; }
+.cs-spinner { width: 20px; height: 20px; border: 2px solid var(--border-strong); border-top-color: var(--accent); border-radius: 50%; animation: cs-spin 0.7s linear infinite; }
+@keyframes cs-spin { to { transform: rotate(360deg); } }
 
-/* Comments List */
-.comments-list {
+/* ── Comment list ──────────────────────────────────────────────────────── */
+.cs-list { display: flex; flex-direction: column; gap: 4px; }
+
+.cs-comment { padding: 14px 0; border-bottom: 1px solid var(--border); }
+.cs-comment:last-child { border-bottom: none; }
+
+.cs-comment-body { display: flex; gap: 12px; align-items: flex-start; }
+
+.cs-comment-content { flex: 1; min-width: 0; }
+
+.cs-comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.cs-username { font-weight: 700; font-size: 0.85rem; color: var(--text-primary); }
+.cs-date { font-size: 0.75rem; color: var(--text-muted); }
+
+.cs-owner-actions { display: flex; gap: 4px; margin-left: auto; }
+.cs-action-btn {
+  background: none; border: none; font-size: 0.75rem; color: var(--text-muted);
+  cursor: pointer; padding: 2px 7px; border-radius: 5px; transition: background 0.15s, color 0.15s;
+}
+.cs-action-btn:hover { background: var(--bg-surface-2); color: var(--text-primary); }
+.cs-action-btn--delete:hover { background: rgba(211,47,47,0.1); color: #e53935; }
+
+.cs-text { margin: 0 0 8px; font-size: 0.9rem; line-height: 1.55; color: var(--text-secondary); white-space: pre-wrap; word-break: break-word; }
+
+/* ── Edit form ─────────────────────────────────────────────────────────── */
+.cs-edit-form { margin-bottom: 6px; }
+
+/* ── Reply bar ─────────────────────────────────────────────────────────── */
+.cs-reply-bar { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.cs-reply-btn {
+  background: none; border: none; font-size: 0.78rem; color: var(--text-muted);
+  cursor: pointer; padding: 3px 8px; border-radius: 6px; transition: background 0.15s, color 0.15s; font-weight: 500;
+}
+.cs-reply-btn:hover { background: var(--bg-surface-2); color: var(--accent); }
+
+.cs-view-replies-btn {
+  background: none; border: none; font-size: 0.78rem; font-weight: 600; color: var(--accent);
+  cursor: pointer; padding: 3px 8px; border-radius: 6px; transition: background 0.15s;
+}
+.cs-view-replies-btn:hover { background: var(--accent-pill-bg); }
+
+/* ── Inline reply form ─────────────────────────────────────────────────── */
+.cs-reply-form { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; padding: 10px; background: var(--bg-surface-2); border-radius: 10px; }
+
+/* ── Replies (indented thread) ─────────────────────────────────────────── */
+.cs-replies {
+  margin-top: 10px;
+  margin-left: 16px;
+  padding-left: 16px;
+  border-left: 2px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-.comment-item {
-  padding: 14px 16px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-surface-3);
-  transition: background var(--transition), border-color var(--transition);
-}
+.cs-reply { display: flex; gap: 10px; align-items: flex-start; }
 
-.comment-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.comment-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.comment-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.comment-username {
-  font-weight: 600;
-  color: var(--text-primary);
-  font-size: 14px;
-}
-
-.comment-date {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.comment-actions-menu {
-  display: flex;
-  gap: 8px;
-}
-
-.action-btn {
-  background: none;
-  border: none;
-  padding: 4px 8px;
-  font-size: 12px;
-  color: var(--text-muted);
-  cursor: pointer;
-  border-radius: 6px;
-  transition: background var(--transition), color var(--transition);
-}
-
-.action-btn:hover {
-  background: var(--bg-surface-2);
-  color: var(--text-primary);
-}
-
-.action-btn.delete:hover {
-  background: rgba(211, 47, 47, 0.1);
-  color: #d32f2f;
-}
-
-/* Comment Content */
-.comment-content p {
-  margin: 0;
-  line-height: 1.55;
-  color: var(--text-secondary);
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-size: 14px;
-}
-
-/* Edit Form */
-.comment-edit-form {
-  margin-top: 12px;
-}
-
-.edit-input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1.5px solid var(--border-strong);
-  border-radius: 8px;
-  background: var(--bg-surface-2);
-  color: var(--text-primary);
-  font-size: 14px;
-  font-family: inherit;
-  resize: vertical;
-  min-height: 60px;
-  box-sizing: border-box;
-  transition: border-color var(--transition), background var(--transition);
-}
-
-.edit-input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.edit-actions {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  margin-top: 8px;
-  gap: 8px;
-}
-
-.cancel-btn {
-  background: var(--bg-surface-2);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  padding: 6px 14px;
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background var(--transition);
-}
-
-.cancel-btn:hover {
-  background: var(--border-strong);
-}
-
-.save-btn {
-  background: #4caf50;
-  color: white;
-  border: none;
-  padding: 6px 14px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--transition);
-}
-
-.save-btn:hover:not(:disabled) {
-  background: #43a047;
-}
-
-.save-btn:disabled {
-  background: var(--border-strong);
-  color: var(--text-muted);
-  cursor: not-allowed;
-}
-
-/* Empty State */
-.empty-comments {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--text-muted);
-}
-
-.empty-comments p {
-  margin: 0;
-  font-size: 14px;
-}
-
-/* Loading State */
-.loading-comments {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--text-muted);
-}
-
-.loading-comments p {
-  margin: 0;
-  font-size: 14px;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .comment-section {
-    padding: 16px;
-    margin-top: 16px;
-  }
-
-  .comment-input-container {
-    gap: 8px;
-  }
-
-  .user-avatar {
-    width: 32px;
-    height: 32px;
-  }
-
-  .comment-avatar {
-    width: 28px;
-    height: 28px;
-  }
-
-  .comment-actions {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .comment-actions-menu {
-    margin-left: auto;
-  }
-
-  .edit-actions {
-    flex-direction: row;
-    justify-content: flex-end;
-  }
+/* ── Mobile ────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .comment-section { padding: 16px; }
+  .cs-form .cs-avatar { width: 30px; height: 30px; }
+  .cs-avatar--sm { width: 28px; height: 28px; }
+  .cs-replies { margin-left: 8px; padding-left: 10px; }
 }

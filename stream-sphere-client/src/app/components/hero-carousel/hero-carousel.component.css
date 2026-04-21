@@ -85,24 +85,61 @@
 }
 
 .hero-text {
-  max-width: 600px;
+  max-width: 780px;   /* wider column → title fits in 2-3 lines instead of 4+ */
 }
 
 .hero-title {
-  font-size: 3.5rem;
-  font-weight: 700;
-  margin: 0 0 1rem 0;
-  line-height: 1.1;
+  font-size: 2.8rem;  /* slightly smaller so long titles don't stack as many lines */
+  font-weight: 800;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.15;
   text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
 }
 
 .hero-description {
-  font-size: 1.2rem;
-  margin: 0 0 1.5rem 0;
-  line-height: 1.4;
+  font-size: 1.05rem;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.5;
   opacity: 0.9;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+
+  /* Clamp to 3 lines by default */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
+
+/* When expanded — show all lines */
+.hero-description.expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+  max-height: 180px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.3) transparent;
+  margin-bottom: 0.5rem;
+}
+.hero-description.expanded::-webkit-scrollbar { width: 4px; }
+.hero-description.expanded::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 2px; }
+
+/* Read more / Read less button */
+.desc-toggle-btn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.75);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin: 0 0 1.2rem 0;
+  display: inline-block;
+  letter-spacing: 0.03em;
+  transition: color 0.2s;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
+.desc-toggle-btn:hover { color: #fff; }
 
 .hero-meta {
   display: flex;
@@ -404,11 +441,12 @@
   }
 
   .hero-title {
-    font-size: 2.5rem;
+    font-size: 2.2rem;
   }
 
   .hero-description {
-    font-size: 1rem;
+    font-size: 0.95rem;
+    -webkit-line-clamp: 2;
   }
 
   .hero-meta {
@@ -510,8 +548,8 @@
 
   .hero-description {
     font-size: 0.88rem;
-    /* Hide on very small screens to give more room to buttons */
-    display: none;
+    /* On very small screens only show 2 lines to preserve button space */
+    -webkit-line-clamp: 2;
   }
 
   .hero-content {

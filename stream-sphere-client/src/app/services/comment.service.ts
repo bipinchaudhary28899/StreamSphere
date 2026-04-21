@@ -12,6 +12,8 @@ export interface Comment {
   content: string;
   created_at: string;
   updated_at: string;
+  parent_id?: string | null;
+  replies_count: number;
 }
 
 export interface CreateCommentRequest {
@@ -92,6 +94,24 @@ export class CommentService {
 
     return this.http.get<{ success: boolean; comments: Comment[] }>(
       `${this.apiUrl}/user/comments`,
+      { headers }
+    );
+  }
+
+  // Get replies for a comment
+  getReplies(commentId: string): Observable<{ success: boolean; replies: Comment[] }> {
+    return this.http.get<{ success: boolean; replies: Comment[] }>(
+      `${this.apiUrl}/comments/${commentId}/replies`
+    );
+  }
+
+  // Create a reply (parent_id provided)
+  createReply(videoId: string, content: string, parentId: string): Observable<{ success: boolean; comment: Comment }> {
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    return this.http.post<{ success: boolean; comment: Comment }>(
+      `${this.apiUrl}/videos/${videoId}/comments`,
+      { video_id: videoId, content, parent_id: parentId },
       { headers }
     );
   }

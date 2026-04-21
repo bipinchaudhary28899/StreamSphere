@@ -20,6 +20,10 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
   isMuted = true;
   hasAudio = false;
   userInteracted = false;
+  descriptionExpanded = false;
+
+  /** Min chars before "Read more" is shown — short descriptions need no toggle */
+  readonly DESC_THRESHOLD = 120;
 
   private viewInitialized = false;
   private dataLoaded = false;
@@ -248,10 +252,16 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  toggleDescription(event: Event): void {
+    event.stopPropagation();
+    this.descriptionExpanded = !this.descriptionExpanded;
+  }
+
   nextVideo(): void {
     this.unobserveCurrentVideo();
     this.stopAutoAdvance();
     this.hasAudio = false;
+    this.descriptionExpanded = false;
     this.currentIndex = (this.currentIndex + 1) % this.videos.length;
     setTimeout(() => {
       this.observeCurrentVideo();
@@ -269,6 +279,7 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
     this.unobserveCurrentVideo();
     this.stopAutoAdvance();
     this.hasAudio = false;
+    this.descriptionExpanded = false;
     this.currentIndex = (this.currentIndex - 1 + this.videos.length) % this.videos.length;
     setTimeout(() => {
       this.observeCurrentVideo();

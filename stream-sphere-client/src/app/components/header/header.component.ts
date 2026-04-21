@@ -90,6 +90,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.isScrolled = window.scrollY > 60;
   }
 
+  // ── Close search when clicking outside the header ────────────────────────
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.searchOpen && !this.hostEl.nativeElement.contains(event.target as Node)) {
+      this.closeSearch();
+    }
+  }
+
   // ── User data ────────────────────────────────────────────────────────────
   loadUserData(): void {
     try {

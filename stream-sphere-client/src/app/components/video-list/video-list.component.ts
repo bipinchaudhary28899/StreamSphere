@@ -108,7 +108,10 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
           this.loadNextPage();
         }
       },
-      { rootMargin: '200px' }, // start loading 200px before the sentinel is visible
+      // 800px rootMargin = start fetching the next batch when the sentinel
+      // is still ~800px below the viewport — roughly 2-3 card rows away —
+      // so the new cards are ready before the user even gets close to the end.
+      { rootMargin: '800px' },
     );
 
     // The sentinel lives inside *ngIf="!isLoading" so it may not exist yet

@@ -83,6 +83,9 @@ router.get('/videos/disliked',
   wrap(VideoController.getDislikedVideos.bind(VideoController)),
 );
 
+// View count — does NOT require authentication
+router.post('/videos/:videoId/view', wrap(VideoController.recordView.bind(VideoController)));
+
 // Parameterised routes after all literal-segment routes
 router.get('/videos/:videoId/reaction',
   authenticateJWT,
@@ -114,6 +117,11 @@ router.delete('/videos/:videoId',
 );
 
 // ── Comments ──────────────────────────────────────────────────────────────────
+// Get replies route MUST come before the catch-all /:commentId routes
+router.get('/comments/:commentId/replies',
+  wrap((req, res) => commentController.getReplies(req, res)),
+);
+
 router.get('/videos/:videoId/comments',
   wrap((req, res) => commentController.getCommentsByVideoId(req, res)),
 );

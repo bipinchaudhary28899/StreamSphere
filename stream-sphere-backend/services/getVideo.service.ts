@@ -12,7 +12,7 @@ const s3 = new S3Client({
   },
 });
 
-const PAGE_SIZE = 6; // cards per page
+const PAGE_SIZE = 10; // cards per page
 
 export interface FeedPage {
   videos:     any[];
@@ -244,5 +244,39 @@ export class VideoService {
       redisService.del(CK.singleVideo(videoId)),
       redisService.del(CK.topLiked()),
     ]);
+  }
+
+  // ── View counting ────────────────────────────────────────────────────────────
+
+  async recordView(videoId: string, userId?: string): Promise<number> {
+    const viewKey = `ss:view:${videoId}:${userId ?? 'anon'}`;
+    const TTL_24H = 86400;
+
+    // Check if view already counted (try to get the key)
+    const alreadyCounted = await redisService.get<string>(viewKey);
+    if (alreadyCounted) {
+      console.log(`[VIEW] already counted for videoId=${videoId} userId=${userId ?? 'anon'}`);
+      return -1;
+    }
+
+    // Set Redis key with 24h TTL
+    await redisService.set(viewKey, '1', TTL_24H);
+
+    // Atomically increment views on the Video document
+    const video = await Video.findByIdAndUpdate(
+      videoId,
+      { $inc: { views: 1 } },
+      { new: true }
+    );
+
+    if (!video) throw new Error('Video not found');
+
+    // Bust single-video cache
+    await redisService.del(CK.singleVideo(videoId));
+
+    const newViewCount = video.views;
+    console.log(`[VIEW] videoId=${videoId} userId=${userId ?? 'anon'} → incremented to ${newViewCount}`);
+
+    return newViewCount;
   }
 }
