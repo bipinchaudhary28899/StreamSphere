@@ -1,0 +1,193 @@
+<div class="ad-page">
+
+  <!-- Header -->
+  <div class="ad-header">
+    <div class="ad-title-row">
+      <span class="ad-icon">🛡️</span>
+      <h1 class="ad-title">Dev Dashboard</h1>
+      <span class="ad-badge">Admin only</span>
+    </div>
+    <div class="ad-meta" *ngIf="lastRefresh">
+      Last updated: {{ lastRefresh | date:'medium' }}
+      &nbsp;·&nbsp; Period: {{ stats?.period }}
+    </div>
+    <button class="ad-refresh-btn" (click)="load()" [disabled]="loading">
+      {{ loading ? 'Loading…' : '↻ Refresh' }}
+    </button>
+  </div>
+
+  <!-- Error -->
+  <div class="ad-error" *ngIf="error">⚠️ {{ error }}</div>
+
+  <!-- Loading skeleton -->
+  <div class="ad-skeleton" *ngIf="loading && !stats">
+    <div class="ad-skel-card" *ngFor="let i of [1,2,3,4]"></div>
+  </div>
+
+  <div class="ad-grid" *ngIf="stats && !loading">
+
+    <!-- ── CloudFront ───────────────────────────────────────────────────── -->
+    <div class="ad-card">
+      <div class="ad-card-header">
+        <span class="ad-card-icon">🌐</span>
+        <h2>CloudFront</h2>
+        <span class="ad-note">Free: 10M req + 1TB / month (12 mo)</span>
+      </div>
+
+      <div class="ad-warn" *ngIf="!stats.cloudfront.distributionConfigured">
+        ⚠️ Add <code>CLOUDFRONT_DISTRIBUTION_ID</code> to your <code>.env</code> to see CloudFront metrics.
+      </div>
+
+      <div class="ad-warn" *ngIf="stats.errors.cloudfront">
+        CloudWatch error: {{ stats.errors.cloudfront }}
+      </div>
+
+      <!-- Requests -->
+      <div class="ad-metric">
+        <div class="ad-metric-row">
+          <span class="ad-metric-label">HTTP Requests</span>
+          <span class="ad-metric-value">
+            {{ fmt(stats.cloudfront.requests) }}
+            <span class="ad-limit">/ {{ fmt(stats.limits.cloudfront.requests) }}</span>
+          </span>
+        </div>
+        <div class="ad-bar-track">
+          <div class="ad-bar-fill {{ level(stats.cloudfront.requests, stats.limits.cloudfront.requests) }}"
+               [style.width.%]="pct(stats.cloudfront.requests, stats.limits.cloudfront.requests)">
+          </div>
+        </div>
+        <div class="ad-pct {{ level(stats.cloudfront.requests, stats.limits.cloudfront.requests) }}">
+          {{ pct(stats.cloudfront.requests, stats.limits.cloudfront.requests).toFixed(1) }}% of free tier
+        </div>
+      </div>
+
+      <!-- Data Transfer -->
+      <div class="ad-metric">
+        <div class="ad-metric-row">
+          <span class="ad-metric-label">Data Transfer Out</span>
+          <span class="ad-metric-value">
+            {{ fmtGB(stats.cloudfront.dataTransferGB) }}
+            <span class="ad-limit">/ {{ stats.limits.cloudfront.dataTransferGB }} GB</span>
+          </span>
+        </div>
+        <div class="ad-bar-track">
+          <div class="ad-bar-fill {{ level(stats.cloudfront.dataTransferGB, stats.limits.cloudfront.dataTransferGB) }}"
+               [style.width.%]="pct(stats.cloudfront.dataTransferGB, stats.limits.cloudfront.dataTransferGB)">
+          </div>
+        </div>
+        <div class="ad-pct {{ level(stats.cloudfront.dataTransferGB, stats.limits.cloudfront.dataTransferGB) }}">
+          {{ pct(stats.cloudfront.dataTransferGB, stats.limits.cloudfront.dataTransferGB).toFixed(2) }}% of free tier
+        </div>
+      </div>
+    </div>
+
+    <!-- ── S3 ───────────────────────────────────────────────────────────── -->
+    <div class="ad-card">
+      <div class="ad-card-header">
+        <span class="ad-card-icon">🗄️</span>
+        <h2>Amazon S3</h2>
+        <span class="ad-note">Free: 5 GB storage · 2K PUTs / month (always)</span>
+      </div>
+
+      <div class="ad-warn" *ngIf="stats.errors.s3">
+        S3 error: {{ stats.errors.s3 }}
+      </div>
+
+      <!-- Storage -->
+      <div class="ad-metric">
+        <div class="ad-metric-row">
+          <span class="ad-metric-label">Storage Used</span>
+          <span class="ad-metric-value">
+            {{ fmtGB(stats.s3.storageGB) }}
+            <span class="ad-limit">/ {{ stats.limits.s3.storageGB }} GB</span>
+          </span>
+        </div>
+        <div class="ad-bar-track">
+          <div class="ad-bar-fill {{ level(stats.s3.storageGB, stats.limits.s3.storageGB) }}"
+               [style.width.%]="pct(stats.s3.storageGB, stats.limits.s3.storageGB)">
+          </div>
+        </div>
+        <div class="ad-pct {{ level(stats.s3.storageGB, stats.limits.s3.storageGB) }}">
+          {{ pct(stats.s3.storageGB, stats.limits.s3.storageGB).toFixed(2) }}% of free tier
+        </div>
+      </div>
+
+      <!-- PUT requests -->
+      <div class="ad-metric">
+        <div class="ad-metric-row">
+          <span class="ad-metric-label">Upload Requests (PUTs)</span>
+          <span class="ad-metric-value">
+            {{ fmt(stats.s3.putRequests) }}
+            <span class="ad-limit">/ {{ fmt(stats.limits.s3.putRequests) }}</span>
+          </span>
+        </div>
+        <div class="ad-bar-track">
+          <div class="ad-bar-fill {{ level(stats.s3.putRequests, stats.limits.s3.putRequests) }}"
+               [style.width.%]="pct(stats.s3.putRequests, stats.limits.s3.putRequests)">
+          </div>
+        </div>
+        <div class="ad-pct {{ level(stats.s3.putRequests, stats.limits.s3.putRequests) }}">
+          {{ pct(stats.s3.putRequests, stats.limits.s3.putRequests).toFixed(1) }}% of free tier
+        </div>
+      </div>
+
+      <div class="ad-info-row" *ngIf="stats.s3.objectCount !== null">
+        <span>Total objects in bucket:</span>
+        <strong>{{ stats.s3.objectCount }}</strong>
+      </div>
+    </div>
+
+    <!-- ── Backend API ──────────────────────────────────────────────────── -->
+    <div class="ad-card">
+      <div class="ad-card-header">
+        <span class="ad-card-icon">⚡</span>
+        <h2>Backend API</h2>
+        <span class="ad-note">Tracked in Redis</span>
+      </div>
+
+      <div class="ad-stat-pair">
+        <div class="ad-stat">
+          <div class="ad-stat-value">{{ fmt(stats.backend.apiRequestsToday) }}</div>
+          <div class="ad-stat-label">Requests today</div>
+        </div>
+        <div class="ad-stat">
+          <div class="ad-stat-value">{{ fmt(stats.backend.apiRequestsMonth) }}</div>
+          <div class="ad-stat-label">Requests this month</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── App Stats ────────────────────────────────────────────────────── -->
+    <div class="ad-card">
+      <div class="ad-card-header">
+        <span class="ad-card-icon">📊</span>
+        <h2>App Stats</h2>
+        <span class="ad-note">MongoDB counts</span>
+      </div>
+
+      <div class="ad-stat-pair">
+        <div class="ad-stat">
+          <div class="ad-stat-value">{{ stats.app.videos }}</div>
+          <div class="ad-stat-label">Videos</div>
+        </div>
+        <div class="ad-stat">
+          <div class="ad-stat-value">{{ stats.app.users }}</div>
+          <div class="ad-stat-label">Users</div>
+        </div>
+        <div class="ad-stat">
+          <div class="ad-stat-value">{{ stats.app.comments }}</div>
+          <div class="ad-stat-label">Comments</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /ad-grid -->
+
+  <!-- Free tier footnote -->
+  <div class="ad-footer" *ngIf="stats">
+    <p>☁️ CloudFront free tier applies for the <strong>first 12 months</strong> of your AWS account.</p>
+    <p>🗄️ S3 storage and request free tiers are <strong>always free</strong> (within limits).</p>
+    <p>📈 CloudFront hit/miss breakdown requires <em>Additional CloudFront Metrics</em> (~$0.01/month) — not tracked here to stay fully free.</p>
+  </div>
+
+</div>

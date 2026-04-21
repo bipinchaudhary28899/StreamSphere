@@ -139,6 +139,18 @@ export class VideoController {
     }
   }
 
+  // ── My videos (user profile dashboard) ───────────────────────────────────────
+  static async getMyVideos(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.userId;
+      if (!userId) return res.status(401).json({ message: 'User not authenticated' });
+      const videos = await videoService.getMyVideos(userId);
+      res.json(videos);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch your videos', error });
+    }
+  }
+
   // ── Delete ────────────────────────────────────────────────────────────────────
   static async deleteVideo(req: Request, res: Response) {
     try {

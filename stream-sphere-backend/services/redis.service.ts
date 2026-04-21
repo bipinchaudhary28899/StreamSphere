@@ -13,14 +13,14 @@
 
 import Redis from 'ioredis';
 
-const REDIS_URL = process.env.REDIS_URL;
-
 class RedisService {
   private client: Redis | null = null;
 
   // ── Lifecycle ────────────────────────────────────────────────────────────────
 
   connect(): void {
+    const REDIS_URL = process.env.REDIS_URL;
+
     if (!REDIS_URL) {
       console.warn('[Redis] REDIS_URL not set — caching disabled, falling back to MongoDB for every request');
       return;
@@ -51,6 +51,11 @@ class RedisService {
 
   private alive(): boolean {
     return this.client !== null && this.client.status === 'ready';
+  }
+
+  /** Public — lets callers decide whether to use Redis-dependent features */
+  isAvailable(): boolean {
+    return this.alive();
   }
 
   // ── Core helpers ─────────────────────────────────────────────────────────────
@@ -85,6 +90,35 @@ class RedisService {
       console.log(`[Redis] SET  ${key}  TTL=${ttlSeconds}s  (${serialised.length} bytes stored)`);
     } catch (e: any) {
       console.error('[Redis] set error:', e.message);
+    }
+  }
+
+  /**
+   * Atomically increment a counter key by 1.
+   * The key is created if it doesn't exist (starts at 0 then becomes 1).
+   * TTL is set only on first creation so monthly keys naturally expire.
+   */
+  async incr(key: string, ttlSeconds?: number): Promise<void> {
+    if (!this.alive()) return;
+    try {
+      const newVal = await this.client!.incr(key);
+      if (newVal === 1 && ttlSeconds) {
+        await this.client!.expire(key, ttlSeconds);
+      }
+    } catch (e: any) {
+      console.error('[Redis] incr error:', e.message);
+    }
+  }
+
+  /** Read a raw integer counter (returns 0 if missing or Redis is down). */
+  async getCounter(key: string): Promise<number> {
+    if (!this.alive()) return 0;
+    try {
+      const val = await this.client!.get(key);
+      return val ? parseInt(val, 10) : 0;
+    } catch (e: any) {
+      console.error('[Redis] getCounter error:', e.message);
+      return 0;
     }
   }
 

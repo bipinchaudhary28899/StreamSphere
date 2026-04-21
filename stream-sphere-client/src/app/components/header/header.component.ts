@@ -141,8 +141,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   // ── Navigation ───────────────────────────────────────────────────────────
+  get isAdmin(): boolean { return this.user?.email === 'bkumar28899@gmail.com'; }
+
   navigateToHome():    void { this.router.navigate(['/home']); }
   navigateToProfile(): void { this.router.navigate(['/user-profile']); this.closeSearch(); }
+  navigateToAdmin():   void { this.router.navigate(['/admin']); this.closeSearch(); }
   navigateToUpload(): void {
     this.closeSearch();
     this.dialog.open(UploadVideoComponent, {

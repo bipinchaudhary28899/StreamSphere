@@ -178,6 +178,10 @@ export class VideoService {
     return await Video.find({ dislikedBy: userId }).sort({ _id: -1 }).lean().exec();
   }
 
+  async getMyVideos(userId: string) {
+    return await Video.find({ user_id: userId }).sort({ _id: -1 }).lean().exec();
+  }
+
   // ── Like / Dislike ────────────────────────────────────────────────────────────
 
   async likeVideo(videoId: string, userId: string) {

@@ -11,11 +11,13 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.1033.0",
     "@aws-sdk/client-s3": "^3.797.0",
     "@aws-sdk/cloudfront-signer": "^3.775.0",
     "@aws-sdk/s3-request-presigner": "^3.797.0",
     "aws-sdk": "^2.1692.0",
     "axios": "^1.10.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
@@ -31,6 +33,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.1",
     "@types/jsonwebtoken": "^9.0.9",
