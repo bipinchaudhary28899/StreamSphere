@@ -54,6 +54,13 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     this.loadFirstPage();
 
+    // Refresh feed after a new video is uploaded
+    this.subs.push(
+      this.videoService.feedRefresh$.subscribe(() => {
+        this.resetAndLoad();
+      }),
+    );
+
     // React to category changes from the header.
     // If a search is already active, re-run it scoped to the new category
     // instead of switching back to the paginated feed.
@@ -108,7 +115,10 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
           this.loadNextPage();
         }
       },
-      { rootMargin: '200px' }, // start loading 200px before the sentinel is visible
+      // 800px rootMargin = start fetching the next batch when the sentinel
+      // is still ~800px below the viewport — roughly 2-3 card rows away —
+      // so the new cards are ready before the user even gets close to the end.
+      { rootMargin: '800px' },
     );
 
     // The sentinel lives inside *ngIf="!isLoading" so it may not exist yet

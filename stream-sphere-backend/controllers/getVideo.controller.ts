@@ -156,4 +156,22 @@ export class VideoController {
       res.status(500).json({ message: 'Failed to delete video', error: error.message });
     }
   }
+
+  // ── View counting ─────────────────────────────────────────────────────────────
+  static async recordView(req: Request, res: Response) {
+    try {
+      const { videoId } = req.params;
+
+      // Prefer authenticated userId; fall back to the browser's anon session UUID
+      // sent in the X-Anon-Session header so each browser gets its own dedup key.
+      const userId: string | undefined =
+        (req as any).user?.userId
+        ?? (req.headers['x-anon-session'] as string | undefined);
+
+      const viewCount = await videoService.recordView(videoId, userId);
+      res.json({ views: viewCount });
+    } catch (error: any) {
+      res.status(500).json({ message: 'Failed to record view', error: error.message });
+    }
+  }
 }

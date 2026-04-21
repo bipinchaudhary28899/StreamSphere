@@ -5,12 +5,24 @@
 
     <!-- Logo -->
     <div class="logo" (click)="navigateToHome()">
-      <img src="assets/thumbs/Stream Sphere Icon.png"
-           alt="StreamSphere"
-           class="app-logo desktop-logo" />
-      <img src="assets/thumbs/ss_icon_mobile.png"
-           alt="StreamSphere"
-           class="app-logo mobile-logo" />
+      <!-- Spaces in srcset are separators — URL-encode them so the WebP is
+           actually picked up by browsers instead of falling back to the 1.4 MB PNG -->
+      <picture>
+        <source srcset="assets/thumbs/Stream%20Sphere%20Icon.webp" type="image/webp" />
+        <img src="assets/thumbs/Stream%20Sphere%20Icon.png"
+             alt="StreamSphere"
+             width="64" height="64"
+             fetchpriority="high"
+             class="app-logo desktop-logo" />
+      </picture>
+      <picture>
+        <source srcset="assets/thumbs/ss_icon_mobile.webp" type="image/webp" />
+        <img src="assets/thumbs/ss_icon_mobile.png"
+             alt="StreamSphere"
+             width="44" height="44"
+             fetchpriority="high"
+             class="app-logo mobile-logo" />
+      </picture>
     </div>
 
     <!-- Spacer -->
@@ -39,6 +51,7 @@
         <img [src]="profileImage"
              [alt]="user?.name"
              (error)="onImageError($event)"
+             referrerpolicy="no-referrer"
              class="avatar-img" />
       </button>
 
@@ -89,7 +102,7 @@
 
   <!-- Profile card -->
   <div class="menu-profile-card" (click)="$event.stopPropagation()">
-    <img [src]="profileImage" (error)="onImageError($event)" class="menu-avatar" />
+    <img [src]="profileImage" (error)="onImageError($event)" referrerpolicy="no-referrer" class="menu-avatar" />
     <div class="menu-user-info">
       <div class="menu-name">{{ user?.name }}</div>
       <div class="menu-email">{{ user?.email }}</div>

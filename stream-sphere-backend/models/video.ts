@@ -7,12 +7,14 @@ interface IVideo extends Document {
   S3_url: string;
   user_id: string;
   userName?: string;
+  user_profile_image?: string;
   uploadedAt: Date;
   category: string;
   likes: number;
   dislikes: number;
   likedBy: string[];
   dislikedBy: string[];
+  views: number;
 }
 
 const videoSchema: Schema = new Schema(
@@ -22,12 +24,14 @@ const videoSchema: Schema = new Schema(
     S3_url: { type: String, required: true },
     user_id: { type: String, required: true },
     userName: { type: String },
+    user_profile_image: { type: String, default: null },
     uploadedAt: { type: Date, required: true },
     category: { type: String, default: 'Uncategorized' },
     likes: { type: Number, default: 0 },
     dislikes: { type: Number, default: 0 },
     likedBy: [{ type: String }],
     dislikedBy: [{ type: String }],
+    views: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
@@ -42,6 +46,9 @@ videoSchema.index({ category: 1, _id: -1 });
 
 // Top-liked carousel
 videoSchema.index({ likes: -1 });
+
+// Top views
+videoSchema.index({ views: -1 });
 
 // Full-text search on title + description
 videoSchema.index({ title: 'text', description: 'text' });

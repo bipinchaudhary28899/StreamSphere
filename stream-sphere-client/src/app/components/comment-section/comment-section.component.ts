@@ -5,6 +5,15 @@ import { CommentService, Comment } from '../../services/comment.service';
 import { AuthService } from '../../services/auth.service';
 import { Subscription } from 'rxjs';
 
+export interface CommentUI extends Comment {
+  replies: Comment[];
+  showReplies: boolean;
+  loadingReplies: boolean;
+  showReplyForm: boolean;
+  replyContent: string;
+  submittingReply: boolean;
+}
+
 @Component({
   selector: 'app-comment-section',
   standalone: true,
@@ -14,8 +23,8 @@ import { Subscription } from 'rxjs';
 })
 export class CommentSectionComponent implements OnInit, OnDestroy {
   @Input() videoId: string = '';
-  
-  comments: Comment[] = [];
+
+  comments: CommentUI[] = [];
   newComment: string = '';
   isLoggedIn: boolean = false;
   currentUser: any = null;
@@ -23,7 +32,7 @@ export class CommentSectionComponent implements OnInit, OnDestroy {
   submitting: boolean = false;
   editingCommentId: string | null = null;
   editContent: string = '';
-  
+
   private subscriptions: Subscription[] = [];
 
   constructor(
@@ -34,8 +43,6 @@ export class CommentSectionComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.checkLoginState();
     this.loadComments();
-    
-    // Subscribe to login state changes
     this.subscriptions.push(
       this.authService.getLoginState().subscribe(isLoggedIn => {
         this.isLoggedIn = isLoggedIn;
@@ -51,61 +58,61 @@ export class CommentSectionComponent implements OnInit, OnDestroy {
   checkLoginState(): void {
     const user = localStorage.getItem('user');
     this.isLoggedIn = !!user;
-    if (this.isLoggedIn) {
-      this.loadCurrentUser();
-    }
+    if (this.isLoggedIn) this.loadCurrentUser();
   }
 
   loadCurrentUser(): void {
     const userData = localStorage.getItem('user');
     if (userData) {
-      try {
-        this.currentUser = JSON.parse(userData);
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        this.currentUser = null;
-      }
+      try { this.currentUser = JSON.parse(userData); }
+      catch { this.currentUser = null; }
     }
   }
 
   loadComments(): void {
     if (!this.videoId) return;
-    
     this.loading = true;
     this.subscriptions.push(
       this.commentService.getCommentsByVideoId(this.videoId).subscribe({
         next: (response) => {
-          this.comments = response.comments;
+          this.comments = response.comments.map(c => this.toUI(c));
           this.loading = false;
         },
-        error: (error) => {
-          console.error('Error loading comments:', error);
-          this.loading = false;
-        }
+        error: () => { this.loading = false; }
       })
     );
   }
 
+  private toUI(c: Comment): CommentUI {
+    return {
+      ...c,
+      replies: [],
+      showReplies: false,
+      loadingReplies: false,
+      showReplyForm: false,
+      replyContent: '',
+      submittingReply: false,
+    };
+  }
+
+  // ── Top-level comment ────────────────────────────────────────────────────────
+
   submitComment(): void {
     if (!this.newComment.trim() || !this.isLoggedIn) return;
-    
     this.submitting = true;
     this.subscriptions.push(
       this.commentService.createComment(this.videoId, this.newComment.trim()).subscribe({
         next: (response) => {
-          this.comments.unshift(response.comment);
+          this.comments.unshift(this.toUI(response.comment));
           this.newComment = '';
           this.submitting = false;
         },
-        error: (error) => {
-          console.error('Error creating comment:', error);
-          this.submitting = false;
-        }
+        error: () => { this.submitting = false; }
       })
     );
   }
 
-  startEdit(comment: Comment): void {
+  startEdit(comment: CommentUI): void {
     this.editingCommentId = comment._id;
     this.editContent = comment.content;
   }
@@ -117,73 +124,118 @@ export class CommentSectionComponent implements OnInit, OnDestroy {
 
   updateComment(commentId: string): void {
     if (!this.editContent.trim()) return;
-    
     this.subscriptions.push(
       this.commentService.updateComment(commentId, this.editContent.trim()).subscribe({
         next: (response) => {
-          const index = this.comments.findIndex(c => c._id === commentId);
-          if (index !== -1) {
-            this.comments[index] = response.comment;
+          const idx = this.comments.findIndex(c => c._id === commentId);
+          if (idx !== -1) {
+            this.comments[idx] = { ...this.comments[idx], ...response.comment };
           }
           this.editingCommentId = null;
           this.editContent = '';
         },
-        error: (error) => {
-          console.error('Error updating comment:', error);
-        }
+        error: (err) => console.error('Error updating comment:', err)
       })
     );
   }
 
   deleteComment(commentId: string): void {
-    if (!confirm('Are you sure you want to delete this comment?')) return;
-    
+    if (!confirm('Delete this comment and all its replies?')) return;
     this.subscriptions.push(
       this.commentService.deleteComment(commentId).subscribe({
-        next: () => {
-          this.comments = this.comments.filter(c => c._id !== commentId);
-        },
-        error: (error) => {
-          console.error('Error deleting comment:', error);
-        }
+        next: () => { this.comments = this.comments.filter(c => c._id !== commentId); },
+        error: (err) => console.error('Error deleting comment:', err)
       })
     );
   }
 
-  canEditComment(comment: Comment): boolean {
-    const userId = this.currentUser?._id || this.currentUser?.userId || this.currentUser?.id;
-    const canEdit = this.isLoggedIn && this.currentUser && comment.user_id === userId;
-    return canEdit;
+  // ── Replies ──────────────────────────────────────────────────────────────────
+
+  toggleReplies(comment: CommentUI): void {
+    if (comment.showReplies) {
+      comment.showReplies = false;
+      return;
+    }
+    if (comment.replies.length > 0) {
+      comment.showReplies = true;
+      return;
+    }
+    comment.loadingReplies = true;
+    this.subscriptions.push(
+      this.commentService.getReplies(comment._id).subscribe({
+        next: (res) => {
+          comment.replies = res.replies;
+          comment.showReplies = true;
+          comment.loadingReplies = false;
+        },
+        error: () => { comment.loadingReplies = false; }
+      })
+    );
   }
 
-  canDeleteComment(comment: Comment): boolean {
-    const userId = this.currentUser?._id || this.currentUser?.userId || this.currentUser?.id;
-    const canDelete = this.isLoggedIn && this.currentUser && comment.user_id === userId;
-    return canDelete;
+  openReplyForm(comment: CommentUI): void {
+    // Close all other reply forms first
+    this.comments.forEach(c => { if (c._id !== comment._id) c.showReplyForm = false; });
+    comment.showReplyForm = !comment.showReplyForm;
+    comment.replyContent = '';
+  }
+
+  submitReply(comment: CommentUI): void {
+    if (!comment.replyContent.trim() || !this.isLoggedIn) return;
+    comment.submittingReply = true;
+    this.subscriptions.push(
+      this.commentService.createReply(this.videoId, comment.replyContent.trim(), comment._id).subscribe({
+        next: (res) => {
+          comment.replies.push(res.comment);
+          comment.replies_count = (comment.replies_count || 0) + 1;
+          comment.showReplies = true;
+          comment.showReplyForm = false;
+          comment.replyContent = '';
+          comment.submittingReply = false;
+        },
+        error: () => { comment.submittingReply = false; }
+      })
+    );
+  }
+
+  deleteReply(reply: Comment, parent: CommentUI): void {
+    if (!confirm('Delete this reply?')) return;
+    this.subscriptions.push(
+      this.commentService.deleteComment(reply._id).subscribe({
+        next: () => {
+          parent.replies = parent.replies.filter(r => r._id !== reply._id);
+          parent.replies_count = Math.max(0, (parent.replies_count || 1) - 1);
+        },
+        error: (err) => console.error('Error deleting reply:', err)
+      })
+    );
+  }
+
+  // ── Permissions ───────────────────────────────────────────────────────────────
+
+  isOwner(comment: Comment): boolean {
+    const uid = this.currentUser?._id || this.currentUser?.userId || this.currentUser?.id;
+    return this.isLoggedIn && !!this.currentUser && comment.user_id === uid;
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+
+  get totalComments(): number {
+    return this.comments.reduce((acc, c) => acc + 1 + (c.replies_count || 0), 0);
   }
 
   formatDate(dateString: string): string {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
-    if (diffInSeconds < 60) {
-      return 'Just now';
-    } else if (diffInSeconds < 3600) {
-      const minutes = Math.floor(diffInSeconds / 60);
-      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-    } else if (diffInSeconds < 86400) {
-      const hours = Math.floor(diffInSeconds / 3600);
-      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    } else if (diffInSeconds < 2592000) {
-      const days = Math.floor(diffInSeconds / 86400);
-      return `${days} day${days > 1 ? 's' : ''} ago`;
-    } else {
-      return date.toLocaleDateString();
-    }
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 2592000) return `${Math.floor(diff / 86400)}d ago`;
+    return date.toLocaleDateString();
   }
 
   getDefaultAvatar(username: string): string {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random&color=fff&size=40`;
   }
-} 
+}

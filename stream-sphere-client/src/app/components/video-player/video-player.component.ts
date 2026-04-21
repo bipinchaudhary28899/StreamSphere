@@ -28,6 +28,7 @@ export class VideoPlayerComponent implements OnInit {
   error: string | null = null;
   isOwner: boolean = false;
   isDeleteHovered: boolean = false;
+  descOpen: boolean = false;
   currentUserId: string | null = null;
   userReaction: 'liked' | 'disliked' | 'none' = 'none';
   isLiking: boolean = false;
@@ -63,6 +64,7 @@ export class VideoPlayerComponent implements OnInit {
           this.checkUserAuthentication();
           this.loading = false;
           this.recordWatchHistory(videoId);
+          this.doRecordView(videoId);
         } else {
           this.error = 'Video not found';
           this.loading = false;
@@ -85,6 +87,15 @@ export class VideoPlayerComponent implements OnInit {
 
     this.videoService.addToHistory(videoId, user.userId).subscribe({
       error: (err) => console.error('Failed to record watch history:', err),
+    });
+  }
+
+  // Called for ALL visitors (logged-in or anonymous) — auth token is included
+  // automatically by videoService so the backend builds a per-user dedup key.
+  private doRecordView(videoId: string) {
+    this.videoService.recordView(videoId).subscribe({
+      next: (res) => { if (res.views > 0) this.video.views = res.views; },
+      error: () => {} // silently ignore — view count is non-critical
     });
   }
 
@@ -231,5 +242,12 @@ export class VideoPlayerComponent implements OnInit {
     if (videoId) {
       this.loadVideo(videoId);
     }
+  }
+
+  formatViews(count: number): string {
+    if (!count) return '0';
+    if (count >= 1_000_000) return (count / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (count >= 1_000) return (count / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
+    return count.toLocaleString();
   }
 }

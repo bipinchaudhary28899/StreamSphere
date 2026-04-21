@@ -1,8 +1,31 @@
 // services/getVideo.service.ts
 import mongoose from 'mongoose';
 import { Video } from '../models/video';
+import { User } from '../models/user';
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { redisService, CK, TTL } from './redis.service';
+
+/**
+ * YouTube/Instagram pattern: profile images live in the User collection.
+ * After fetching any list of videos, batch-lookup uploaders and stamp
+ * user_profile_image onto each video object (overrides any stale stored value).
+ * Only one small indexed query per request; result is cached with the feed.
+ */
+async function populateUserImages(videos: any[]): Promise<any[]> {
+  if (!videos.length) return videos;
+  const userIds = [...new Set(videos.map((v: any) => v.user_id).filter(Boolean))];
+  const users = await User.find(
+    { _id: { $in: userIds } },
+    { _id: 1, profileImage: 1 },
+  ).lean().exec();
+  const profileMap = new Map(
+    (users as any[]).map((u) => [u._id.toString(), u.profileImage || null]),
+  );
+  return videos.map((v: any) => ({
+    ...v,
+    user_profile_image: profileMap.get(v.user_id) ?? v.user_profile_image ?? null,
+  }));
+}
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION!,
@@ -12,7 +35,7 @@ const s3 = new S3Client({
   },
 });
 
-const PAGE_SIZE = 6; // cards per page
+const PAGE_SIZE = 10; // cards per page
 
 export interface FeedPage {
   videos:     any[];
@@ -65,11 +88,12 @@ export class VideoService {
     console.log(`[FEED] MongoDB returned ${docs.length} doc(s) (fetched limit+1=${limit + 1})`);
 
     const hasMore    = docs.length > limit;
-    const videos     = hasMore ? docs.slice(0, limit) : docs;
-    const nextCursor = hasMore ? String(videos[videos.length - 1]._id) : null;
+    const rawVideos  = hasMore ? docs.slice(0, limit) : docs;
+    const nextCursor = hasMore ? String(rawVideos[rawVideos.length - 1]._id) : null;
 
-    console.log(`[FEED] page built: ${videos.length} video(s), hasMore=${hasMore}, nextCursor=${nextCursor ?? 'null'}`);
+    console.log(`[FEED] page built: ${rawVideos.length} video(s), hasMore=${hasMore}, nextCursor=${nextCursor ?? 'null'}`);
 
+    const videos = await populateUserImages(rawVideos);
     const page: FeedPage = { videos, nextCursor, hasMore };
 
     await redisService.set(cacheKey, page, TTL.feed);
@@ -112,8 +136,9 @@ export class VideoService {
       .exec();
 
     console.log(`[SEARCH] MongoDB returned ${results.length} result(s)`);
-    await redisService.set(cacheKey, results, TTL.search);
-    return results;
+    const populated = await populateUserImages(results);
+    await redisService.set(cacheKey, populated, TTL.search);
+    return populated;
   }
 
   // ── Top-liked (hero carousel) ────────────────────────────────────────────────
@@ -122,7 +147,8 @@ export class VideoService {
     const cached = await redisService.get<any[]>(CK.topLiked());
     if (cached) return cached;
 
-    const videos = await Video.find({}).sort({ likes: -1 }).limit(3).lean().exec();
+    const raw = await Video.find({}).sort({ likes: -1 }).limit(3).lean().exec();
+    const videos = await populateUserImages(raw);
     await redisService.set(CK.topLiked(), videos, TTL.topLiked);
     return videos;
   }
@@ -244,5 +270,39 @@ export class VideoService {
       redisService.del(CK.singleVideo(videoId)),
       redisService.del(CK.topLiked()),
     ]);
+  }
+
+  // ── View counting ────────────────────────────────────────────────────────────
+
+  async recordView(videoId: string, userId?: string): Promise<number> {
+    const viewKey = `ss:view:${videoId}:${userId ?? 'anon'}`;
+    const TTL_24H = 86400;
+
+    // Check if view already counted (try to get the key)
+    const alreadyCounted = await redisService.get<string>(viewKey);
+    if (alreadyCounted) {
+      console.log(`[VIEW] already counted for videoId=${videoId} userId=${userId ?? 'anon'}`);
+      return -1;
+    }
+
+    // Set Redis key with 24h TTL
+    await redisService.set(viewKey, '1', TTL_24H);
+
+    // Atomically increment views on the Video document
+    const video = await Video.findByIdAndUpdate(
+      videoId,
+      { $inc: { views: 1 } },
+      { new: true }
+    );
+
+    if (!video) throw new Error('Video not found');
+
+    // Bust single-video cache
+    await redisService.del(CK.singleVideo(videoId));
+
+    const newViewCount = video.views;
+    console.log(`[VIEW] videoId=${videoId} userId=${userId ?? 'anon'} → incremented to ${newViewCount}`);
+
+    return newViewCount;
   }
 }

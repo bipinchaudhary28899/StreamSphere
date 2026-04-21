@@ -31,11 +31,17 @@
   padding-bottom: 40px;
 }
 
+/* Search mode — hero is gone, reset overlap margin */
+.content-section.no-hero {
+  margin-top: 0;
+  padding-top: 24px;
+}
+
 /* ── Video grid ───────────────────────────────────────────────────────── */
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(5, 1fr);   /* 5 cards at full desktop width */
+  gap: 16px;
   padding: 0 24px;
   margin-top: 24px;
 }
@@ -172,11 +178,19 @@
   }
 }
 
+/* ── Large tablet / small laptop ──────────────────────────────────────── */
+@media (max-width: 1280px) {
+  .video-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+}
+
 /* ── Tablet ───────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .video-grid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
     padding: 0 16px;
   }
   .content-section { margin-top: -80px; }
@@ -193,6 +207,7 @@
     margin-top: -60px; // less overlap — mini cards are 88px tall, not 380px
     padding-bottom: 80px; // room for bottom nav
   }
+
 
   // ── Grid becomes a single-column list with tight gap ──────────────────
   .video-grid {

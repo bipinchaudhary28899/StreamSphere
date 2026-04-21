@@ -1,6 +1,6 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, BehaviorSubject, Subject } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface FeedPage {
@@ -18,6 +18,12 @@ export class VideoService {
   private categorySubject = new BehaviorSubject<string>('All');
   public  search$   = this.searchSubject.asObservable();
   public  category$ = this.categorySubject.asObservable();
+
+  // ── Feed refresh signal — emitted after a successful upload ─────────────────
+  private feedRefreshSubject = new Subject<void>();
+  public  feedRefresh$ = this.feedRefreshSubject.asObservable();
+
+  triggerFeedRefresh(): void { this.feedRefreshSubject.next(); }
 
   constructor(private http: HttpClient) {}
 
@@ -98,6 +104,27 @@ export class VideoService {
 
   getWatchHistory(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/history`);
+  }
+
+  // ── View count ──────────────────────────────────────────────────────────
+  // Sends auth token (logged-in) OR a persistent anon session UUID so the
+  // backend can build a per-browser dedup key regardless of login state.
+  recordView(videoId: string): Observable<{ views: number }> {
+    const token = localStorage.getItem('token');
+    const headers = token
+      ? new HttpHeaders({ Authorization: `Bearer ${token}` })
+      : new HttpHeaders({ 'X-Anon-Session': this.getAnonSessionId() });
+    return this.http.post<{ views: number }>(`${this.apiUrl}/videos/${videoId}/view`, {}, { headers });
+  }
+
+  // Returns a stable UUID for this browser, creating one on first visit.
+  private getAnonSessionId(): string {
+    let id = localStorage.getItem('ss_session_id');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('ss_session_id', id);
+    }
+    return id;
   }
 
   // ── Header reactive subjects ────────────────────────────────────────────────

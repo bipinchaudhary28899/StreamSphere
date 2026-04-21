@@ -77,7 +77,7 @@ export const videoIdParamSchema = z.object({
 /**
  * POST /api/videos/:videoId/comments
  * Params: { videoId }
- * Body:   { video_id, content }
+ * Body:   { video_id, content, parent_id? }
  */
 export const createCommentSchema = z.object({
   params: z.object({
@@ -86,6 +86,7 @@ export const createCommentSchema = z.object({
   body: z.object({
     video_id: mongoId,
     content:  nonEmptyString('Comment content', 1000),
+    parent_id: mongoId.optional().nullable(),
   }),
 });
 

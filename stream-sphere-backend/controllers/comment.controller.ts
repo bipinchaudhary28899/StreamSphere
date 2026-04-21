@@ -34,7 +34,7 @@ export class CommentController {
   // Create a new comment
   async createComment(req: AuthenticatedRequest, res: Response) {
     try {
-      const { video_id, content } = req.body;
+      const { video_id, content, parent_id } = req.body;
       const user = req.user;
 
       if (!user) {
@@ -58,7 +58,8 @@ export class CommentController {
         user_id: user.userId,
         username: user.name || user.email,
         user_profile_image: user.profileImage || undefined,
-        content: content.trim()
+        content: content.trim(),
+        parent_id: parent_id || undefined
       };
 
       const comment = await commentService.createComment(commentData);
@@ -159,6 +160,23 @@ export class CommentController {
     } catch (error) {
       console.error('Error in getCommentsByUserId:', error);
       res.status(500).json({ error: 'Failed to fetch user comments' });
+    }
+  }
+
+  // Get replies to a comment
+  async getReplies(req: Request, res: Response) {
+    try {
+      const { commentId } = req.params;
+
+      if (!commentId) {
+        return res.status(400).json({ error: 'Comment ID is required' });
+      }
+
+      const replies = await commentService.getReplies(commentId);
+      res.status(200).json({ success: true, replies });
+    } catch (error) {
+      console.error('Error in getReplies:', error);
+      res.status(500).json({ error: 'Failed to fetch replies' });
     }
   }
 } 

@@ -2,11 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>StreamSphereClient</title>
+  <title>StreamSphere — Watch & Share Videos</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="StreamSphere — discover, watch, and share videos across every category. Stream the best content from creators worldwide.">
+
+  <!-- Preconnect: open connections early for critical third-party origins -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Google profile images use no-referrer — omit crossorigin to avoid CORS preflight -->
+  <link rel="preconnect" href="https://lh3.googleusercontent.com">
+
+  <!-- Preload the logo WebP so the browser fetches it before rendering the header
+       (fixes the 1.4 MB PNG being loaded instead of the 13 KB WebP) -->
+  <link rel="preload" href="assets/thumbs/Stream%20Sphere%20Icon.webp" as="image" type="image/webp">
+
+  <!-- Fonts — display=swap keeps text visible during font load -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- Material Icons — display=block avoids invisible-icon flash -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons&display=block" rel="stylesheet">
 </head>
 <body class="mat-typography">
   <app-root></app-root>

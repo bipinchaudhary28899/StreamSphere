@@ -85,24 +85,61 @@
 }
 
 .hero-text {
-  max-width: 600px;
+  max-width: 780px;   /* wider column → title fits in 2-3 lines instead of 4+ */
 }
 
 .hero-title {
-  font-size: 3.5rem;
-  font-weight: 700;
-  margin: 0 0 1rem 0;
-  line-height: 1.1;
+  font-size: 2.8rem;  /* slightly smaller so long titles don't stack as many lines */
+  font-weight: 800;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.15;
   text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
 }
 
 .hero-description {
-  font-size: 1.2rem;
-  margin: 0 0 1.5rem 0;
-  line-height: 1.4;
+  font-size: 1.05rem;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.5;
   opacity: 0.9;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+
+  /* Clamp to 3 lines by default */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
+
+/* When expanded — show all lines */
+.hero-description.expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+  max-height: 180px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.3) transparent;
+  margin-bottom: 0.5rem;
+}
+.hero-description.expanded::-webkit-scrollbar { width: 4px; }
+.hero-description.expanded::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 2px; }
+
+/* Read more / Read less button */
+.desc-toggle-btn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.75);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin: 0 0 1.2rem 0;
+  display: inline-block;
+  letter-spacing: 0.03em;
+  transition: color 0.2s;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
+.desc-toggle-btn:hover { color: #fff; }
 
 .hero-meta {
   display: flex;
@@ -394,30 +431,53 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .hero-carousel {
-    height: 68vh;
-    min-height: 420px;
+    height: calc(88vh + 60px);
+    min-height: calc(560px + 60px);
   }
 
-  .hero-content {
-    /* Keep buttons above the 80px card overlap on mobile */
-    padding: 0 2rem 130px 2rem;
-  }
-
-  .hero-title {
-    font-size: 2.5rem;
-  }
-
-  .hero-description {
-    font-size: 1rem;
-  }
-
+  /* Hide description, read-more toggle, and meta — mobile shows title + buttons only */
+  .hero-description,
+  .desc-toggle-btn,
   .hero-meta {
-    gap: 1rem;
-    font-size: 0.9rem;
+    display: none !important;
   }
 
+  /* Span full usable area below the navbar; flex-center the title */
+  .hero-content {
+    top: 60px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    padding: 0 2rem 5rem 2rem;   /* bottom gap reserves room for pinned actions */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: visible;
+  }
+
+  /* Title: max 2 lines then ellipsis — buttons never shift with title length */
+  .hero-title {
+    font-size: 2rem;
+    margin-bottom: 0;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+  }
+
+  /* Pin action buttons to the bottom of the carousel regardless of title length.
+     bottom must exceed the card-section overlap (80px at ≤900px) so buttons
+     are never covered by the content-section z-index:5 overlay.
+     .hero-text is position:static, so this absolute is relative to .hero-content. */
   .hero-actions {
+    position: absolute;
+    bottom: 100px;   /* 80px card overlap + 20px breathing room */
+    left: 2rem;
+    right: 2rem;
     gap: 0.75rem;
+    flex-wrap: wrap;
   }
 
   .hero-play-btn {
@@ -455,24 +515,24 @@
   /* Hide thumbnail indicators — they fall inside the mini-card overlap zone */
   .hero-indicators { display: none; }
 
-  /* Tighter hero for mini-card list view */
   .hero-carousel {
-    height: 60vh;
-    min-height: 360px;
+    height: calc(60vh + 56px);
+    min-height: calc(360px + 56px);
   }
 
   .hero-content {
-    padding: 0 1.25rem 120px 1.25rem;
+    top: 56px;
+    padding: 0 1.25rem 5rem 1.25rem;
   }
 
   .hero-title {
-    font-size: 2.2rem;
+    font-size: 2rem;
   }
 
-  .hero-meta {
-    gap: 0.75rem;
-    font-size: 0.85rem;
-    margin-bottom: 1.25rem;
+  .hero-actions {
+    left: 1.25rem;
+    right: 1.25rem;
+    bottom: 80px;   /* 60px card overlap + 20px breathing room */
   }
 
   .hero-play-btn {
@@ -508,14 +568,14 @@
     font-size: 1.75rem;
   }
 
-  .hero-description {
-    font-size: 0.88rem;
-    /* Hide on very small screens to give more room to buttons */
-    display: none;
+  .hero-content {
+    padding: 0 1rem 5rem 1rem;
   }
 
-  .hero-content {
-    padding: 0 1rem 105px 1rem;
+  .hero-actions {
+    left: 1rem;
+    right: 1rem;
+    bottom: 80px;   /* 60px card overlap + 20px breathing room */
   }
 
   .hero-controls {

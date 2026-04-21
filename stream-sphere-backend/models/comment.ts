@@ -8,6 +8,8 @@ export interface IComment extends Document {
   content: string;
   created_at: Date;
   updated_at: Date;
+  parent_id?: string | null;
+  replies_count: number;
 }
 
 const commentSchema = new Schema<IComment>({
@@ -42,6 +44,15 @@ const commentSchema = new Schema<IComment>({
   updated_at: {
     type: Date,
     default: Date.now
+  },
+  parent_id: {
+    type: Schema.Types.ObjectId,
+    ref: 'Comment',
+    default: null
+  },
+  replies_count: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
@@ -50,5 +61,6 @@ const commentSchema = new Schema<IComment>({
 // Index for better query performance
 commentSchema.index({ video_id: 1, created_at: -1 });
 commentSchema.index({ user_id: 1 });
+commentSchema.index({ parent_id: 1, created_at: -1 });
 
 export const Comment = mongoose.model<IComment>('Comment', commentSchema); 

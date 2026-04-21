@@ -1,37 +1,58 @@
-<div class="upload-container">
+<div class="upload-container" [class.upload-container--dialog]="dialogRef">
+
+  <!-- Dialog header (only shown when opened as a modal) -->
+  <div class="upload-dialog-header" *ngIf="dialogRef">
+    <h2 class="upload-dialog-title">Upload Video</h2>
+    <button class="upload-close-btn" (click)="dialogRef.close()" matTooltip="Close">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
   <form [formGroup]="uploadForm" (ngSubmit)="onSubmit()">
+
     <div class="form-group">
       <label>Title</label>
-      <input
-        formControlName="title"
-        type="text"
-        placeholder="Enter video title"
-      />
+      <input formControlName="title" type="text" placeholder="Enter video title" />
     </div>
 
     <div class="form-group">
-      <label>Description (Optional)</label>
-      <textarea
-        formControlName="description"
-        placeholder="Enter video description (optional)"
-        rows="4"
-      ></textarea>
+      <label>Description <span class="optional">(optional)</span></label>
+      <textarea formControlName="description" placeholder="What's this video about?" rows="3"></textarea>
     </div>
 
     <div class="form-group">
       <label>Video File</label>
-      <input type="file" (change)="onFileSelected($event)" accept="video/*" />
-      <small class="duration-limit">Maximum video duration: 3 minutes</small>
+      <div class="file-drop-zone" (click)="fileInput.click()">
+        <mat-icon class="file-icon">{{ selectedFile ? 'videocam' : 'cloud_upload' }}</mat-icon>
+        <span class="file-label">
+          {{ selectedFile ? selectedFile.name : 'Click to choose a video file' }}
+        </span>
+        <span class="file-hint">MP4, MOV, WebM — max 3 minutes</span>
+      </div>
+      <input #fileInput type="file" (change)="onFileSelected($event)" accept="video/*" style="display:none" />
+    </div>
+
+    <div *ngIf="errorMessage" class="error-message">
+      <mat-icon>error_outline</mat-icon>
+      {{ errorMessage }}
     </div>
 
     <button type="submit" [disabled]="isUploading || !uploadForm.valid">
-      Upload Video
+      <mat-icon *ngIf="!isUploading">upload</mat-icon>
+      {{ isUploading ? 'Uploading… ' + uploadProgress + '%' : 'Upload Video' }}
     </button>
 
-    <mat-progress-bar *ngIf="isUploading" mode="determinate" [value]="uploadProgress"></mat-progress-bar>
+    <mat-progress-bar
+      *ngIf="isUploading"
+      mode="determinate"
+      [value]="uploadProgress"
+      class="upload-progress-bar">
+    </mat-progress-bar>
 
     <div *ngIf="uploadSuccess" class="success-message">
-      Video uploaded and saved successfully! 🎉
+      <mat-icon>check_circle</mat-icon>
+      Video uploaded successfully!
     </div>
+
   </form>
 </div>

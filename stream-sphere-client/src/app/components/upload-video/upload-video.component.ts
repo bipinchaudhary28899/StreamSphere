@@ -1,17 +1,23 @@
-import { Component } from '@angular/core';
+import { Component, Optional } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { UploadService } from '../../services/upload.service';
+import { VideoService } from '../../services/video.service';
 import { HttpEventType, HttpProgressEvent } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
+import { MatIconModule } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-upload-video',
   standalone: true,
-  imports: [ReactiveFormsModule, MatButtonModule, MatInputModule, CommonModule, MatProgressBarModule],
+  imports: [
+    ReactiveFormsModule, MatButtonModule, MatInputModule,
+    CommonModule, MatProgressBarModule, MatIconModule, MatDialogModule,
+  ],
   templateUrl: './upload-video.component.html',
   styleUrls: ['./upload-video.component.css']
 })
@@ -23,10 +29,13 @@ export class UploadVideoComponent {
   uploadSuccess: boolean = false;
   errorMessage: string = '';
 
+  // dialogRef is null when the component is opened as a full page (via router)
   constructor(
     private fb: FormBuilder,
     private uploadService: UploadService,
-    private router: Router
+    private videoService: VideoService,
+    private router: Router,
+    @Optional() public dialogRef: MatDialogRef<UploadVideoComponent> | null,
   ) {
     this.uploadForm = this.fb.group({
       title: ['', Validators.required],
@@ -123,6 +132,7 @@ export class UploadVideoComponent {
                 S3_url: cloudFrontUrl,  // CloudFront URL saved to MongoDB
                 user_id: user?.userId ?? 'UNKNOWN USER',
                 userName: user?.name ?? 'Unknown User',
+                user_profile_image: user?.profileImage ?? null,
               };
 
               this.uploadService.saveVideoMetadata(metadata).subscribe({
@@ -132,7 +142,15 @@ export class UploadVideoComponent {
                   this.uploadForm.reset();
                   this.selectedFile = null;
                   this.uploadProgress = 0;
-                  setTimeout(() => this.router.navigate(['/home']), 1500);
+                  // Signal the video list to reload so the new video appears immediately
+                  this.videoService.triggerFeedRefresh();
+                  setTimeout(() => {
+                    if (this.dialogRef) {
+                      this.dialogRef.close('uploaded');
+                    } else {
+                      this.router.navigate(['/home']);
+                    }
+                  }, 1500);
                 },
                 error: (err) => {
                   console.error('[upload] Error saving metadata:', err);
