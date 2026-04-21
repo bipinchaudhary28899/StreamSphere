@@ -11,6 +11,8 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 
+type UploadPhase = 'idle' | 'uploading' | 'processing' | 'categorizing' | 'success';
+
 @Component({
   selector: 'app-upload-video',
   standalone: true,
@@ -28,6 +30,8 @@ export class UploadVideoComponent {
   isUploading: boolean = false;
   uploadSuccess: boolean = false;
   errorMessage: string = '';
+  uploadPhase: UploadPhase = 'idle';
+  private categorizingTimer: any = null;
 
   // dialogRef is null when the component is opened as a full page (via router)
   constructor(
@@ -99,9 +103,10 @@ export class UploadVideoComponent {
   onSubmit() {
     if (!this.uploadForm.valid || !this.selectedFile) return;
 
-    this.isUploading = true;
+    this.isUploading    = true;
     this.uploadProgress = 0;
-    this.errorMessage = '';
+    this.uploadPhase    = 'uploading';
+    this.errorMessage   = '';
 
     const file = this.selectedFile;
     const { title, description } = this.uploadForm.value;
@@ -121,7 +126,18 @@ export class UploadVideoComponent {
             }
 
             if (event.type === HttpEventType.Response) {
-              // Step 3: Save metadata with CloudFront URL (not the S3 URL)
+              // S3 upload complete — switch to "processing" phase while backend saves
+              this.uploadPhase    = 'processing';
+              this.uploadProgress = 100;
+
+              // After ~1.2 s the backend is likely running category detection — reflect that
+              this.categorizingTimer = setTimeout(() => {
+                if (this.uploadPhase === 'processing') {
+                  this.uploadPhase = 'categorizing';
+                }
+              }, 1200);
+
+              // Step 3: Save metadata + trigger category detection on backend
               const user = localStorage.getItem('user')
                 ? JSON.parse(localStorage.getItem('user')!)
                 : null;
@@ -129,7 +145,7 @@ export class UploadVideoComponent {
               const metadata = {
                 title,
                 description,
-                S3_url: cloudFrontUrl,  // CloudFront URL saved to MongoDB
+                S3_url: cloudFrontUrl,
                 user_id: user?.userId ?? 'UNKNOWN USER',
                 userName: user?.name ?? 'Unknown User',
                 user_profile_image: user?.profileImage ?? null,
@@ -137,12 +153,13 @@ export class UploadVideoComponent {
 
               this.uploadService.saveVideoMetadata(metadata).subscribe({
                 next: () => {
-                  this.uploadSuccess = true;
-                  this.isUploading = false;
+                  clearTimeout(this.categorizingTimer);
+                  this.uploadPhase    = 'success';
+                  this.uploadSuccess  = true;
+                  this.isUploading    = false;
                   this.uploadForm.reset();
-                  this.selectedFile = null;
+                  this.selectedFile   = null;
                   this.uploadProgress = 0;
-                  // Signal the video list to reload so the new video appears immediately
                   this.videoService.triggerFeedRefresh();
                   setTimeout(() => {
                     if (this.dialogRef) {
@@ -150,11 +167,13 @@ export class UploadVideoComponent {
                     } else {
                       this.router.navigate(['/home']);
                     }
-                  }, 1500);
+                  }, 1800);
                 },
                 error: (err) => {
+                  clearTimeout(this.categorizingTimer);
                   console.error('[upload] Error saving metadata:', err);
-                  this.isUploading = false;
+                  this.isUploading  = false;
+                  this.uploadPhase  = 'idle';
 
                   if (err.error?.error?.includes('duration exceeds')) {
                     this.errorMessage = err.error.error;
@@ -171,14 +190,16 @@ export class UploadVideoComponent {
           },
           error: (err) => {
             console.error('[upload] Error uploading to S3:', err);
-            this.isUploading = false;
+            this.isUploading  = false;
+            this.uploadPhase  = 'idle';
             this.errorMessage = 'Upload to storage failed. Please try again.';
           }
         });
       },
       error: (err) => {
         console.error('[upload] Error getting signed URL:', err);
-        this.isUploading = false;
+        this.isUploading  = false;
+        this.uploadPhase  = 'idle';
 
         if (err.status === 400) {
           this.errorMessage = 'Invalid file. Please check the file and try again.';

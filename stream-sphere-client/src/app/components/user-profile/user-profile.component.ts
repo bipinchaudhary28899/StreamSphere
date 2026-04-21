@@ -56,10 +56,12 @@ export class UserProfileComponent implements OnInit {
       const u = localStorage.getItem('user');
       if (u) {
         const parsed = JSON.parse(u);
-        return parsed.profileImage || 'assets/thumbs/default-avatar.png';
+        if (parsed.profileImage) return parsed.profileImage;
+        const name = encodeURIComponent(parsed.name || 'User');
+        return `https://ui-avatars.com/api/?name=${name}&background=random&color=fff&size=40`;
       }
     } catch {}
-    return 'assets/thumbs/default-avatar.png';
+    return `https://ui-avatars.com/api/?name=User&background=random&color=fff&size=40`;
   })();
   userName: string = (() => {
     try {
@@ -173,18 +175,12 @@ export class UserProfileComponent implements OnInit {
   }
 
   loadMyVideos(): void {
-    if (!this.user) {
-      return;
-    }
+    if (!this.user) return;
 
-    // Fetch first page; my videos are filtered client-side by user_id.
-    // For a user who has uploaded many videos, this could be extended to a
-    // dedicated /api/videos/mine endpoint — acceptable for current scale.
-    this.videoService.getFeed(undefined, 'All').subscribe({
-      next: (page: any) => {
-        const videos: any[] = page.videos ?? page; // handle both FeedPage and plain array
-        this.myVideos = videos.filter((video: any) => video.user_id === this.user?.userId);
-        this.dataSource.data = this.myVideos;
+    this.videoService.getMyVideos().subscribe({
+      next: (videos: any[]) => {
+        this.myVideos = videos;
+        this.dataSource.data = videos;
         setTimeout(() => this.attachTableHelpers());
       },
       error: (err: any) => {
@@ -327,9 +323,9 @@ export class UserProfileComponent implements OnInit {
 
   onImageError(event: Event): void {
     const img = event.target as HTMLImageElement;
-    // Prevent infinite error loop if the fallback itself is missing
-    img.onerror = null;
-    img.src = 'assets/thumbs/default-avatar.png';
+    img.onerror = null; // prevent infinite loop
+    const name = encodeURIComponent(this.userName || 'User');
+    img.src = `https://ui-avatars.com/api/?name=${name}&background=random&color=fff&size=40`;
   }
 
   openUploadPage(): void {

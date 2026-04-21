@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
@@ -40,9 +40,6 @@ export class CommentService {
 
   // Create a new comment
   createComment(videoId: string, content: string): Observable<{ success: boolean; comment: Comment }> {
-    const token = localStorage.getItem('token');
-    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-    
     const commentData: CreateCommentRequest = {
       video_id: videoId,
       content: content
@@ -51,15 +48,11 @@ export class CommentService {
     return this.http.post<{ success: boolean; comment: Comment }>(
       `${this.apiUrl}/videos/${videoId}/comments`,
       commentData,
-      { headers }
     );
   }
 
   // Update a comment
   updateComment(commentId: string, content: string): Observable<{ success: boolean; comment: Comment }> {
-    const token = localStorage.getItem('token');
-    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-    
     const updateData: UpdateCommentRequest = {
       content: content
     };
@@ -67,18 +60,13 @@ export class CommentService {
     return this.http.put<{ success: boolean; comment: Comment }>(
       `${this.apiUrl}/comments/${commentId}`,
       updateData,
-      { headers }
     );
   }
 
   // Delete a comment
   deleteComment(commentId: string): Observable<{ success: boolean; message: string }> {
-    const token = localStorage.getItem('token');
-    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-
     return this.http.delete<{ success: boolean; message: string }>(
       `${this.apiUrl}/comments/${commentId}`,
-      { headers }
     );
   }
 
@@ -89,12 +77,8 @@ export class CommentService {
 
   // Get comments by current user
   getUserComments(): Observable<{ success: boolean; comments: Comment[] }> {
-    const token = localStorage.getItem('token');
-    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-
     return this.http.get<{ success: boolean; comments: Comment[] }>(
       `${this.apiUrl}/user/comments`,
-      { headers }
     );
   }
 
@@ -107,12 +91,9 @@ export class CommentService {
 
   // Create a reply (parent_id provided)
   createReply(videoId: string, content: string, parentId: string): Observable<{ success: boolean; comment: Comment }> {
-    const token = localStorage.getItem('token');
-    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
     return this.http.post<{ success: boolean; comment: Comment }>(
       `${this.apiUrl}/videos/${videoId}/comments`,
       { video_id: videoId, content, parent_id: parentId },
-      { headers }
     );
   }
 } 

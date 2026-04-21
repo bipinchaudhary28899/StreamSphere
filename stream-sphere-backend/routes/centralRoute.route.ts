@@ -6,10 +6,12 @@ import { VideoController }        from '../controllers/getVideo.controller';
 import { CommentController }      from '../controllers/comment.controller';
 import { authenticateJWT }        from '../services/auth.service';
 import { WatchHistoryController } from '../controllers/watchHistory.controller';
+import { adminStatsController }   from '../controllers/admin.controller';
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 import { validate }        from '../middleware/validate.middleware';
 import { authLimiter, uploadLimiter, writeLimiter } from '../middleware/rateLimiter.middleware';
+import { statsMiddleware } from '../middleware/stats.middleware';
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 import {
@@ -27,6 +29,19 @@ import {
 const router: Router          = express.Router();
 const commentController       = new CommentController();
 const watchHistoryController  = new WatchHistoryController();
+
+// Count every API request for the dev dashboard
+router.use(statsMiddleware);
+
+// ── Admin guard (email-based) ─────────────────────────────────────────────────
+const ADMIN_EMAIL = 'bkumar28899@gmail.com';
+function requireAdmin(req: any, res: Response, next: any): void {
+  if (req.user?.email !== ADMIN_EMAIL) {
+    res.status(403).json({ message: 'Forbidden' });
+    return;
+  }
+  next();
+}
 
 // Express v5 requires handlers to return void | Promise<void>.
 // Controllers that use early `return res.json(...)` return Response, so we
@@ -81,6 +96,10 @@ router.get('/videos/liked',
 router.get('/videos/disliked',
   authenticateJWT,
   wrap(VideoController.getDislikedVideos.bind(VideoController)),
+);
+router.get('/videos/mine',
+  authenticateJWT,
+  wrap(VideoController.getMyVideos.bind(VideoController)),
 );
 
 // View count — does NOT require authentication
@@ -166,6 +185,13 @@ router.post('/history/:videoId',
 router.get('/history',
   authenticateJWT,
   wrap((req, res) => watchHistoryController.getWatchHistory(req, res)),
+);
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+router.get('/admin/stats',
+  authenticateJWT,
+  requireAdmin,
+  wrap(adminStatsController),
 );
 
 export default router;

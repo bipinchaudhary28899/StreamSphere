@@ -51,5 +51,13 @@ export const routes: Routes = [
   canActivate: [AuthGuard]
 },
 
+  {
+    path: 'admin',
+    loadComponent: () =>
+      import('./components/admin-dashboard/admin-dashboard.component')
+        .then(c => c.AdminDashboardComponent),
+    canActivate: [AuthGuard]
+  },
+
   { path: '**', redirectTo: 'home' }
 ];

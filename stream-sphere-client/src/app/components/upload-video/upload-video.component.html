@@ -39,19 +39,39 @@
 
     <button type="submit" [disabled]="isUploading || !uploadForm.valid">
       <mat-icon *ngIf="!isUploading">upload</mat-icon>
-      {{ isUploading ? 'Uploading… ' + uploadProgress + '%' : 'Upload Video' }}
+      <ng-container [ngSwitch]="uploadPhase">
+        <ng-container *ngSwitchCase="'uploading'">Uploading… {{ uploadProgress }}%</ng-container>
+        <ng-container *ngSwitchCase="'processing'">Saving to storage…</ng-container>
+        <ng-container *ngSwitchCase="'categorizing'">Generating category…</ng-container>
+        <ng-container *ngSwitchDefault>Upload Video</ng-container>
+      </ng-container>
     </button>
 
+    <!-- Determinate bar while bytes are being sent to S3 -->
     <mat-progress-bar
-      *ngIf="isUploading"
+      *ngIf="uploadPhase === 'uploading'"
       mode="determinate"
       [value]="uploadProgress"
       class="upload-progress-bar">
     </mat-progress-bar>
 
-    <div *ngIf="uploadSuccess" class="success-message">
+    <!-- Indeterminate bar while backend processes (save + category detection) -->
+    <mat-progress-bar
+      *ngIf="uploadPhase === 'processing' || uploadPhase === 'categorizing'"
+      mode="indeterminate"
+      class="upload-progress-bar">
+    </mat-progress-bar>
+
+    <!-- Phase status label shown below the bar -->
+    <div *ngIf="uploadPhase === 'processing' || uploadPhase === 'categorizing'" class="upload-phase-label">
+      <mat-icon class="phase-icon spin">sync</mat-icon>
+      <span *ngIf="uploadPhase === 'processing'">Saving your video…</span>
+      <span *ngIf="uploadPhase === 'categorizing'">Generating category…</span>
+    </div>
+
+    <div *ngIf="uploadPhase === 'success'" class="success-message">
       <mat-icon>check_circle</mat-icon>
-      Video uploaded successfully!
+      Video saved successfully!
     </div>
 
   </form>

@@ -238,4 +238,10 @@ export class CommentSectionComponent implements OnInit, OnDestroy {
   getDefaultAvatar(username: string): string {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random&color=fff&size=40`;
   }
+
+  onAvatarError(event: Event, username: string): void {
+    const img = event.target as HTMLImageElement;
+    img.onerror = null; // prevent infinite loop
+    img.src = this.getDefaultAvatar(username);
+  }
 }

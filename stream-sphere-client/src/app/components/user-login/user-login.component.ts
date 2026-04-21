@@ -279,7 +279,6 @@ export class UserLoginComponent {
           if (result.user && result.token) {
             localStorage.setItem('user', JSON.stringify(result.user));
             localStorage.setItem('token', result.token);
-            
           }
           
           this.isLoggedIn = true;

@@ -66,6 +66,10 @@ export class VideoService {
   }
 
   // ── User-specific lists ─────────────────────────────────────────────────────
+  getMyVideos(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/videos/mine`);
+  }
+
   getLikedVideos(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/videos/liked`, { headers: this.authHeaders() });
   }

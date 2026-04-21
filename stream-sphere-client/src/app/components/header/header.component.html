@@ -126,6 +126,12 @@
 
   <mat-divider></mat-divider>
 
+  <button mat-menu-item *ngIf="isAdmin" (click)="navigateToAdmin()" class="admin-item">
+    <mat-icon>developer_board</mat-icon><span>Dev Dashboard</span>
+  </button>
+
+  <mat-divider *ngIf="isAdmin"></mat-divider>
+
   <button mat-menu-item class="sign-out-item" (click)="logout()">
     <mat-icon>logout</mat-icon><span>Sign Out</span>
   </button>

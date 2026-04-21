@@ -14,13 +14,13 @@ export const handleGoogleLogin = async (token: string): Promise<IUserResponse> =
 
   const payload = ticket.getPayload()!;
   const { name, email, picture } = payload;
-  
+
   console.log("backend email is : ", email);
   console.log("Google profile image URL: ", picture);
-  
+
   let user = await User.findOne({ email });
   let isNewUser = false;
-  
+
   if (!user) {
     // Create new user
     user = new User({
@@ -42,13 +42,13 @@ export const handleGoogleLogin = async (token: string): Promise<IUserResponse> =
   }
 
   console.log("backend user is : ", user);
-  
-  const jwtPayload = { 
-    userId: user._id, 
-    email: user.email, 
+
+  const jwtPayload = {
+    userId: user._id,
+    email: user.email,
     name: user.name,
     profileImage: user.profileImage,
-    subject: user._id 
+    subject: user._id
   };
   const jwtToken = jwt.sign(jwtPayload, process.env.JWT_SECRET!);
 
@@ -57,9 +57,9 @@ export const handleGoogleLogin = async (token: string): Promise<IUserResponse> =
     user: {
       role: user.role,
       email: user.email,
-      userName: user.name, 
-      name: user.name, // Add name for consistency
-      profileImage: user.profileImage || '', // Ensure it's always a string
+      userName: user.name,
+      name: user.name,
+      profileImage: user.profileImage || '',
       isVerified: user.isVerified,
       userId: user._id as string,
     },
@@ -71,16 +71,16 @@ export const handleGoogleLogin = async (token: string): Promise<IUserResponse> =
 export function authenticateJWT(req: any, res: any, next: any) {
   const authHeader = req.headers.authorization;
   console.log('JWT Middleware - Auth header:', authHeader);
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     console.log('JWT Middleware - No token provided');
     return res.status(401).json({ message: 'No token provided' });
   }
-  
+
   const token = authHeader.split(' ')[1];
   console.log('JWT Middleware - Token received:', token.substring(0, 20) + '...');
   console.log('JWT Middleware - JWT_SECRET exists:', !!process.env.JWT_SECRET);
-  
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!);
     console.log('JWT Middleware - Token decoded successfully:', decoded);

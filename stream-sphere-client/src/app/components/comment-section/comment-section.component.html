@@ -13,7 +13,7 @@
     <img [src]="currentUser?.profileImage || getDefaultAvatar(currentUser?.name || 'User')"
          [alt]="currentUser?.name"
          class="cs-avatar"
-         onerror="this.src='assets/thumbs/default-avatar.png'">
+         (error)="onAvatarError($event, currentUser?.name || 'User')">
     <div class="cs-input-wrap">
       <textarea [(ngModel)]="newComment"
                 placeholder="Add a comment…"
@@ -57,7 +57,7 @@
         <img [src]="comment.user_profile_image || getDefaultAvatar(comment.username)"
              [alt]="comment.username"
              class="cs-avatar cs-avatar--sm"
-             onerror="this.src='assets/thumbs/default-avatar.png'">
+             (error)="onAvatarError($event, comment.username)">
 
         <div class="cs-comment-content">
           <!-- Meta row -->
@@ -100,7 +100,7 @@
           <div class="cs-reply-form" *ngIf="comment.showReplyForm">
             <img [src]="currentUser?.profileImage || getDefaultAvatar(currentUser?.name || 'User')"
                  class="cs-avatar cs-avatar--xs"
-                 onerror="this.src='assets/thumbs/default-avatar.png'">
+                 (error)="onAvatarError($event, currentUser?.name || 'User')">
             <div class="cs-input-wrap">
               <textarea [(ngModel)]="comment.replyContent"
                         placeholder="Write a reply…"
@@ -126,7 +126,7 @@
               <img [src]="reply.user_profile_image || getDefaultAvatar(reply.username)"
                    [alt]="reply.username"
                    class="cs-avatar cs-avatar--xs"
-                   onerror="this.src='assets/thumbs/default-avatar.png'">
+                   (error)="onAvatarError($event, reply.username)">
               <div class="cs-comment-content">
                 <div class="cs-comment-meta">
                   <span class="cs-username">{{ reply.username }}</span>
