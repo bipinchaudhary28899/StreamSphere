@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StreamSphere — Architecture Diagram</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d0f14;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 60px;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 48px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* ── Canvas ─────────────────────────────────────────────────── */
+  .diagram {
+    position: relative;
+    width: 960px;
+    height: 620px;
+  }
+
+  /* ── Nodes ──────────────────────────────────────────────────── */
+  .node {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    cursor: default;
+    transition: transform 0.2s;
+  }
+  .node:hover { transform: translateY(-4px); }
+
+  .node-box {
+    border-radius: 16px;
+    border: 1.5px solid;
+    padding: 20px 22px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 130px;
+    min-height: 100px;
+    justify-content: center;
+    position: relative;
+    backdrop-filter: blur(4px);
+  }
+
+  .node-icon {
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  .node-name {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .node-sub {
+    font-size: 0.68rem;
+    color: #94a3b8;
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  /* ── Colour themes per node ─────────────────────────────────── */
+  .node-angular  .node-box { background: rgba(196,38,47,0.12); border-color: #c4262f; }
+  .node-angular  .node-name { color: #ff6b6b; }
+
+  .node-node     .node-box { background: rgba(51,160,56,0.12); border-color: #339a38; }
+  .node-node     .node-name { color: #4ade80; }
+
+  .node-redis    .node-box { background: rgba(220,50,50,0.12); border-color: #dc3232; }
+  .node-redis    .node-name { color: #f87171; }
+
+  .node-mongo    .node-box { background: rgba(0,163,85,0.12); border-color: #00a355; }
+  .node-mongo    .node-name { color: #34d399; }
+
+  .node-s3       .node-box { background: rgba(255,153,0,0.12); border-color: #ff9900; }
+  .node-s3       .node-name { color: #fbbf24; }
+
+  .node-cf       .node-box { background: rgba(100,180,255,0.12); border-color: #64b4ff; }
+  .node-cf       .node-name { color: #93c5fd; }
+
+  .node-hf       .node-box { background: rgba(255,208,80,0.12); border-color: #ffd050; }
+  .node-hf       .node-name { color: #fde68a; }
+
+  /* ── SVG arrows ─────────────────────────────────────────────── */
+  svg.arrows {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  /* ── Legend ─────────────────────────────────────────────────── */
+  .legend {
+    margin-top: 48px;
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: #94a3b8;
+  }
+
+  .legend-line {
+    width: 32px;
+    height: 2px;
+    border-radius: 2px;
+  }
+  .legend-line.solid   { background: #60a5fa; }
+  .legend-line.dashed  { background: repeating-linear-gradient(to right, #f59e0b 0, #f59e0b 6px, transparent 6px, transparent 10px); }
+  .legend-line.upload  { background: #a78bfa; }
+
+  /* ── Flow labels ─────────────────────────────────────────────── */
+  .flow-labels {
+    margin-top: 36px;
+    width: 960px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .flow-card {
+    background: #141720;
+    border: 1px solid #1e2535;
+    border-radius: 12px;
+    padding: 14px 18px;
+  }
+
+  .flow-card h3 {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #60a5fa;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+  }
+
+  .flow-card ol {
+    padding-left: 16px;
+    font-size: 0.76rem;
+    color: #94a3b8;
+    line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+
+<h1>StreamSphere</h1>
+<p class="subtitle">High-Level System Architecture</p>
+
+<div class="diagram">
+
+  <!-- ── SVG layer (arrows drawn under nodes) ── -->
+  <svg class="arrows">
+    <defs>
+      <!-- Blue arrow (API / data) -->
+      <marker id="arr-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#60a5fa"/>
+      </marker>
+      <!-- Amber arrow (upload) -->
+      <marker id="arr-amber" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#f59e0b"/>
+      </marker>
+      <!-- Purple arrow (CDN) -->
+      <marker id="arr-purple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#a78bfa"/>
+      </marker>
+      <!-- Green arrow (NLP) -->
+      <marker id="arr-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#4ade80"/>
+      </marker>
+      <!-- Red arrow (cache) -->
+      <marker id="arr-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#f87171"/>
+      </marker>
+    </defs>
+
+    <!-- Angular ↔ Node.js (REST API) — bidirectional -->
+    <line x1="193" y1="120" x2="385" y2="120"
+          stroke="#60a5fa" stroke-width="2"
+          marker-end="url(#arr-blue)" marker-start="url(#arr-blue)"/>
+    <text x="289" y="112" text-anchor="middle" font-size="10" fill="#60a5fa">REST API</text>
+
+    <!-- Angular ← CloudFront (video stream) -->
+    <path d="M 790 95 Q 680 40 260 95"
+          stroke="#a78bfa" stroke-width="2" fill="none"
+          marker-end="url(#arr-purple)"/>
+    <text x="520" y="42" text-anchor="middle" font-size="10" fill="#a78bfa">Video Stream (CDN)</text>
+
+    <!-- Node.js → S3 (presigned URL / upload) -->
+    <path d="M 520 95 Q 580 40 660 95"
+          stroke="#f59e0b" stroke-width="2" fill="none" stroke-dasharray="6,4"
+          marker-end="url(#arr-amber)"/>
+    <text x="590" y="56" text-anchor="middle" font-size="10" fill="#f59e0b">Presigned URL</text>
+
+    <!-- S3 → CloudFront -->
+    <line x1="790" y1="120" x2="880" y2="120"
+          stroke="#f59e0b" stroke-width="2"
+          marker-end="url(#arr-amber)"/>
+    <text x="835" y="112" text-anchor="middle" font-size="10" fill="#f59e0b">Origin</text>
+
+    <!-- Node.js ↔ Redis (cache) -->
+    <line x1="520" y1="158" x2="520" y2="340"
+          stroke="#f87171" stroke-width="2"
+          marker-end="url(#arr-red)" marker-start="url(#arr-red)"/>
+    <text x="538" y="255" font-size="10" fill="#f87171">Cache</text>
+
+    <!-- Node.js ↔ MongoDB (persistence) -->
+    <path d="M 455 158 Q 340 280 265 340"
+          stroke="#34d399" stroke-width="2" fill="none"
+          marker-end="url(#arr-green)" marker-start="url(#arr-green)"/>
+    <text x="330" y="252" text-anchor="middle" font-size="10" fill="#34d399">Queries</text>
+
+    <!-- Node.js → HuggingFace (category detection) -->
+    <path d="M 455 158 Q 420 340 480 395"
+          stroke="#fde68a" stroke-width="2" fill="none" stroke-dasharray="5,4"
+          marker-end="url(#arr-amber)"/>
+    <text x="408" y="310" text-anchor="middle" font-size="10" fill="#fde68a">NLP Classify</text>
+
+  </svg>
+
+  <!-- ── Nodes ── -->
+
+  <!-- Angular (Browser Client) — far left, middle height -->
+  <div class="node node-angular" style="left:60px; top:60px;">
+    <div class="node-box">
+      <div class="node-icon">🔺</div>
+      <div class="node-name">Angular 19</div>
+      <div class="node-sub">SPA Client<br/>Infinite Scroll<br/>Dark Mode</div>
+    </div>
+  </div>
+
+  <!-- Node.js — center top -->
+  <div class="node node-node" style="left:387px; top:60px;">
+    <div class="node-box">
+      <div class="node-icon">⬡</div>
+      <div class="node-name">Node.js</div>
+      <div class="node-sub">Express API<br/>Auth · Rate Limit<br/>Validation</div>
+    </div>
+  </div>
+
+  <!-- AWS S3 — right top -->
+  <div class="node node-s3" style="left:648px; top:60px;">
+    <div class="node-box">
+      <div class="node-icon">🪣</div>
+      <div class="node-name">AWS S3</div>
+      <div class="node-sub">Video Storage<br/>Presigned URLs</div>
+    </div>
+  </div>
+
+  <!-- CloudFront — far right top -->
+  <div class="node node-cf" style="left:840px; top:60px;">
+    <div class="node-box">
+      <div class="node-icon">⚡</div>
+      <div class="node-name">CloudFront</div>
+      <div class="node-sub">CDN<br/>Global Edge<br/>Low Latency</div>
+    </div>
+  </div>
+
+  <!-- Redis — center right, lower -->
+  <div class="node node-redis" style="left:455px; top:340px;">
+    <div class="node-box">
+      <div class="node-icon">⚙️</div>
+      <div class="node-name">Redis</div>
+      <div class="node-sub">Feed Cache<br/>Search Cache<br/>TTL Invalidation</div>
+    </div>
+  </div>
+
+  <!-- MongoDB — left lower -->
+  <div class="node node-mongo" style="left:130px; top:340px;">
+    <div class="node-box">
+      <div class="node-icon">🍃</div>
+      <div class="node-name">MongoDB</div>
+      <div class="node-sub">Video Docs<br/>Users · Comments<br/>Watch History</div>
+    </div>
+  </div>
+
+  <!-- HuggingFace — center lower -->
+  <div class="node node-hf" style="left:390px; top:470px;">
+    <div class="node-box">
+      <div class="node-icon">🤗</div>
+      <div class="node-name">HuggingFace</div>
+      <div class="node-sub">NLP Model<br/>Auto Category<br/>Detection</div>
+    </div>
+  </div>
+
+</div><!-- /diagram -->
+
+
+<!-- ── Legend ── -->
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-line solid"></div>
+    REST API / Data Flow
+  </div>
+  <div class="legend-item">
+    <div class="legend-line dashed"></div>
+    Presigned Upload / NLP Call
+  </div>
+  <div class="legend-item">
+    <div class="legend-line upload"></div>
+    CDN Video Delivery
+  </div>
+</div>
+
+
+<!-- ── Flow breakdown cards ── -->
+<div class="flow-labels">
+
+  <div class="flow-card">
+    <h3>📺 Video Playback</h3>
+    <ol>
+      <li>Angular requests feed from Node.js</li>
+      <li>Node.js checks Redis (TTL 2 min)</li>
+      <li>On miss → query MongoDB</li>
+      <li>CloudFront URL returned in payload</li>
+      <li>Browser streams video via CloudFront</li>
+    </ol>
+  </div>
+
+  <div class="flow-card">
+    <h3>⬆️ Video Upload</h3>
+    <ol>
+      <li>Angular requests presigned S3 URL</li>
+      <li>Node.js generates URL with UUID key</li>
+      <li>Browser uploads directly to S3</li>
+      <li>Angular calls <code>/save-video</code></li>
+      <li>Node.js calls HuggingFace for category</li>
+      <li>Saved to MongoDB, Redis cache busted</li>
+    </ol>
+  </div>
+
+  <div class="flow-card">
+    <h3>🔍 Search &amp; Filter</h3>
+    <ol>
+      <li>User types → debounced 350ms</li>
+      <li>Node.js checks Redis (TTL 60s)</li>
+      <li>On miss → MongoDB regex query</li>
+      <li>Category filter scopes results</li>
+      <li>Cache keyed by term + category</li>
+    </ol>
+  </div>
+
+</div>
+
+</body>
+</html>

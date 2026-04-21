@@ -1,4 +1,4 @@
-import express from 'express';  // Use import for consistency
+import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -7,40 +7,46 @@ import cors from 'cors';
 process.env.NODE_OPTIONS = '--dns-result-order=ipv4first';
 
 import centralRoute from './routes/centralRoute.route';
-import { Video } from './models/video';
+import { globalLimiter } from './middleware/rateLimiter.middleware';
+import { redisService } from './services/redis.service';
 
 dotenv.config();
 
 const app = express();
 
+// ── CORS ──────────────────────────────────────────────────────────────────────
 app.use(cors({
   origin: (origin, callback) => {
-    const allowed = process.env.CLIENT_URL?.split(',') || [];
+    const allowed = process.env.CLIENT_URL?.split(',').map(o => o.trim()) || [];
     if (!origin || allowed.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
     }
-  }
+  },
 }));
 
-app.use(express.json());
-console.log('centralRoute typeof:', typeof centralRoute);
-console.log('centralRoute:', centralRoute);
+// ── Body parsing ──────────────────────────────────────────────────────────────
+app.use(express.json({ limit: '10kb' })); // reject abnormally large JSON bodies
 
+// ── Global rate limiter (backstop for all routes) ─────────────────────────────
+app.use(globalLimiter);
+
+// ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api', centralRoute);
 
+// ── Database + server start ───────────────────────────────────────────────────
+// Connect Redis (non-blocking — if REDIS_URL absent, caching silently disabled)
+redisService.connect();
 
-// Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI!)
   .then(() => {
     console.log('✅ MongoDB connected');
-
-    // Start server after successful DB connection
     app.listen(3000, () => {
-      console.log('🚀 Server is running on http://localhost:3000');
+      console.log('🚀 Server running on http://localhost:3000');
     });
   })
   .catch((err: any) => {
     console.error('❌ MongoDB connection error:', err);
+    process.exit(1);
   });

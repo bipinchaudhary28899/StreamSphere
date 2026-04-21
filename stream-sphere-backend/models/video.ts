@@ -32,6 +32,20 @@ const videoSchema: Schema = new Schema(
   { timestamps: true }
 );
 
+// ── Indexes ───────────────────────────────────────────────────────────────────
+// NOTE: { _id: -1 } is intentionally omitted — MongoDB creates the _id index
+// automatically and does not allow overwriting it.
+
+// Category feed: category filter + cursor (supports the compound query
+// { category, _id: { $lt: cursor } } sorted by _id desc)
+videoSchema.index({ category: 1, _id: -1 });
+
+// Top-liked carousel
+videoSchema.index({ likes: -1 });
+
+// Full-text search on title + description
+videoSchema.index({ title: 'text', description: 'text' });
+
 const Video = mongoose.model<IVideo>('Video', videoSchema);
 
 export { Video };

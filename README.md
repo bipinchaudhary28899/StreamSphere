@@ -10,7 +10,7 @@ A full-stack video streaming platform built with Angular (Frontend) and Node.js/
 ```bash
 cd stream-sphere-backend
 npm install
-export JWT_SECRET="123456789876543231"
+cp .env.example .env   # then fill in your own values
 npm run dev
 ```
 

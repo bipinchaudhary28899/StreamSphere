@@ -1,35 +1,38 @@
-// ── Card shell ──────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
+//  VideoCard — redesigned aesthetic layout
+//  Desktop: vertical card (380px).  Mobile ≤ 600px: horizontal mini-card (88px).
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── Card shell ────────────────────────────────────────────────────────────────
 .video-card {
   position: relative;
   z-index: 1;
-  border-radius: 18px;
+  border-radius: 16px;
   overflow: visible;
   background: transparent;
   border: none;
-  padding: 5px;
-  transition: box-shadow 0.3s;
+  padding: 3px;
+  transition: box-shadow 0.25s, transform 0.2s;
   display: flex;
   flex-direction: column;
-  height: 400px;
-  min-height: 320px;
-  max-height: 480px;
+  height: 380px;
+  min-height: 300px;
+  max-height: 460px;
   width: 100%;
-  max-width: 100%;
-  margin: 0;
   cursor: pointer;
   box-sizing: border-box;
 
-  // ── Pink gradient border on hover ────────────────────────────────────────
+  // Animated gradient border on hover
   &::before {
     content: '';
     position: absolute;
     z-index: 0;
-    top: 0; left: 0; right: 0; bottom: 0;
-    border-radius: 18px;
-    background: linear-gradient(120deg, #ff1a73, #ff6fa8, #ff1a73);
+    inset: 0;
+    border-radius: 16px;
+    background: linear-gradient(120deg, var(--accent), #ff79a8, var(--accent));
     background-size: 300% 300%;
     opacity: 0;
-    transition: opacity 0.3s;
+    transition: opacity 0.25s;
     pointer-events: none;
     animation: none;
   }
@@ -40,8 +43,8 @@
   }
 
   &:hover {
-    box-shadow: 0 12px 28px rgba(255, 26, 115, 0.22);
-    border-color: transparent;
+    transform: translateY(-3px);
+    box-shadow: 0 14px 32px var(--accent-soft-2);
   }
 }
 
@@ -51,193 +54,274 @@
   100% { background-position: 0%   50%; }
 }
 
-// ── Inner white surface ──────────────────────────────────────────────────────
+// ── Inner surface ─────────────────────────────────────────────────────────────
 .video-card-inner {
   position: relative;
   z-index: 1;
-  background: white;
+  background: var(--bg-surface);
   border-radius: 13px;
   height: 100%;
   width: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition);
 }
 
-// ── Video preview ────────────────────────────────────────────────────────────
+// ── Thumbnail section ─────────────────────────────────────────────────────────
+.thumb-wrap {
+  position: relative;
+  flex: 0 0 58%;
+  overflow: hidden;
+  border-radius: 13px 13px 0 0;
+  background: #111;
+}
+
 .video-preview {
-  flex: 0 0 60%;
-  height: 60%;
-  min-height: 140px;
-  max-height: 240px;
   width: 100%;
+  height: 100%;
   object-fit: cover;
-  border-radius: 10px 10px 0 0;
+  display: block;
   pointer-events: none;
 }
 
-// ── Card content area ────────────────────────────────────────────────────────
-mat-card-content {
-  flex: 1 1 40%;
-  height: 40%;
-  display: flex;
-  flex-direction: column;
-  padding: 8px 10px 6px;
-  overflow: hidden;
-}
-
-// ── Title: always 2 lines, truncates with ellipsis ───────────────────────────
-.video-title {
-  font-size: 1.02rem;
-  font-weight: 600;
-  margin: 0 0 6px;
-  line-height: 1.3;
-
-  // Reserve exactly 2 lines regardless of content length
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2; 
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-
-  min-height: calc(1.3em * 2);   // always occupies 2-line height even if shorter
-  max-height: calc(1.3em * 2);
-}
-
-// ── Info section: 3 fixed rows ───────────────────────────────────────────────
-.video-info-section {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  justify-content: space-evenly;  // rows spread evenly in the remaining space
-}
-
-.info-row {
+// Hover overlay — dark scrim + centred play icon
+.thumb-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.38);
   display: flex;
   align-items: center;
-  gap: 5px;
-  min-height: 24px;   // each row always takes the same vertical slot
-  overflow: hidden;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.22s;
+  pointer-events: none;
 }
-.uploader-likes-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;  // ← pushes likes to the far right always
-  min-height: 24px;
-  gap: 8px;
-  flex-wrap: nowrap; 
+
+.video-card:hover .thumb-overlay {
+  opacity: 1;
 }
-.uploader-info {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  overflow: hidden;
-  flex-shrink: 1;          // allows name to truncate if space is tight
-  min-width: 0; 
-  .uploader-name {
-    font-weight: 500;
-    font-size: 0.9rem;
-    color: #333;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+
+.play-hint {
+  font-size: 52px !important;
+  width: 52px !important;
+  height: 52px !important;
+  color: #fff;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+  transform: scale(0.88);
+  transition: transform 0.22s;
+}
+
+.video-card:hover .play-hint {
+  transform: scale(1);
+}
+
+// Category badge — overlaid on thumbnail, bottom-left
+.cat-badge {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: var(--tag-gradient);
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+
+  &--empty {
+    background: rgba(0, 0, 0, 0.45);
+    color: rgba(255, 255, 255, 0.7);
+    box-shadow: none;
+  }
+
+  &--back {
+    position: static;
+    margin-bottom: 4px;
+    display: inline-block;
+    pointer-events: none;
   }
 }
-.likes-info {
+
+// Flip / info trigger — overlaid on thumbnail, top-right
+.flip-trigger {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 4px;
-  flex-shrink: 0;          // ← likes never shrink or wrap, always stays right
-  white-space: nowrap; 
-  .like-icon {
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.22s, background 0.2s, transform 0.2s;
+  z-index: 5;
+
+  mat-icon {
     font-size: 16px;
     width: 16px;
     height: 16px;
-    color: #ff1a73;
+    color: rgba(255, 255, 255, 0.9);
   }
 
-  .like-count {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #222;
+  &:hover {
+    background: rgba(0, 0, 0, 0.72);
+    transform: scale(1.1);
   }
 
-  .like-label {
-    font-size: 0.85rem;
-    color: #666;
+  // Back-face close button — always visible
+  &--back {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    opacity: 1;
+    background: var(--bg-surface-2);
+
+    mat-icon { color: var(--text-secondary); }
+
+    &:hover { background: var(--border-strong); transform: none; }
   }
 }
-// Uploader row
-.uploader-row {
-  .avatar-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+
+.video-card:hover .flip-trigger:not(.flip-trigger--back) {
+  opacity: 1;
+}
+
+// ── Card info area ─────────────────────────────────────────────────────────────
+mat-card-content.card-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px 14px 14px;
+  overflow: hidden;
+}
+
+// YouTube-style row: avatar | title + meta stacked
+.card-info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+// Coloured initial circle
+.avatar-circle {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--tag-gradient);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+
+  &--sm {
     width: 26px;
     height: 26px;
-    background: #e0e7ef;
-    border-radius: 50%;
-    flex-shrink: 0;
-
-    mat-icon {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
-    }
-  }
-
-  .uploader-name {
-    font-weight: 500;
-    font-size: 0.9rem;
-    color: #333;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-
-// Category row
-.category-row {
-  .category-tag {
-    display: inline-block;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 3px 11px;
-    border-radius: 14px;
     font-size: 0.72rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    white-space: nowrap;
-
-    &--empty {
-      background: #e0e0e0;
-      color: #999;
-      box-shadow: none;
-    }
   }
 }
 
-// ── Faded state ──────────────────────────────────────────────────────────────
+// Text block: title + meta stacked
+.text-block {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+// ── Title ─────────────────────────────────────────────────────────────────────
+.video-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.38;
+  color: var(--text-primary);
+
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// ── Meta row: uploader · likes ─────────────────────────────────────────────────
+.video-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  flex-wrap: nowrap;
+}
+
+.uploader-name {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.meta-dot {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.like-icon {
+  font-size: 13px !important;
+  width: 13px !important;
+  height: 13px !important;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.like-count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+// ── Faded ─────────────────────────────────────────────────────────────────────
 .video-card.faded {
-  filter: grayscale(0.7) brightness(0.85);
-  opacity: 0.7;
+  filter: grayscale(0.6) brightness(0.9);
+  opacity: 0.65;
   pointer-events: none;
 }
 
-// ── Flip card ────────────────────────────────────────────────────────────────
+// ── Flip card shell ───────────────────────────────────────────────────────────
 .flip-card {
   perspective: 1000px;
   width: 100%;
-  height: 400px;
+  height: 380px;
 }
 
 .flip-card-inner {
   position: relative;
   width: 100%;
   height: 100%;
-  transition: transform 0.6s;
+  transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
 }
 
@@ -269,74 +353,176 @@ mat-card-content {
   margin: 0;
 }
 
-.flip-icon {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  background: white;
-  border-radius: 50%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-  cursor: pointer;
-  padding: 5px;
-  transition: background 0.2s;
-  z-index: 10;
-
-  &:hover { background: #f0f0f0; }
-}
-
+// ── Flipped back content ───────────────────────────────────────────────────────
 .flipped-content {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100%;
-  padding: 20px;
+  padding: 32px 24px 24px;
   text-align: center;
+  gap: 10px;
+  position: relative;
 }
+
+.flip-back-title {
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
 .video-description {
-  font-size: 0.88rem;
-  color: #555;
-  line-height: 1.5;
-  margin: 6px 0 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
-  line-clamp: 4;
-  text-overflow: ellipsis;
-  text-align: center;
+  line-clamp: 5;
 }
-// ── Mobile ───────────────────────────────────────────────────────────────────
-@media (max-width: 600px) {
-  .video-card {
-    height: 360px;
-    min-width: 140px;
-    max-width: 96vw;
-    margin: 8px auto;
 
-    &:hover {
-      transform: translateY(-2px) scale(1.01);
-      box-shadow: 0 6px 12px rgba(255, 26, 115, 0.18);
-    }
+.flip-back-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  margin-top: 2px;
+}
+
+
+// ════════════════════════════════════════════════════════════════════════════
+//  MOBILE  ≤ 600px  —  Horizontal mini card (88 px tall)
+// ════════════════════════════════════════════════════════════════════════════
+@media (max-width: 600px) {
+
+  // Disable 3-D flip
+  .flip-card {
+    perspective: none;
+    height: auto;
+    min-height: auto;
+    max-height: none;
+  }
+
+  .flip-card-inner {
+    transform-style: flat;
+    transition: none;
+    height: auto;
+    transform: none !important;
+  }
+
+  .flip-card-front {
+    position: relative;
+    backface-visibility: visible;
+    height: auto;
+    top: auto;
+    left: auto;
+    width: 100%;
+  }
+
+  .flip-card-back  { display: none !important; }
+  .flip-trigger    { display: none !important; }
+  .thumb-overlay   { display: none !important; }
+
+  // Mini card shell
+  .video-card {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 2px;
+    border-radius: 12px;
+
+    &::before { display: none; }
+    &:hover   { transform: none; box-shadow: none; }
+    &:active  { transform: scale(0.985); }
+  }
+
+  // Horizontal inner layout
+  .video-card-inner {
+    flex-direction: row !important;
+    height: 88px;
+    border-radius: 10px;
+    align-items: stretch;
+  }
+
+  // Thumbnail — left column, fixed width
+  .thumb-wrap {
+    flex: 0 0 140px !important;
+    width: 140px !important;
+    height: 88px !important;
+    border-radius: 10px 0 0 10px;
+    overflow: hidden;
   }
 
   .video-preview {
-    flex: 0 0 55%;
-    height: 55%;
-    min-height: 80px;
-    max-height: 200px;
+    width: 140px !important;
+    height: 88px !important;
+    border-radius: 10px 0 0 10px;
+    object-fit: cover;
+
+    &::-webkit-media-controls          { display: none !important; }
+    &::-webkit-media-controls-enclosure { display: none !important; }
   }
 
-  mat-card-content {
-    flex: 1 1 45%;
-    padding: 6px 8px 4px;
+  // Category badge stays but smaller
+  .cat-badge {
+    font-size: 0.55rem !important;
+    padding: 2px 6px !important;
+    bottom: 6px;
+    left: 6px;
+    letter-spacing: 0.3px;
   }
+
+  // Info — right column
+  mat-card-content.card-body {
+    flex: 1 1 0 !important;
+    min-width: 0;
+    padding: 8px 10px !important;
+    justify-content: center;
+  }
+
+  .card-info-row {
+    gap: 7px;
+    align-items: center;
+  }
+
+  // Smaller avatar
+  .avatar-circle {
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 0.68rem !important;
+    flex-shrink: 0;
+  }
+
+  .text-block { gap: 3px; }
 
   .video-title {
-    font-size: 0.9rem;
+    font-size: 0.82rem !important;
+    line-height: 1.3;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
 
-  .info-row {
-    min-height: 20px;
+  .uploader-name {
+    font-size: 0.72rem !important;
+    max-width: 80px;
+  }
+
+  .meta-dot { font-size: 0.65rem !important; }
+
+  .like-icon {
+    font-size: 11px !important;
+    width: 11px !important;
+    height: 11px !important;
+  }
+
+  .like-count { font-size: 0.72rem !important; }
+
+  mat-card.video-card {
+    height: auto !important;
+    min-height: 0 !important;
   }
 }

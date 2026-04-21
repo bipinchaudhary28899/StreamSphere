@@ -1,13 +1,19 @@
 <!-- video-list.component.html -->
 <div class="video-section-container">
-  <!-- Hero Carousel - Top 3 Most Liked Videos -->
-  <app-hero-carousel></app-hero-carousel>
-  
-  <app-category-slider (categorySelected)="handleCategory($event)"></app-category-slider>
-    <!-- Loading state -->
+
+  <!-- Hero carousel — fills viewport edge to edge -->
+  <div class="hero-wrapper">
+    <app-hero-carousel></app-hero-carousel>
+    <div class="hero-bottom-fade"></div>
+  </div>
+
+  <!-- Content section — overlaps hero fade for "submerged" look -->
+  <div class="content-section">
+
+    <!-- ── Initial loading skeletons ───────────────────────────────────────── -->
     <div *ngIf="isLoading" class="loading-state">
       <div class="video-grid">
-        <div *ngFor="let skeleton of [1,2,3,4,5,6]" class="skeleton-card">
+        <div *ngFor="let s of [1,2,3,4,5,6,7,8,9,10,11,12]" class="skeleton-card">
           <div class="skeleton-video"></div>
           <div class="skeleton-info">
             <div class="skeleton-avatar"></div>
@@ -18,29 +24,47 @@
           </div>
         </div>
       </div>
-      <mat-spinner diameter="50"></mat-spinner>
-      <p>Loading videos...</p>
     </div>
-  
-    <!-- Error state -->
+
+    <!-- ── Error state ──────────────────────────────────────────────────────── -->
     <div *ngIf="error && !isLoading" class="error-state">
       <mat-icon>error_outline</mat-icon>
       <p>{{ error }}</p>
       <button mat-button color="primary" (click)="loadVideos()">Retry</button>
     </div>
-  
-    <!-- Video grid (your existing structure) -->
-    <div *ngIf="!isLoading && !error" class="video-grid">
-      <app-video-card 
-        *ngFor="let video of filteredVideos" 
-        [video]="video"
-        (videoDeleted)="onVideoDeleted($event)">
-      </app-video-card>
-    </div>
-  
-    <!-- Empty state -->
-    <div *ngIf="!isLoading && !error && filteredVideos.length === 0" class="empty-state">
-      <mat-icon>videocam_off</mat-icon>
-      <p>No videos found</p>
-    </div>
+
+    <!-- ── Video grid ───────────────────────────────────────────────────────── -->
+    <ng-container *ngIf="!isLoading && !error">
+
+      <div class="video-grid" *ngIf="displayedVideos.length > 0">
+        <app-video-card
+          *ngFor="let video of displayedVideos; trackBy: trackById"
+          [video]="video"
+          (videoDeleted)="onVideoDeleted($event)">
+        </app-video-card>
+      </div>
+
+      <!-- Empty state (no results) -->
+      <div *ngIf="displayedVideos.length === 0" class="empty-state">
+        <mat-icon>videocam_off</mat-icon>
+        <p>No videos found</p>
+      </div>
+
+      <!-- ── Load-more spinner (infinite scroll) ───────────────────────────── -->
+      <div *ngIf="isLoadingMore" class="load-more-spinner">
+        <mat-spinner diameter="36"></mat-spinner>
+      </div>
+
+      <!-- ── End-of-feed message ───────────────────────────────────────────── -->
+      <div *ngIf="!hasMore && !isLoadingMore && displayedVideos.length > 0 && !isSearchMode" class="end-of-feed">
+        <span>You've seen all the videos</span>
+      </div>
+
+      <!-- ── Sentinel — IntersectionObserver watches this ─────────────────── -->
+      <!-- Placed outside *ngIf so the observer can always latch onto it -->
+      <div #sentinel class="scroll-sentinel" aria-hidden="true"></div>
+
+    </ng-container>
+
+  </div><!-- /content-section -->
 </div>

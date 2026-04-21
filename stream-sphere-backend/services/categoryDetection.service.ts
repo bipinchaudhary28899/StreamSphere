@@ -57,8 +57,10 @@ export class CategoryDetectionService {
 
   async detectCategory(title: string, description: string): Promise<string> {
     try {
-      // Combine title and description for analysis
-      const combinedText = `Video Title: ${title} Description: ${description} This video is related to:`;
+      // Use only the actual content — no trailing prompts that confuse BART-MNLI
+      const combinedText = description
+        ? `${title}. ${description}`.trim()
+        : title.trim();
 
       // Use Hugging Face API for category detection
       if (this.HUGGING_FACE_API_KEY) {
@@ -72,73 +74,83 @@ export class CategoryDetectionService {
     }
   }
 
+  /**
+   * Call the HuggingFace inference API with exponential-backoff retry.
+   *
+   * HF free-tier returns HTTP 429 (rate limit) or 503 (model loading) when
+   * multiple users call it simultaneously.  Without retries every concurrent
+   * burst silently falls back to "Other".  With retries we give the model a
+   * few seconds to recover before giving up.
+   *
+   * Schedule: attempt 1 → wait 1 s → attempt 2 → wait 2 s → attempt 3 → give up
+   */
   private async detectByHuggingFace(text: string): Promise<string> {
-    try {
-      const response = await axios.post(
-        this.HUGGING_FACE_API_URL,
-        {
-          inputs: text,
-          parameters: {
-            candidate_labels: this.categories,
+    const MAX_RETRIES = 3;
+    const BASE_DELAY_MS = 1000;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const response = await axios.post(
+          this.HUGGING_FACE_API_URL,
+          {
+            inputs: text,
+            parameters: {
+              candidate_labels: this.categories,
+              hypothesis_template: "This video is about {}.",
+            },
           },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${this.HUGGING_FACE_API_KEY}`,
-            "Content-Type": "application/json",
+          {
+            headers: {
+              Authorization: `Bearer ${this.HUGGING_FACE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            timeout: 20000,
           },
-          timeout: 20000,
-        },
-      );
+        );
 
-      // ✅ ALWAYS normalize first
-      const result = Array.isArray(response.data)
-        ? response.data[0]
-        : response.data;
+        // Normalize: HF sometimes wraps the result in an array
+        const result = Array.isArray(response.data)
+          ? response.data[0]
+          : response.data;
 
-      console.log("HF RAW RESPONSE:", result); // 🔥 NOW THIS WILL PRINT
+        console.log("HF RAW RESPONSE:", result);
 
-      if (result) {
-        if (result.labels && result.scores) {
-          const bestMatchIndex = result.scores.indexOf(
-            Math.max(...result.scores),
-          );
-          const confidence = result.scores[bestMatchIndex];
-
-          console.log(
-            "Best Label:",
-            result.labels[bestMatchIndex],
-            "Confidence:",
-            confidence,
-          );
-
-          if (confidence > this.threshold) {
-            return result.labels[bestMatchIndex];
-          }
+        if (result?.labels && result?.scores) {
+          const bestIdx = result.scores.indexOf(Math.max(...result.scores));
+          const confidence = result.scores[bestIdx];
+          console.log("Best Label:", result.labels[bestIdx], "Confidence:", confidence);
+          if (confidence > this.threshold) return result.labels[bestIdx];
         }
 
-        if (result.label && result.score) {
-          console.log(
-            "Single Label:",
-            result.label,
-            "Confidence:",
-            result.score,
-          );
-
-          if (result.score > this.threshold) {
-            return result.label;
-          }
+        if (result?.label && result?.score) {
+          console.log("Single Label:", result.label, "Confidence:", result.score);
+          if (result.score > this.threshold) return result.label;
         }
+
+        return "Other";
+
+      } catch (error: any) {
+        const status: number | undefined = error?.response?.status;
+        const isRetryable = status === 429 || status === 503 || !status; // also retry network errors
+
+        if (isRetryable && attempt < MAX_RETRIES) {
+          const delay = BASE_DELAY_MS * attempt; // 1s, 2s
+          console.warn(
+            `HuggingFace attempt ${attempt}/${MAX_RETRIES} failed (HTTP ${status ?? 'network error'}) — retrying in ${delay}ms`,
+          );
+          await new Promise((res) => setTimeout(res, delay));
+          continue;
+        }
+
+        console.error(
+          `HuggingFace API error after ${attempt} attempt(s):`,
+          error?.response?.data || error.message,
+        );
+        return "Other";
       }
-
-      return "Other";
-    } catch (error: any) {
-      console.error(
-        "Hugging Face API error:",
-        error?.response?.data || error.message,
-      );
-      return "Other";
     }
+
+    return "Other"; // TypeScript fallthrough guard
   }
 
   // Get all available categories

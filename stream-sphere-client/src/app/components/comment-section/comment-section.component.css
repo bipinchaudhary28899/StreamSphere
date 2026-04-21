@@ -1,18 +1,19 @@
 .comment-section {
   margin-top: 24px;
   padding: 20px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: var(--bg-surface);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition);
 }
 
 .comment-section-title {
   font-size: 1.2rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #e1e5e9;
+  border-bottom: 1px solid var(--border);
 }
 
 /* Comment Form */
@@ -41,24 +42,34 @@
 .comment-input {
   width: 100%;
   padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
   font-size: 14px;
   font-family: inherit;
   resize: vertical;
   min-height: 80px;
-  transition: border-color 0.2s;
+  transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
+  box-sizing: border-box;
+}
+
+.comment-input::placeholder {
+  color: var(--text-placeholder);
 }
 
 .comment-input:focus {
   outline: none;
-  border-color: #2196f3;
-  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+  border-color: var(--accent);
+  background: var(--bg-surface);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .comment-input:disabled {
-  background-color: #f5f5f5;
+  background-color: var(--bg-surface-2);
+  color: var(--text-muted);
   cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .comment-actions {
@@ -70,32 +81,34 @@
 
 .char-count {
   font-size: 12px;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .submit-btn {
-  background: #2196f3;
+  background: var(--accent);
   color: white;
   border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
+  padding: 8px 18px;
+  border-radius: 8px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background var(--transition), transform 0.15s;
 }
 
 .submit-btn:hover:not(:disabled) {
-  background: #1976d2;
+  background: var(--accent-hover);
+  transform: translateY(-1px);
 }
 
 .submit-btn:disabled {
-  background: #ccc;
+  background: var(--border-strong);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
 .submit-btn.loading {
-  background: #1976d2;
+  background: var(--accent-hover);
   cursor: not-allowed;
 }
 
@@ -103,13 +116,14 @@
 .login-prompt {
   text-align: center;
   padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
+  background: var(--bg-surface-2);
+  border-radius: 10px;
   margin-bottom: 24px;
+  transition: background var(--transition);
 }
 
 .login-prompt p {
-  color: #666;
+  color: var(--text-muted);
   margin: 0;
 }
 
@@ -117,14 +131,15 @@
 .comments-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .comment-item {
-  padding: 16px;
-  border: 1px solid #e1e5e9;
-  border-radius: 8px;
-  background: #fafafa;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-surface-3);
+  transition: background var(--transition), border-color var(--transition);
 }
 
 .comment-header {
@@ -151,13 +166,13 @@
 
 .comment-username {
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   font-size: 14px;
 }
 
 .comment-date {
   font-size: 12px;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .comment-actions-menu {
@@ -170,28 +185,30 @@
   border: none;
   padding: 4px 8px;
   font-size: 12px;
-  color: #666;
+  color: var(--text-muted);
   cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.2s;
+  border-radius: 6px;
+  transition: background var(--transition), color var(--transition);
 }
 
 .action-btn:hover {
-  background: #e1e5e9;
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
 }
 
 .action-btn.delete:hover {
-  background: #ffebee;
+  background: rgba(211, 47, 47, 0.1);
   color: #d32f2f;
 }
 
 /* Comment Content */
 .comment-content p {
   margin: 0;
-  line-height: 1.5;
-  color: #333;
+  line-height: 1.55;
+  color: var(--text-secondary);
   white-space: pre-wrap;
   word-wrap: break-word;
+  font-size: 14px;
 }
 
 /* Edit Form */
@@ -201,57 +218,67 @@
 
 .edit-input {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 8px 12px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
   font-size: 14px;
   font-family: inherit;
   resize: vertical;
   min-height: 60px;
+  box-sizing: border-box;
+  transition: border-color var(--transition), background var(--transition);
 }
 
 .edit-input:focus {
   outline: none;
-  border-color: #2196f3;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .edit-actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   margin-top: 8px;
+  gap: 8px;
 }
 
 .cancel-btn {
-  background: #f5f5f5;
-  color: #666;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 12px;
+  background: var(--bg-surface-2);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
   cursor: pointer;
+  transition: background var(--transition);
 }
 
 .cancel-btn:hover {
-  background: #e0e0e0;
+  background: var(--border-strong);
 }
 
 .save-btn {
   background: #4caf50;
   color: white;
   border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background var(--transition);
 }
 
 .save-btn:hover:not(:disabled) {
-  background: #45a049;
+  background: #43a047;
 }
 
 .save-btn:disabled {
-  background: #ccc;
+  background: var(--border-strong);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
@@ -259,7 +286,7 @@
 .empty-comments {
   text-align: center;
   padding: 40px 20px;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .empty-comments p {
@@ -271,7 +298,7 @@
 .loading-comments {
   text-align: center;
   padding: 40px 20px;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .loading-comments p {
@@ -311,8 +338,7 @@
   }
 
   .edit-actions {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
+    flex-direction: row;
+    justify-content: flex-end;
   }
-} 
+}

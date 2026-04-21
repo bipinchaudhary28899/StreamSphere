@@ -1,7 +1,28 @@
-<app-header (search)="handleSearch($event)"></app-header>
-<div class="main-container" [ngClass]="{'no-sidebar': !isLoggedIn}">
-  <app-sidebar *ngIf="isLoggedIn"></app-sidebar>
-  <div class="main-body">
-    <router-outlet></router-outlet>
-  </div>
+<app-header></app-header>
+
+<div class="main-body" [class.home-page]="isHomePage">
+  <router-outlet></router-outlet>
 </div>
+
+<!-- Mobile bottom navigation (logged-in only) -->
+<nav class="mobile-bottom-nav" *ngIf="isLoggedIn">
+  <a routerLink="/home"
+     routerLinkActive="active"
+     [routerLinkActiveOptions]="{exact: false}"
+     class="nav-item">
+    <mat-icon>home</mat-icon>
+    <span>Home</span>
+  </a>
+  <a routerLink="/upload" routerLinkActive="active" class="nav-item">
+    <mat-icon>cloud_upload</mat-icon>
+    <span>Upload</span>
+  </a>
+  <a routerLink="/user-profile" routerLinkActive="active" class="nav-item">
+    <mat-icon>person</mat-icon>
+    <span>You</span>
+  </a>
+  <a routerLink="/history" routerLinkActive="active" class="nav-item">
+    <mat-icon>history</mat-icon>
+    <span>History</span>
+  </a>
+</nav>

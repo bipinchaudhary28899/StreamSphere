@@ -2,103 +2,110 @@
   <div class="flip-card" [class.flipped]="flip">
     <div class="flip-card-inner">
 
+      <!-- ══ FRONT ════════════════════════════════════════════════════════ -->
       <div class="flip-card-front">
         <mat-card (click)="onVideoClick()" class="video-card" [ngClass]="{ faded: faded }">
           <div class="video-card-inner">
-            <video class="video-preview" controls controlsList="nodownload">
-              <source [src]="safeUrl" type="video/mp4" />
-            </video>
-            <mat-card-content>
-              <h3 class="video-title">{{ video?.title || "Untitled Video" }}</h3>
-              <div class="video-info-section">
-                <div class="uploader-likes-row">
-                  <div class="uploader-info">
-                    <span class="avatar-placeholder"><mat-icon>person</mat-icon></span>
+
+            <!-- Thumbnail + overlays -->
+            <div class="thumb-wrap">
+              <video class="video-preview" preload="metadata" controlsList="nodownload">
+                <source [src]="safeUrl" type="video/mp4" />
+              </video>
+              <!-- Hover overlay with play hint -->
+              <div class="thumb-overlay">
+                <mat-icon class="play-hint">play_circle</mat-icon>
+              </div>
+              <!-- Category badge — bottom-left of thumbnail -->
+              <span class="cat-badge" *ngIf="video?.category; else noCat1">{{ video.category }}</span>
+              <ng-template #noCat1>
+                <span class="cat-badge cat-badge--empty">Uncategorised</span>
+              </ng-template>
+              <!-- Flip trigger — top-right of thumbnail -->
+              <button class="flip-trigger" (click)="onFlipClick($event)" title="See description">
+                <mat-icon>info_outline</mat-icon>
+              </button>
+            </div>
+
+            <!-- Card info area -->
+            <mat-card-content class="card-body">
+              <div class="card-info-row">
+                <span class="avatar-circle">{{ (video?.userName || 'U')[0].toUpperCase() }}</span>
+                <div class="text-block">
+                  <h3 class="video-title">{{ video?.title || "Untitled Video" }}</h3>
+                  <div class="video-meta">
                     <span class="uploader-name">{{ video?.userName || "Unknown User" }}</span>
-                  </div>
-                  <div class="likes-info">
+                    <span class="meta-dot">·</span>
                     <mat-icon class="like-icon">thumb_up</mat-icon>
                     <span class="like-count">{{ video.likes || 0 }}</span>
-                    <span class="like-label">Likes</span>
                   </div>
                 </div>
-                <div class="info-row category-row">
-                  <span class="category-tag" *ngIf="video?.category; else noCategory">{{ video.category }}</span>
-                  <ng-template #noCategory>
-                    <span class="category-tag category-tag--empty">Uncategorised</span>
-                  </ng-template>
-                </div>
-              </div>
-              <div class="flip-icon" (click)="onFlipClick($event)">
-                <mat-icon>swap_horiz</mat-icon>
               </div>
             </mat-card-content>
+
           </div>
         </mat-card>
       </div>
 
-     <div class="flip-card-back">
-  <mat-card class="video-card">
-    <div class="video-card-inner">
-      <div class="flipped-content">
-        <h3 class="video-title">{{ video?.title || "Untitled Video" }}</h3>
-        <p class="video-description">{{ video?.description || "No description available." }}</p>
-        <div class="video-info-section">
-          <div class="uploader-likes-row">
-            <div class="uploader-info">
-              <span class="avatar-placeholder"><mat-icon>person</mat-icon></span>
-              <span class="uploader-name">{{ video?.userName || "Unknown User" }}</span>
-            </div>
-            <div class="likes-info">
-              <mat-icon class="like-icon">thumb_up</mat-icon>
-              <span class="like-count">{{ video.likes || 0 }}</span>
-              <span class="like-label">Likes</span>
+      <!-- ══ BACK ═════════════════════════════════════════════════════════ -->
+      <div class="flip-card-back">
+        <mat-card class="video-card">
+          <div class="video-card-inner">
+            <div class="flipped-content">
+
+              <span class="cat-badge cat-badge--back">{{ video?.category || 'Uncategorised' }}</span>
+
+              <h3 class="video-title flip-back-title">{{ video?.title || "Untitled Video" }}</h3>
+              <p class="video-description">{{ video?.description || "No description available." }}</p>
+
+              <div class="flip-back-meta">
+                <span class="avatar-circle avatar-circle--sm">{{ (video?.userName || 'U')[0].toUpperCase() }}</span>
+                <span class="uploader-name">{{ video?.userName || "Unknown User" }}</span>
+                <span class="meta-dot">·</span>
+                <mat-icon class="like-icon">thumb_up</mat-icon>
+                <span class="like-count">{{ video.likes || 0 }}</span>
+              </div>
+
+              <button class="flip-trigger flip-trigger--back" (click)="onFlipClick($event)" title="Back to video">
+                <mat-icon>close</mat-icon>
+              </button>
+
             </div>
           </div>
-          <div class="info-row category-row">
-            <span class="category-tag" *ngIf="video?.category; else noCategory2">{{ video.category }}</span>
-            <ng-template #noCategory2>
-              <span class="category-tag category-tag--empty">Uncategorised</span>
-            </ng-template>
-          </div>
-        </div>
-        <div class="flip-icon" (click)="onFlipClick($event)">
-          <mat-icon>swap_horiz</mat-icon>
-        </div>
+        </mat-card>
       </div>
-    </div>
-  </mat-card>
-</div>
+
     </div>
   </div>
 </ng-container>
 
+<!-- Normal card (profile pages, no flip) -->
 <ng-template #normalCard>
   <mat-card (click)="onVideoClick()" class="video-card" [ngClass]="{ faded: faded }">
     <div class="video-card-inner">
-      <video class="video-preview" controls controlsList="nodownload">
-        <source [src]="safeUrl" type="video/mp4" />
-      </video>
-      <mat-card-content>
-        <h3 class="video-title">{{ video?.title || "Untitled Video" }}</h3>
-        <div class="video-info-section">
-          <!-- ← fixed: was still using old separate rows -->
-          <div class="uploader-likes-row">
-            <div class="uploader-info">
-              <span class="avatar-placeholder"><mat-icon>person</mat-icon></span>
+      <div class="thumb-wrap">
+        <video class="video-preview" preload="metadata" controlsList="nodownload">
+          <source [src]="safeUrl" type="video/mp4" />
+        </video>
+        <div class="thumb-overlay">
+          <mat-icon class="play-hint">play_circle</mat-icon>
+        </div>
+        <span class="cat-badge" *ngIf="video?.category; else noCat3">{{ video.category }}</span>
+        <ng-template #noCat3>
+          <span class="cat-badge cat-badge--empty">Uncategorised</span>
+        </ng-template>
+      </div>
+      <mat-card-content class="card-body">
+        <div class="card-info-row">
+          <span class="avatar-circle">{{ (video?.userName || 'U')[0].toUpperCase() }}</span>
+          <div class="text-block">
+            <h3 class="video-title">{{ video?.title || "Untitled Video" }}</h3>
+            <div class="video-meta">
               <span class="uploader-name">{{ video?.userName || "Unknown User" }}</span>
-            </div>
-            <div class="likes-info">
+              <span class="meta-dot">·</span>
               <mat-icon class="like-icon">thumb_up</mat-icon>
               <span class="like-count">{{ video.likes || 0 }}</span>
-              <span class="like-label">Likes</span>
             </div>
-          </div>
-          <div class="info-row category-row">
-            <span class="category-tag" *ngIf="video?.category; else noCategory3">{{ video.category }}</span>
-            <ng-template #noCategory3>
-              <span class="category-tag category-tag--empty">Uncategorised</span>
-            </ng-template>
           </div>
         </div>
       </mat-card-content>

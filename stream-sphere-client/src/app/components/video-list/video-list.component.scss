@@ -1,92 +1,247 @@
-.video-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px,1fr));
-    gap:20px;
-    padding:0 20px;
-    height: auto;
-    margin-top: 32px;
-}
-
-@media (max-width: 600px) {
-  .video-grid {
-    padding: 0 4px;
-    grid-template-columns: 1fr;
-    justify-content: center;
-  }
-}
-
-/* Skeleton Loader Styles */
-.skeleton-card {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-  margin: 10px;
+/* ── Page wrapper ─────────────────────────────────────────────────────── */
+.video-section-container {
   width: 100%;
-  max-width: 340px;
-  min-width: 220px;
+  min-height: 100vh;
+  background: var(--bg-base);
+}
+
+/* ── Hero wrapper ─────────────────────────────────────────────────────── */
+.hero-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* Gradient overlay fades the hero bottom into the page background */
+.hero-bottom-fade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 160px;
+  background: linear-gradient(to bottom, transparent 0%, var(--bg-base) 100%);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* ── Content section — "submerged" overlap ────────────────────────────── */
+.content-section {
+  position: relative;
+  z-index: 5;
+  margin-top: -100px;
+  padding-bottom: 40px;
+}
+
+/* ── Video grid ───────────────────────────────────────────────────────── */
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 0 24px;
+  margin-top: 24px;
+}
+
+/* ── States ───────────────────────────────────────────────────────────── */
+.loading-state,
+.error-state,
+.empty-state {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+  gap: 12px;
+  text-align: center;
+}
+
+.error-state mat-icon,
+.empty-state mat-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  color: var(--border-strong);
+}
+
+.loading-state .video-grid {
+  width: 100%;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+/* ── Skeleton cards ───────────────────────────────────────────────────── */
+.skeleton-card {
+  background: var(--bg-surface);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 340px;
+  transition: background var(--transition);
 }
+
 .skeleton-video {
-  height: 60%;
-  min-height: 140px;
-  max-height: 220px;
-  background: #ececec;
+  height: 58%;
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 25%,
+    var(--skeleton-shine) 50%,
+    var(--skeleton-base) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
 }
+
 .skeleton-info {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
-  gap: 10px;
+  padding: 14px 16px;
+  gap: 12px;
+  flex: 1;
 }
+
 .skeleton-avatar {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: #ececec;
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 25%,
+    var(--skeleton-shine) 50%,
+    var(--skeleton-base) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
   flex-shrink: 0;
 }
+
 .skeleton-lines {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
+
 .skeleton-line {
   height: 12px;
-  background: #ececec;
   border-radius: 6px;
   width: 100%;
-}
-.skeleton-line.short {
-  width: 60%;
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 25%,
+    var(--skeleton-shine) 50%,
+    var(--skeleton-base) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
 }
 
-/* Responsive stacking for video info section on mobile */
+.skeleton-line.short { width: 55%; }
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* ── Infinite scroll helpers ─────────────────────────────────────────────── */
+.scroll-sentinel {
+  height: 1px;
+  width: 100%;
+}
+
+.load-more-spinner {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0 8px;
+}
+
+.end-of-feed {
+  display: flex;
+  align-items: center;
+  padding: 20px 24px 8px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.3px;
+  gap: 12px;
+
+  &::before, &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+}
+
+/* ── Tablet ───────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .video-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+    padding: 0 16px;
+  }
+  .content-section { margin-top: -80px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBILE  ≤ 600px  —  mini card list layout
+   ═══════════════════════════════════════════════════════════════════════ */
 @media (max-width: 600px) {
-  .video-info-section {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-  .category-badge {
-    margin-left: 0;
-    margin-top: 4px;
-  }
-  .skeleton-card {
-    max-width: 98vw;
-    min-width: 0;
-    margin: 8px auto;
-  }
-  .skeleton-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 10px 8px;
-  }
-}
 
-.video-section-container {
-  margin-top: 0;
+  .hero-bottom-fade { height: 100px; }
+
+  .content-section {
+    margin-top: -60px; // less overlap — mini cards are 88px tall, not 380px
+    padding-bottom: 80px; // room for bottom nav
+  }
+
+  // ── Grid becomes a single-column list with tight gap ──────────────────
+  .video-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;       // tight list spacing between 88px mini cards
+    padding: 0 12px;
+    margin-top: 12px;
+  }
+
+  // ── Skeleton: also horizontal mini-card style ─────────────────────────
+  .skeleton-card {
+    height: 88px;
+    flex-direction: row;
+    border-radius: 10px;
+  }
+
+  .skeleton-video {
+    flex: 0 0 140px;
+    width: 140px;
+    height: 88px;
+    border-radius: 10px 0 0 10px;
+  }
+
+  .skeleton-info {
+    flex: 1;
+    padding: 10px 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .skeleton-avatar {
+    width: 18px;
+    height: 18px;
+  }
+
+  .skeleton-lines {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .skeleton-line        { height: 10px; }
+  .skeleton-line.short  { width: 60%; }
+
+  // ── State messages ─────────────────────────────────────────────────────
+  .loading-state,
+  .error-state,
+  .empty-state {
+    padding: 24px 16px;
+  }
 }
