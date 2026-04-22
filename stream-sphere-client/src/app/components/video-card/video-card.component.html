@@ -21,6 +21,10 @@
               <ng-template #noCat1>
                 <span class="cat-badge cat-badge--empty">Uncategorised</span>
               </ng-template>
+              <!-- Processing badge — shown while HLS transcoding is in progress -->
+              <span class="processing-badge" *ngIf="video?.status === 'processing'">
+                <mat-icon>hourglass_empty</mat-icon> Processing
+              </span>
               <!-- Flip trigger — top-right of thumbnail -->
               <button class="flip-trigger" (click)="onFlipClick($event)" title="See description">
                 <mat-icon>info_outline</mat-icon>
@@ -110,6 +114,9 @@
         <ng-template #noCat3>
           <span class="cat-badge cat-badge--empty">Uncategorised</span>
         </ng-template>
+        <span class="processing-badge" *ngIf="video?.status === 'processing'">
+          <mat-icon>hourglass_empty</mat-icon> Processing
+        </span>
       </div>
       <mat-card-content class="card-body">
         <div class="card-info-row">

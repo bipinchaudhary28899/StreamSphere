@@ -19,11 +19,15 @@ const s3 = new S3Client({
 /**
  * Generate a collision-proof S3 presigned PUT URL.
  *
- * Key format: Videos/<uuid>/<sanitised-original-name>
+ * Key format: Videos/raw/<uuid>/<sanitised-original-name>
  *
  * Using a UUID prefix (v4, 122 bits of randomness) instead of Date.now()
  * makes it impossible for two simultaneous uploads — even with the same
  * filename — to collide on the same S3 key.
+ *
+ * The `raw/` sub-prefix is the trigger prefix for the HLS Lambda function.
+ * Lambda is configured to fire on s3:ObjectCreated events under Videos/raw/.
+ * Transcoded HLS files are written to Videos/hls/<uuid>/ by the Lambda.
  */
 export const generateSignedUrl = async (
   filename: string,
@@ -31,7 +35,7 @@ export const generateSignedUrl = async (
 ): Promise<{ signedUrl: string; key: string }> => {
   // Strip directory traversal and whitespace from the original filename
   const safeName = path.basename(filename).replace(/\s+/g, "_");
-  const key = `Videos/${randomUUID()}/${safeName}`;
+  const key = `Videos/raw/${randomUUID()}/${safeName}`;
 
   const command = new PutObjectCommand({
     Bucket: process.env.AWS_S3_BUCKET_NAME,
