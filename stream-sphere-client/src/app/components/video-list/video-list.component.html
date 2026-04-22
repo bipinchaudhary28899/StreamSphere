@@ -1,4 +1,24 @@
 <!-- video-list.component.html -->
+
+<!-- ── Processing banner ───────────────────────────────────────────────────── -->
+<div class="processing-banner" *ngIf="processingVideos.length > 0">
+  <div class="processing-banner__inner">
+    <span class="processing-banner__spinner"></span>
+    <span *ngIf="processingVideos.length === 1">
+      <strong>"{{ processingVideos[0].title }}"</strong> is being processed — it will appear in the feed shortly.
+    </span>
+    <span *ngIf="processingVideos.length > 1">
+      <strong>{{ processingVideos.length }} videos</strong> are being processed — they will appear in the feed shortly.
+    </span>
+  </div>
+</div>
+
+<!-- ── Ready toast ────────────────────────────────────────────────────────── -->
+<div class="ready-toast" *ngIf="readyToast">
+  <mat-icon>check_circle</mat-icon>
+  <span>{{ readyToast }}</span>
+</div>
+
 <div class="video-section-container">
 
   <!-- Hero carousel — hidden during text search or when a category is selected -->

@@ -6,6 +6,7 @@ interface IVideo extends Document {
   description: string;
   S3_url: string;
   hlsUrl: string | null;
+  previewUrl: string | null;
   status: 'processing' | 'ready';
   user_id: string;
   userName?: string;
@@ -25,6 +26,7 @@ const videoSchema: Schema = new Schema(
     description: { type: String, required: false, default: '' },
     S3_url: { type: String, required: true },
     hlsUrl: { type: String, default: null },
+    previewUrl: { type: String, default: null },
     status: { type: String, enum: ['processing', 'ready'], default: 'processing' },
     user_id: { type: String, required: true },
     userName: { type: String },

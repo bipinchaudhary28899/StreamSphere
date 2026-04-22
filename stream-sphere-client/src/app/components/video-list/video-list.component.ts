@@ -7,8 +7,9 @@ import { VideoCardComponent } from '../video-card/video-card.component';
 import { MatIcon } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subscription, debounceTime, distinctUntilChanged, filter } from 'rxjs';
 import { HeroCarouselComponent } from '../hero-carousel/hero-carousel.component';
+import { UploadStatusService, ProcessingVideo } from '../../services/upload-status.service';
 
 @Component({
   selector: 'app-video-list',
@@ -27,6 +28,11 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
   isLoading       = true;        // initial load spinner
   isLoadingMore   = false;       // "load more" spinner at bottom
   error: string | null = null;
+
+  // ── Upload processing notification ───────────────────────────────────────────
+  processingVideos: ProcessingVideo[] = [];
+  readyToast: string | null = null;          // title of video that just became ready
+  private readyToastTimer: any = null;
 
   // Pagination
   private nextCursor: string | null = null;
@@ -47,17 +53,43 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private videoService: VideoService,
     private cdr: ChangeDetectorRef,
+    private uploadStatus: UploadStatusService,
   ) {}
 
   // ── Lifecycle ────────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
     this.loadFirstPage();
+    this.checkOwnProcessingVideos();
 
     // Refresh feed after a new video is uploaded
     this.subs.push(
       this.videoService.feedRefresh$.subscribe(() => {
         this.resetAndLoad();
+      }),
+    );
+
+    // Track processing videos and show banner / ready toast
+    this.subs.push(
+      this.uploadStatus.processing$.subscribe(list => {
+        this.processingVideos = list;
+        this.cdr.detectChanges();
+      }),
+    );
+
+    this.subs.push(
+      this.uploadStatus.ready$.pipe(filter(id => !!id)).subscribe(id => {
+        const video = this.processingVideos.find(v => v.id === id);
+        this.readyToast = video ? `"${video.title}" is ready!` : 'Your video is ready!';
+        this.cdr.detectChanges();
+        // Refresh the feed so the video appears in the grid
+        this.resetAndLoad();
+        // Auto-dismiss the toast after 5 seconds
+        clearTimeout(this.readyToastTimer);
+        this.readyToastTimer = setTimeout(() => {
+          this.readyToast = null;
+          this.cdr.detectChanges();
+        }, 5000);
       }),
     );
 
@@ -137,12 +169,17 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** Called on initial load or after filter/category reset */
   loadFirstPage(): void {
-    this.isLoading       = true;
     this.isSearchMode    = false;
     this.error           = null;
-    this.displayedVideos = [];
     this.nextCursor      = null;
     this.hasMore         = false;
+
+    // Only show the full skeleton block on a cold load (no videos yet).
+    // On refreshes (e.g. after upload) keep existing videos visible so
+    // the user can still click them while new data loads in background.
+    if (!this.displayedVideos.length) {
+      this.isLoading = true;
+    }
 
     this.videoService.getFeed(undefined, this.currentCategory).subscribe({
       next: (page) => {
@@ -210,6 +247,24 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
         this.isLoading = false;
         console.error('Search failed:', err);
       },
+    });
+  }
+
+  // ── Processing recovery ───────────────────────────────────────────────────────
+  // On page load/refresh, check if the logged-in user has any videos still in
+  // 'processing' state and register them with UploadStatusService so the banner
+  // and ready-toast work even after a page refresh.
+  private checkOwnProcessingVideos(): void {
+    const userData = localStorage.getItem('user');
+    if (!userData) return;
+
+    this.videoService.getMyVideos().subscribe({
+      next: (videos: any[]) => {
+        videos
+          .filter((v: any) => v.status === 'processing')
+          .forEach((v: any) => this.uploadStatus.track(v._id, v.title));
+      },
+      error: () => {} // silently ignore — non-critical
     });
   }
 

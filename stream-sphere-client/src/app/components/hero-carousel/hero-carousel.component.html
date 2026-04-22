@@ -3,16 +3,15 @@
 
     <!-- Background Video/Image -->
     <div class="hero-background">
-      <!-- No muted attribute — controlled entirely by component -->
+      <!-- 8-second preview MP4 — lightweight, no HLS needed for carousel -->
       <video
         #videoElement
-        *ngIf="currentVideo?.S3_url"
-        [src]="currentVideo?.S3_url"
+        *ngIf="currentPreviewSrc"
+        [src]="currentPreviewSrc"
         class="hero-video"
         loop
         playsinline
         preload="metadata"
-        fetchpriority="high"
         (loadeddata)="onVideoLoad()">
       </video>
 
