@@ -2,7 +2,7 @@
 import mongoose from 'mongoose';
 import { Video } from '../models/video';
 import { User } from '../models/user';
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 import { redisService, CK, TTL } from './redis.service';
 
 /**
@@ -58,7 +58,9 @@ export class VideoService {
     const cached = await redisService.get<FeedPage>(cacheKey);
     if (cached) return cached;
 
-    const filter: Record<string, any> = {};
+    // Only surface fully-transcoded videos; 'processing' ones are hidden from
+    // the public feed until the HLS Lambda flips their status to 'ready'.
+    const filter: Record<string, any> = { status: 'ready' };
 
     if (category && category !== 'All') {
       filter.category = category;
@@ -234,18 +236,37 @@ export class VideoService {
     if (!video) throw new Error('Video not found');
     if (video.user_id !== userId) throw new Error('Unauthorized: You can only delete your own videos');
 
-    // Extract S3 key from stored CloudFront URL
+    const bucket = process.env.AWS_S3_BUCKET_NAME!;
+
+    // ── Delete raw source file ────────────────────────────────────────────────
     const s3Url = video.S3_url;
-    const s3Key = s3Url.includes('cloudfront.net')
+    const rawKey = s3Url.includes('cloudfront.net')
       ? s3Url.split('cloudfront.net/')[1]
       : s3Url.split('.amazonaws.com/')[1];
 
-    if (!s3Key) throw new Error('Could not extract S3 key from S3_url');
+    if (!rawKey) throw new Error('Could not extract S3 key from S3_url');
 
-    await s3.send(new DeleteObjectCommand({
-      Bucket: process.env.AWS_S3_BUCKET_NAME!,
-      Key: s3Key,
-    }));
+    await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: rawKey }));
+
+    // ── Delete HLS renditions (Videos/hls/<uuid>/ prefix) ────────────────────
+    // Extract the uuid segment from the raw key: Videos/raw/<uuid>/filename
+    const uuidMatch = rawKey.match(/Videos\/raw\/([^/]+)\//);
+    if (uuidMatch) {
+      const hlsPrefix = `Videos/hls/${uuidMatch[1]}/`;
+      const listed = await s3.send(new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: hlsPrefix,
+      }));
+      if (listed.Contents && listed.Contents.length > 0) {
+        await s3.send(new DeleteObjectsCommand({
+          Bucket: bucket,
+          Delete: {
+            Objects: listed.Contents.map(obj => ({ Key: obj.Key! })),
+            Quiet: true,
+          },
+        }));
+      }
+    }
 
     await Video.findByIdAndDelete(videoId);
 

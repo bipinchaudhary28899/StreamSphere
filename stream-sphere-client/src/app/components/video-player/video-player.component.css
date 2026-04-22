@@ -372,3 +372,87 @@
   .vp-reactions     { align-self: stretch; justify-content: center; }
   .vp-react-btn     { flex: 1; justify-content: center; }
 }
+
+/* ── Processing state ───────────────────────────────────────────────────── */
+.vp-processing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 320px;
+  background: var(--bg-card);
+  border-radius: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 32px;
+}
+.vp-processing p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* ── Quality selector ───────────────────────────────────────────────────── */
+.vp-quality-wrap {
+  position: relative;
+  display: inline-flex;
+  margin-top: 8px;
+}
+
+.vp-quality-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.vp-quality-btn:hover { background: var(--bg-hover); }
+.vp-quality-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+.vp-quality-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  min-width: 100px;
+  z-index: 100;
+}
+
+.vp-quality-item {
+  display: block;
+  width: 100%;
+  padding: 9px 16px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.vp-quality-item:hover { background: var(--bg-hover); }
+.vp-quality-item--active {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Processing chip ────────────────────────────────────────────────────── */
+.vp-chip--processing {
+  color: #f39c12;
+  border-color: #f39c12;
+}
+.vp-chip--processing mat-icon {
+  color: #f39c12;
+  animation: vp-spin 1.2s linear infinite;
+}

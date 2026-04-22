@@ -19,14 +19,42 @@
 
     <!-- ── Player ──────────────────────────────────────────────────────── -->
     <div class="vp-player-wrap">
-      <video
-        [src]="safeVideoUrl"
-        controls
-        controlsList="nodownload"
-        class="vp-player"
-        preload="metadata">
-        Your browser does not support the video tag.
-      </video>
+
+      <!-- Processing state — video still being transcoded -->
+      <div *ngIf="video.status === 'processing'" class="vp-processing">
+        <div class="vp-spinner"></div>
+        <p>Video is being processed — please check back in a few minutes.</p>
+      </div>
+
+      <!-- HLS player (status === 'ready') -->
+      <ng-container *ngIf="video.status === 'ready'">
+        <video
+          #videoElement
+          controls
+          controlsList="nodownload"
+          class="vp-player"
+          preload="metadata">
+          Your browser does not support the video tag.
+        </video>
+
+        <!-- Quality selector — only shown when HLS levels are available -->
+        <div class="vp-quality-wrap" *ngIf="hlsLevels.length > 1">
+          <button class="vp-quality-btn" (click)="showQualityMenu = !showQualityMenu">
+            <mat-icon>hd</mat-icon>
+            <span>{{ currentQualityLabel }}</span>
+          </button>
+          <div class="vp-quality-menu" *ngIf="showQualityMenu">
+            <button
+              *ngFor="let lvl of hlsLevels"
+              class="vp-quality-item"
+              [class.vp-quality-item--active]="hlsCurrentLevel === lvl.index"
+              (click)="setQuality(lvl.index)">
+              {{ lvl.name }}
+            </button>
+          </div>
+        </div>
+      </ng-container>
+
     </div>
 
     <!-- ── Below-player panel ─────────────────────────────────────────── -->
@@ -58,6 +86,10 @@
         <span class="vp-chip vp-chip--views">
           <mat-icon>visibility</mat-icon>
           {{ formatViews(video.views || 0) }} views
+        </span>
+        <span class="vp-chip vp-chip--processing" *ngIf="video.status === 'processing'">
+          <mat-icon>hourglass_empty</mat-icon>
+          Processing…
         </span>
       </div>
 

@@ -1,0 +1,16 @@
+{
+  "name": "stream-sphere-hls-lambda",
+  "version": "1.0.0",
+  "description": "AWS Lambda: transcode uploaded videos to HLS 360p/720p/1080p",
+  "main": "handler.js",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.600.0",
+    "axios": "^1.7.2",
+    "fluent-ffmpeg": "^2.1.3",
+    "ffmpeg-static": "^5.2.0"
+  },
+  "devDependencies": {
+    "@types/fluent-ffmpeg": "^2.1.25",
+    "@types/node": "^20.0.0"
+  }
+}

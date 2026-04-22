@@ -7,6 +7,7 @@ import { CommentController }      from '../controllers/comment.controller';
 import { authenticateJWT }        from '../services/auth.service';
 import { WatchHistoryController } from '../controllers/watchHistory.controller';
 import { adminStatsController }   from '../controllers/admin.controller';
+import { hlsWebhookController }   from '../controllers/hlsWebhook.controller';
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 import { validate }        from '../middleware/validate.middleware';
@@ -186,6 +187,10 @@ router.get('/history',
   authenticateJWT,
   wrap((req, res) => watchHistoryController.getWatchHistory(req, res)),
 );
+
+// ── HLS webhook (called by Lambda after transcoding) ─────────────────────────
+// No JWT — authenticated by x-hls-secret header instead.
+router.post('/internal/hls-complete', wrap(hlsWebhookController));
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 router.get('/admin/stats',
