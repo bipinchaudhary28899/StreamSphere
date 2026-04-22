@@ -16,10 +16,8 @@ declare const google: any;
   styleUrls: ['./user-login.component.css'],
 })
 export class UserLoginComponent {
-  avail: boolean = false;
   msg: string = '';
   isLoggedIn: boolean = false;
-  private isGoogleBtnRenderedViaLogout = false;
   private googleScriptLoaded = false;
 
   constructor(
@@ -44,9 +42,7 @@ export class UserLoginComponent {
   }
 
   private loadGoogleScript(): void {
-    // Check if script is already loaded
     if (document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
-      
       this.googleScriptLoaded = true;
       return;
     }
@@ -58,181 +54,84 @@ export class UserLoginComponent {
 
     script.onload = () => {
       this.googleScriptLoaded = true;
-      // Wait a bit for the script to fully initialize
-      setTimeout(() => {
-        // Check if google object is available
-        if (typeof google !== 'undefined' && google.accounts) {
-          console.log('Google object is ready to use');
-        } else {
-          console.warn('Google object not yet available after script load');
-        }
-      }, 100);
     };
-    
-    script.onerror = (error) => {
-      console.error('Failed to load Google script:', error);
+
+    script.onerror = () => {
       this.googleScriptLoaded = false;
     };
-    
-    // Add error handling for script loading
-    script.addEventListener('error', (error) => {
-      console.error('Script loading error:', error);
-      this.googleScriptLoaded = false;
-    });
-    
+
     document.head.appendChild(script);
   }
 
-  private waitForGoogleScript(): Promise<boolean> {
-    return new Promise((resolve) => {
-      const checkGoogle = () => {
-        if (typeof google !== 'undefined' && google.accounts) {
-          
-          resolve(true);
-        } else {
-          
-          setTimeout(checkGoogle, 100);
-        }
-      };
-      checkGoogle();
-    });
-  }
-
   ngAfterViewInit(): void {
-    // Only initialize if user is not logged in
     if (!this.isLoggedIn) {
-      // Add a small delay to ensure the script has time to load
-      setTimeout(() => {
-        this.initializeGoogleSignIn();
-      }, 100);
+      setTimeout(() => this.initializeGoogleSignIn(), 100);
     }
   }
 
   checkLoginState() {
     const storedUser = localStorage.getItem('user');
-    
 
     if (storedUser && storedUser !== 'undefined') {
       try {
         const parsedUser = JSON.parse(storedUser);
         if (parsedUser?.name || parsedUser?.email) {
           this.isLoggedIn = true;
-          // Use setTimeout to defer the state update to the next change detection cycle
-          setTimeout(() => {
-            this.auth.updateLoginState(true);
-          });
-          
+          setTimeout(() => this.auth.updateLoginState(true));
         } else {
           this.isLoggedIn = false;
-          setTimeout(() => {
-            this.auth.updateLoginState(false);
-          });
+          setTimeout(() => this.auth.updateLoginState(false));
         }
       } catch (e) {
-        console.error('Error parsing user:', e);
         this.isLoggedIn = false;
-        setTimeout(() => {
-          this.auth.updateLoginState(false);
-        });
+        setTimeout(() => this.auth.updateLoginState(false));
         localStorage.removeItem('user');
       }
     } else {
       this.isLoggedIn = false;
-      setTimeout(() => {
-        this.auth.updateLoginState(false);
-      });
+      setTimeout(() => this.auth.updateLoginState(false));
     }
     this.cdr.detectChanges();
-  
   }
 
   initializeGoogleSignIn() {
- 
-    
-    // Safe check for google object
-    const googleExists = typeof google !== 'undefined';
-    const googleAccountsExists = googleExists && typeof google.accounts !== 'undefined';
-    
-
-    
     this.retryCount = 0;
-    
+
     const tryRender = async () => {
       const buttonElement = document.getElementById('googleLoginButton');
-      
-      
-      // Safe check for google object
       const googleExists = typeof google !== 'undefined';
       const googleAccountsExists = googleExists && typeof google.accounts !== 'undefined';
-      
-      // Wait for Google script to be ready
+
       if (!this.googleScriptLoaded || !googleExists || !googleAccountsExists) {
         this.retryCount++;
-        console.warn('Waiting for Google script to be ready...', {
-          buttonElement: !!buttonElement,
-          scriptLoaded: this.googleScriptLoaded,
-          googleExists: googleExists,
-          googleAccounts: googleAccountsExists,
-          retryCount: this.retryCount
-        });
-        
-        // If we've tried too many times, add a fallback
         if (this.retryCount > 20) {
-          console.error('Failed to load Google button after multiple attempts');
-          if (buttonElement) {
-            this.addFallbackButton(buttonElement);
-          }
+          if (buttonElement) this.addFallbackButton(buttonElement);
           return;
         }
-        
-        setTimeout(tryRender, 300); // Retry after 300ms
+        setTimeout(tryRender, 300);
         return;
       }
-      
-      // Check if both the script is loaded and google object exists
-      if (buttonElement && this.googleScriptLoaded && googleExists && googleAccountsExists) {
+
+      if (buttonElement) {
         try {
-          // Clear any existing content
           buttonElement.innerHTML = '';
-          
           google.accounts.id.initialize({
-            client_id:
-              '696274223099-m83j37fcauhli1or0a4afjt6eut6f4or.apps.googleusercontent.com',
+            client_id: '696274223099-m83j37fcauhli1or0a4afjt6eut6f4or.apps.googleusercontent.com',
             callback: this.handleCredentialResponse.bind(this),
           });
-
           google.accounts.id.renderButton(
             buttonElement,
             { theme: 'outline', size: 'large', text: 'continue_with' }
           );
-
           google.accounts.id.prompt();
-          
         } catch (error) {
           console.error('Error rendering Google button:', error);
-          // Add a fallback button if Google button fails
           this.addFallbackButton(buttonElement);
         }
       } else {
         this.retryCount++;
-        console.warn('Retrying Google button render...', {
-          buttonElement: !!buttonElement,
-          scriptLoaded: this.googleScriptLoaded,
-          googleExists: googleExists,
-          googleAccounts: googleAccountsExists,
-          retryCount: this.retryCount
-        });
-        
-        // If we've tried too many times, add a fallback
-        if (this.retryCount > 20) {
-          console.error('Failed to load Google button after multiple attempts');
-          if (buttonElement) {
-            this.addFallbackButton(buttonElement);
-          }
-          return;
-        }
-        
-        setTimeout(tryRender, 500); // Retry after 500ms
+        if (this.retryCount > 20) return;
+        setTimeout(tryRender, 500);
       }
     };
 
@@ -242,7 +141,6 @@ export class UserLoginComponent {
   private retryCount = 0;
 
   private addFallbackButton(container: HTMLElement): void {
-    
     container.innerHTML = `
       <button style="
         background: #4285f4;
@@ -268,28 +166,17 @@ export class UserLoginComponent {
   }
 
   handleCredentialResponse(response: any) {
-    
-    
     if (response.credential) {
       this.auth.googleLogin(response.credential).subscribe({
         next: (result) => {
-          
-          
-          // Store user data and token in localStorage
           if (result.user && result.token) {
             localStorage.setItem('user', JSON.stringify(result.user));
             localStorage.setItem('token', result.token);
           }
-          
           this.isLoggedIn = true;
           this.cdr.detectChanges();
-          
-          // Update the auth service login state with setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
-          setTimeout(() => {
-            this.auth.updateLoginState(true);
-          });
-          
-          // Navigate to home page after successful login
+          // Defer to avoid ExpressionChangedAfterItHasBeenCheckedError
+          setTimeout(() => this.auth.updateLoginState(true));
           this.router.navigate(['/home']);
         },
         error: (error) => {
@@ -299,7 +186,6 @@ export class UserLoginComponent {
         }
       });
     } else {
-      console.error('No credential received from Google');
       this.msg = 'Login failed. Please try again.';
       this.cdr.detectChanges();
     }
@@ -309,9 +195,7 @@ export class UserLoginComponent {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     this.isLoggedIn = false;
-    setTimeout(() => {
-      this.auth.updateLoginState(false);
-    });
+    setTimeout(() => this.auth.updateLoginState(false));
     this.cdr.detectChanges();
   }
 }
