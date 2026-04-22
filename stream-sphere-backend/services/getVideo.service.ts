@@ -55,15 +55,8 @@ export class VideoService {
       ? CK.feedCat(category, cursorKey)
       : CK.feedAll(cursorKey);
 
-    console.log(`[FEED] getPaginatedFeed  cursor=${cursor ?? 'none'}  category=${category ?? 'All'}  limit=${limit}  cacheKey=${cacheKey}`);
-
     const cached = await redisService.get<FeedPage>(cacheKey);
-    if (cached) {
-      console.log(`[FEED] → served from Redis cache  (${cached.videos.length} videos, hasMore=${cached.hasMore}, nextCursor=${cached.nextCursor})`);
-      return cached;
-    }
-
-    console.log(`[FEED] → cache miss, querying MongoDB…`);
+    if (cached) return cached;
 
     const filter: Record<string, any> = {};
 
@@ -85,13 +78,9 @@ export class VideoService {
       .lean()
       .exec();
 
-    console.log(`[FEED] MongoDB returned ${docs.length} doc(s) (fetched limit+1=${limit + 1})`);
-
     const hasMore    = docs.length > limit;
     const rawVideos  = hasMore ? docs.slice(0, limit) : docs;
     const nextCursor = hasMore ? String(rawVideos[rawVideos.length - 1]._id) : null;
-
-    console.log(`[FEED] page built: ${rawVideos.length} video(s), hasMore=${hasMore}, nextCursor=${nextCursor ?? 'null'}`);
 
     const videos = await populateUserImages(rawVideos);
     const page: FeedPage = { videos, nextCursor, hasMore };
@@ -109,15 +98,9 @@ export class VideoService {
       : '';
     const cacheKey = CK.search(term) + catSuffix;
 
-    console.log(`[SEARCH] searchVideos  term="${term}"  category=${category ?? 'All'}  cacheKey=${cacheKey}`);
-
     const cached = await redisService.get<any[]>(cacheKey);
-    if (cached) {
-      console.log(`[SEARCH] → served from Redis cache  (${cached.length} results)`);
-      return cached;
-    }
+    if (cached) return cached;
 
-    console.log(`[SEARCH] → cache miss, querying MongoDB…`);
     const regex = new RegExp(term.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
 
     const filter: Record<string, any> = {
@@ -135,7 +118,6 @@ export class VideoService {
       .lean()
       .exec();
 
-    console.log(`[SEARCH] MongoDB returned ${results.length} result(s)`);
     const populated = await populateUserImages(results);
     await redisService.set(cacheKey, populated, TTL.search);
     return populated;
@@ -284,10 +266,7 @@ export class VideoService {
 
     // Check if view already counted (try to get the key)
     const alreadyCounted = await redisService.get<string>(viewKey);
-    if (alreadyCounted) {
-      console.log(`[VIEW] already counted for videoId=${videoId} userId=${userId ?? 'anon'}`);
-      return -1;
-    }
+    if (alreadyCounted) return -1;
 
     // Set Redis key with 24h TTL
     await redisService.set(viewKey, '1', TTL_24H);
@@ -304,9 +283,6 @@ export class VideoService {
     // Bust single-video cache
     await redisService.del(CK.singleVideo(videoId));
 
-    const newViewCount = video.views;
-    console.log(`[VIEW] videoId=${videoId} userId=${userId ?? 'anon'} → incremented to ${newViewCount}`);
-
-    return newViewCount;
+    return video.views;
   }
 }

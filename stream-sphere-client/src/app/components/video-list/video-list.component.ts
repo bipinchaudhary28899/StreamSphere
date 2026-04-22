@@ -109,9 +109,7 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
   private setupIntersectionObserver(): void {
     this.observer = new IntersectionObserver(
       (entries) => {
-        const intersecting = entries[0].isIntersecting;
-        console.log(`[VideoList] IntersectionObserver fired: intersecting=${intersecting}, hasMore=${this.hasMore}, isLoadingMore=${this.isLoadingMore}, isSearchMode=${this.isSearchMode}`);
-        if (intersecting && this.hasMore && !this.isLoadingMore && !this.isSearchMode) {
+        if (entries[0].isIntersecting && this.hasMore && !this.isLoadingMore && !this.isSearchMode) {
           this.loadNextPage();
         }
       },
@@ -132,9 +130,6 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
   private attachSentinel(): void {
     if (this.sentinelRef?.nativeElement && this.observer) {
       this.observer.observe(this.sentinelRef.nativeElement);
-      console.log('[VideoList] IntersectionObserver attached to sentinel');
-    } else {
-      console.log('[VideoList] attachSentinel: sentinel not in DOM yet (will attach after first page)');
     }
   }
 
@@ -149,11 +144,8 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
     this.nextCursor      = null;
     this.hasMore         = false;
 
-    console.log(`[VideoList] loadFirstPage  category=${this.currentCategory}`);
-
     this.videoService.getFeed(undefined, this.currentCategory).subscribe({
       next: (page) => {
-        console.log(`[VideoList] loadFirstPage received: ${page.videos.length} video(s), hasMore=${page.hasMore}, nextCursor=${page.nextCursor ?? 'null'}`);
         this.displayedVideos = page.videos;
         this.nextCursor      = page.nextCursor;
         this.hasMore         = page.hasMore;
@@ -166,7 +158,7 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
       error: (err) => {
         this.error     = 'Failed to load videos. Please try again.';
         this.isLoading = false;
-        console.error('[VideoList] loadFirstPage error:', err);
+        console.error('Failed to load feed:', err);
       },
     });
   }
@@ -179,20 +171,17 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.hasMore || this.isLoadingMore || !this.nextCursor) return;
 
     this.isLoadingMore = true;
-    console.log(`[VideoList] loadNextPage  cursor=${this.nextCursor}  category=${this.currentCategory}  currentTotal=${this.displayedVideos.length}`);
 
     this.videoService.getFeed(this.nextCursor, this.currentCategory).subscribe({
       next: (page) => {
-        console.log(`[VideoList] loadNextPage received: ${page.videos.length} video(s), hasMore=${page.hasMore}, nextCursor=${page.nextCursor ?? 'null'}`);
         this.displayedVideos = [...this.displayedVideos, ...page.videos];
         this.nextCursor      = page.nextCursor;
         this.hasMore         = page.hasMore;
         this.isLoadingMore   = false;
-        console.log(`[VideoList] grid now has ${this.displayedVideos.length} total video(s)`);
       },
       error: (err) => {
         this.isLoadingMore = false;
-        console.error('[VideoList] loadNextPage error:', err);
+        console.error('Failed to load next page:', err);
       },
     });
   }
@@ -211,18 +200,15 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
     this.displayedVideos = [];
     this.hasMore         = false;
 
-    console.log(`[VideoList] runSearch  term="${term}"  category=${this.currentCategory}`);
-
     this.videoService.searchVideos(term, this.currentCategory).subscribe({
       next: ({ videos }) => {
-        console.log(`[VideoList] search returned ${videos.length} result(s)`);
         this.displayedVideos = videos;
         this.isLoading       = false;
       },
       error: (err) => {
         this.error     = 'Search failed. Please try again.';
         this.isLoading = false;
-        console.error('[VideoList] search error:', err);
+        console.error('Search failed:', err);
       },
     });
   }

@@ -4,17 +4,14 @@ import { saveVideoService } from '../services/saveVideo.service';  // Import the
 
 export const saveVideoController = async (req: Request, res: Response): Promise<void> => {
   const { title, description, S3_url, user_id, userName, user_profile_image } = req.body;
-    console.log('req.body at backend is :',req.body);
   try {
-    const newVideo = await saveVideoService(title, description, S3_url, user_id, userName, user_profile_image);  // Call the service to save video
+    const newVideo = await saveVideoService(title, description, S3_url, user_id, userName, user_profile_image);
 
     res.status(201).json({
       message: 'Video saved successfully',
       video: newVideo,
     });
   } catch (error: any) {
-    console.error(error);
-    
     // Check if it's a duration error
     if (error.message && error.message.includes('duration exceeds')) {
       res.status(400).json({

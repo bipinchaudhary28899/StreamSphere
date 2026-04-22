@@ -61,18 +61,10 @@ class RedisService {
   // ── Core helpers ─────────────────────────────────────────────────────────────
 
   async get<T>(key: string): Promise<T | null> {
-    if (!this.alive()) {
-      console.log(`[Redis] GET  ${key}  → SKIP (client not ready, status=${this.client?.status ?? 'null'})`);
-      return null;
-    }
+    if (!this.alive()) return null;
     try {
       const raw = await this.client!.get(key);
-      if (raw) {
-        console.log(`[Redis] GET  ${key}  → HIT  (${raw.length} bytes)`);
-        return JSON.parse(raw) as T;
-      }
-      console.log(`[Redis] GET  ${key}  → MISS`);
-      return null;
+      return raw ? JSON.parse(raw) as T : null;
     } catch (e: any) {
       console.error('[Redis] get error:', e.message);
       return null;
@@ -80,14 +72,9 @@ class RedisService {
   }
 
   async set(key: string, value: unknown, ttlSeconds: number): Promise<void> {
-    if (!this.alive()) {
-      console.log(`[Redis] SET  ${key}  → SKIP (client not ready)`);
-      return;
-    }
+    if (!this.alive()) return;
     try {
-      const serialised = JSON.stringify(value);
-      await this.client!.set(key, serialised, 'EX', ttlSeconds);
-      console.log(`[Redis] SET  ${key}  TTL=${ttlSeconds}s  (${serialised.length} bytes stored)`);
+      await this.client!.set(key, JSON.stringify(value), 'EX', ttlSeconds);
     } catch (e: any) {
       console.error('[Redis] set error:', e.message);
     }

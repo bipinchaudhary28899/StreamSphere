@@ -20,12 +20,9 @@ import { CommonModule } from '@angular/common';
 import { VideoService } from '../../services/video.service';
 import { VideoCardComponent } from '../video-card/video-card.component';
 import { AuthService } from '../../services/auth.service';
-import { Subscription } from 'rxjs';
-import { User } from '../../models/user';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-
-// Using shared User interface from models
+import { User } from '../../models/user';
 
 @Component({
   selector: 'app-user-profile',
@@ -88,7 +85,6 @@ export class UserProfileComponent implements OnInit {
   dataSource = new MatTableDataSource<any>([]);
   selection = new Set<string>();
   isMobile: boolean = false;
-  private loginSubscription: Subscription | null = null;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -106,24 +102,6 @@ export class UserProfileComponent implements OnInit {
     this.loadMyVideos();
     this.loadLikedVideos();
     this.loadDislikedVideos();
-  }
-
-  ngOnDestroy() {
-    if (this.loginSubscription) {
-      this.loginSubscription.unsubscribe();
-    }
-  }
-
-  private subscribeToLoginState() {
-    this.loginSubscription = this.authService
-      .getLoginState()
-      .subscribe((isLoggedIn: boolean) => {
-        this.loadUserData();
-        // Use setTimeout to defer the change detection to the next cycle
-        setTimeout(() => {
-          // this.cdr.detectChanges(); // This line was removed as per the new_code
-        });
-      });
   }
 
   @HostListener('window:resize', ['$event'])

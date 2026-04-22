@@ -74,25 +74,19 @@ const getVideoDuration = async (videoUrl: string): Promise<number> => {
 
 export const saveVideoService = async (title: string, description: string, S3_url: string, user_id: string, userName?: string, user_profile_image?: string) => {
   try {
-    console.log('Saving video with data:', { title, description, S3_url, user_id, userName, user_profile_image });  // Log the incoming data
-
-    // Check video duration (2 minutes = 120 seconds)
+    // Check video duration (max 3 minutes = 180 seconds)
     try {
       const duration = await getVideoDuration(S3_url);
-      console.log('Video duration:', duration, 'seconds');
-      
       if (duration > 180) {
         throw new Error('Video duration exceeds 3 minutes (180 seconds). Please upload a shorter video.');
       }
     } catch (durationError) {
       console.error('Error checking video duration:', durationError);
-      // If we can't check duration, we'll still allow the upload but log the issue
       console.warn('Could not verify video duration, proceeding with upload');
     }
 
     // Auto-detect category based on title and description
     const category = await categoryDetectionService.detectCategory(title, description);
-    console.log('Detected category:', category);
 
     const newVideo = new Video({
       title,
@@ -106,10 +100,6 @@ export const saveVideoService = async (title: string, description: string, S3_ur
     });
 
     const savedVideo = await newVideo.save();
-    console.log('Video saved:', savedVideo);
-
-    const videoId = savedVideo._id ? savedVideo._id.toString() : null;
-    console.log('Video ID:', videoId);
 
     // ── Bust feed caches ──────────────────────────────────────────────────────
     // A new video exists so the "first page" and category pages are stale.

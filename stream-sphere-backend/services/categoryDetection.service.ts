@@ -113,17 +113,12 @@ export class CategoryDetectionService {
           ? response.data[0]
           : response.data;
 
-        console.log("HF RAW RESPONSE:", result);
-
         if (result?.labels && result?.scores) {
           const bestIdx = result.scores.indexOf(Math.max(...result.scores));
-          const confidence = result.scores[bestIdx];
-          console.log("Best Label:", result.labels[bestIdx], "Confidence:", confidence);
-          if (confidence > this.threshold) return result.labels[bestIdx];
+          if (result.scores[bestIdx] > this.threshold) return result.labels[bestIdx];
         }
 
         if (result?.label && result?.score) {
-          console.log("Single Label:", result.label, "Confidence:", result.score);
           if (result.score > this.threshold) return result.label;
         }
 

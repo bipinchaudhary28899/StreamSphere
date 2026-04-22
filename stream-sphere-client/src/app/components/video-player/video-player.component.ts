@@ -164,7 +164,6 @@ export class VideoPlayerComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error liking video:', err);
-        console.error('Error details:', err.error);
         this.isLiking = false;
         alert('Failed to like video. Please try again.');
       },
@@ -198,7 +197,6 @@ export class VideoPlayerComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error disliking video:', err);
-        console.error('Error details:', err.error);
         this.isDisliking = false;
         alert('Failed to dislike video. Please try again.');
       },

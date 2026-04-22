@@ -3,9 +3,6 @@ import { WatchHistoryService } from '../services/watchHistory.service';
 
 const watchHistoryService = new WatchHistoryService();
 export class WatchHistoryController {
-    constructor() {
-         console.log('WatchHistoryController instantiated');  
-    }
   async upsertWatchHistory(req: Request, res: Response): Promise<void> {
     try {
       const { videoId } = req.params;
