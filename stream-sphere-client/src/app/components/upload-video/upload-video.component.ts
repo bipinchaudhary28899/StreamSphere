@@ -10,6 +10,7 @@ import { CommonModule } from '@angular/common';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { Router } from '@angular/router';
+import { UploadStatusService } from '../../services/upload-status.service';
 
 type UploadPhase = 'idle' | 'uploading' | 'processing' | 'categorizing' | 'success';
 
@@ -39,6 +40,7 @@ export class UploadVideoComponent {
     private uploadService: UploadService,
     private videoService: VideoService,
     private router: Router,
+    private uploadStatus: UploadStatusService,
     @Optional() public dialogRef: MatDialogRef<UploadVideoComponent> | null,
   ) {
     this.uploadForm = this.fb.group({
@@ -152,8 +154,12 @@ export class UploadVideoComponent {
               };
 
               this.uploadService.saveVideoMetadata(metadata).subscribe({
-                next: () => {
+                next: (savedVideo: any) => {
                   clearTimeout(this.categorizingTimer);
+                  // Register video for processing status tracking
+                  if (savedVideo?.video?._id) {
+                    this.uploadStatus.track(savedVideo.video._id, title);
+                  }
                   this.uploadPhase    = 'success';
                   this.uploadSuccess  = true;
                   this.isUploading    = false;

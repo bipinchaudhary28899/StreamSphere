@@ -3,6 +3,8 @@ export interface Video {
     title: string;
     description?: string;
     S3_url: string;
+    hlsUrl?: string | null;
+    previewUrl?: string | null;
     thumbnail_url: string;
     user_id: string;
     category?: string;

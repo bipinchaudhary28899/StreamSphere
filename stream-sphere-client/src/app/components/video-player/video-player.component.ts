@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
@@ -38,12 +38,14 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   // ── HLS quality switcher state ────────────────────────────────────────────
   private hls: Hls | null = null;
   hlsLevels: Array<{ name: string; index: number }> = [];
-  hlsCurrentLevel: number = -1;   // -1 = auto
+  hlsCurrentLevel: number = -1;   // -1 = auto (user selection)
+  hlsAutoLevel: number = -1;      // actual level currently playing
   showQualityMenu: boolean = false;
 
   constructor(
     private route: ActivatedRoute,
     private videoService: VideoService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -72,7 +74,9 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
           this.loading = false;
           this.recordWatchHistory(videoId);
           this.doRecordView(videoId);
-          // Defer HLS init until the <video> element is in the DOM
+          // Force Angular to render the *ngIf="video.status === 'ready'" block
+          // so the <video #videoElement> is in the DOM before HLS.js attaches.
+          this.cdr.detectChanges();
           setTimeout(() => this.initHlsPlayer(), 0);
         } else {
           this.error = 'Video not found';
@@ -118,9 +122,9 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       });
 
       this.hls.on(Hls.Events.LEVEL_SWITCHED, (_evt, data) => {
-        // Keep UI in sync when ABR switches levels automatically
-        if (this.hlsCurrentLevel === -1) return;
-        this.hlsCurrentLevel = data.level;
+        // Always track the actual playing level so the badge stays accurate
+        this.hlsAutoLevel = data.level;
+        this.cdr.detectChanges();
       });
 
     } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
@@ -137,9 +141,17 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   }
 
   get currentQualityLabel(): string {
-    if (this.hlsCurrentLevel === -1) return 'Auto';
-    const lvl = this.hlsLevels.find(l => l.index === this.hlsCurrentLevel);
-    return lvl ? lvl.name : 'Auto';
+    if (this.hlsCurrentLevel !== -1) {
+      // Manual selection — show exact level
+      const lvl = this.hlsLevels.find(l => l.index === this.hlsCurrentLevel);
+      return lvl ? lvl.name : 'Auto';
+    }
+    // Auto mode — show actual playing level in parens so user knows what's streaming
+    if (this.hlsAutoLevel !== -1) {
+      const lvl = this.hlsLevels.find(l => l.index === this.hlsAutoLevel);
+      return lvl ? `Auto (${lvl.name})` : 'Auto';
+    }
+    return 'Auto';
   }
 
   private destroyHls(): void {
@@ -147,6 +159,9 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       this.hls.destroy();
       this.hls = null;
     }
+    this.hlsAutoLevel = -1;
+    this.hlsCurrentLevel = -1;
+    this.hlsLevels = [];
   }
 
   // ── Auth / view helpers ───────────────────────────────────────────────────

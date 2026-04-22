@@ -22,6 +22,7 @@ export class VideoCardComponent implements OnInit {
   currentUserId: string | null = null;
   isOwner: boolean = false;
   flip = false;
+  previewLoaded = false; // true once the user hovers — lazy-loads the video src
 
   constructor(
     private sanitizer: DomSanitizer,
@@ -33,7 +34,10 @@ export class VideoCardComponent implements OnInit {
       console.error('No video data provided to video card component');
       return;
     }
-    this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.video.S3_url);
+    // Use the short preview clip for hover playback. Falls back to the raw
+    // S3 URL for legacy videos uploaded before preview generation was added.
+    const previewSrc = this.video.previewUrl || this.video.S3_url;
+    this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(previewSrc);
     const userData = localStorage.getItem('user');
     if (userData) {
       const user = JSON.parse(userData);
@@ -62,6 +66,12 @@ export class VideoCardComponent implements OnInit {
   onFlipClick(event: Event) {
     event.stopPropagation();
     this.flip = !this.flip;
+  }
+
+  onThumbHover(): void {
+    // Lazy-load the video preview only on first hover to avoid
+    // hundreds of simultaneous CloudFront requests on page load.
+    this.previewLoaded = true;
   }
 
   deleteVideo() {

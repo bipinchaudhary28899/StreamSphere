@@ -403,48 +403,49 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-strong);
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 6px;
   padding: 6px 12px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #fff;
   cursor: pointer;
-  transition: background var(--transition);
+  transition: background 0.2s;
 }
-.vp-quality-btn:hover { background: var(--bg-hover); }
-.vp-quality-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+.vp-quality-btn:hover { background: rgba(0, 0, 0, 0.92); }
+.vp-quality-btn mat-icon { font-size: 18px; width: 18px; height: 18px; color: #fff; }
 
 .vp-quality-menu {
   position: absolute;
   bottom: calc(100% + 6px);
   left: 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border-strong);
+  background: rgba(18, 18, 18, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0,0,0,.18);
-  min-width: 100px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+  min-width: 110px;
   z-index: 100;
 }
 
 .vp-quality-item {
   display: block;
   width: 100%;
-  padding: 9px 16px;
+  padding: 10px 16px;
   text-align: left;
   background: transparent;
   border: none;
   font-size: 0.88rem;
-  color: var(--text-primary);
+  color: #e0e0e0;
   cursor: pointer;
-  transition: background var(--transition);
+  transition: background 0.15s;
 }
-.vp-quality-item:hover { background: var(--bg-hover); }
+.vp-quality-item:hover { background: rgba(255, 255, 255, 0.1); }
 .vp-quality-item--active {
-  color: var(--accent);
+  color: #fff;
   font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* ── Processing chip ────────────────────────────────────────────────────── */

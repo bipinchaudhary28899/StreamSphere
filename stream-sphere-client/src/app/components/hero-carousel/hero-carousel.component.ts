@@ -142,6 +142,8 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
           title: backendVideo.title,
           description: backendVideo.description || 'Watch this amazing video on StreamSphere',
           S3_url: backendVideo.S3_url,
+          hlsUrl: backendVideo.hlsUrl || null,
+          previewUrl: backendVideo.previewUrl || null,
           thumbnail_url: backendVideo.thumbnail_url || '',
           user_id: backendVideo.user_id || '',
           category: backendVideo.category,
@@ -301,6 +303,13 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
 
   get currentVideo(): Video | null {
     return this.videos[this.currentIndex] || null;
+  }
+
+  /** The URL to play in the carousel — preview MP4 if available, raw MP4 as fallback */
+  get currentPreviewSrc(): string {
+    const v = this.currentVideo;
+    if (!v) return '';
+    return v.previewUrl || v.S3_url;
   }
 
   get progressPercentage(): number {

@@ -122,6 +122,33 @@ function transcodeRendition(inputPath, outputDir, rendition) {
   });
 }
 
+// ── Helper: generate 8-second MP4 preview (for carousel / hover) ──────────────
+// 854×480, scale preserves aspect ratio with letterbox if needed.
+// faststart moves the moov atom to the front so the browser can play
+// immediately without downloading the whole file.
+function generatePreview(inputPath, outputPath) {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .setStartTime(0)
+      .setDuration(8)
+      .videoCodec('libx264')
+      .audioCodec('aac')
+      .videoFilter('scale=854:480:force_original_aspect_ratio=decrease,pad=854:480:(ow-iw)/2:(oh-ih)/2')
+      .videoBitrate('600k')
+      .audioBitrate('64k')
+      .outputOptions([
+        '-profile:v baseline',
+        '-level 3.0',
+        '-movflags +faststart',
+        '-pix_fmt yuv420p',
+      ])
+      .output(outputPath)
+      .on('end', resolve)
+      .on('error', (err) => reject(new Error(`Preview generation failed: ${err.message}`)))
+      .run();
+  });
+}
+
 // ── Helper: build a master HLS playlist ──────────────────────────────────────
 function buildMasterPlaylist(renditions) {
   const BANDWIDTH = { '360p': 896000, '720p': 2928000 };
@@ -161,12 +188,18 @@ exports.handler = async (event) => {
       console.log(`[HLS] ${rendition.name} done.`);
     }
 
-    // 3. Build and write master.m3u8
+    // 3. Generate 8-second preview MP4 (used by carousel and hover previews)
+    console.log('[HLS] Generating preview.mp4…');
+    const previewLocalPath = path.join(tmpDir, 'preview.mp4');
+    await generatePreview(rawLocalPath, previewLocalPath);
+    console.log('[HLS] preview.mp4 done.');
+
+    // 4. Build and write master.m3u8
     const masterContent = buildMasterPlaylist(RENDITIONS);
     const masterPath = path.join(tmpDir, 'master.m3u8');
     fs.writeFileSync(masterPath, masterContent);
 
-    // 4. Upload all HLS files to S3
+    // 5. Upload all HLS + preview files to S3
     const hlsPrefix = `Videos/hls/${uuid}/`;
     const files = fs.readdirSync(tmpDir).filter(f => f !== path.basename(rawLocalPath));
 
@@ -174,20 +207,23 @@ exports.handler = async (event) => {
     for (const file of files) {
       const localFile = path.join(tmpDir, file);
       const s3Key = hlsPrefix + file;
-      const contentType = file.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl'
-                        : file.endsWith('.ts')   ? 'video/mp2t'
+      const contentType = file.endsWith('.m3u8')   ? 'application/vnd.apple.mpegurl'
+                        : file.endsWith('.ts')     ? 'video/mp2t'
+                        : file.endsWith('.mp4')    ? 'video/mp4'
                         : 'application/octet-stream';
       await uploadToS3(localFile, BUCKET, s3Key, contentType);
     }
     console.log('[HLS] Upload complete.');
 
-    // 5. Notify backend
+    // 6. Notify backend
     const masterHlsUrl = `${CLOUDFRONT_URL}/${hlsPrefix}master.m3u8`;
-    console.log(`[HLS] Calling webhook with masterHlsUrl: ${masterHlsUrl}`);
+    const previewUrl   = `${CLOUDFRONT_URL}/${hlsPrefix}preview.mp4`;
+    console.log(`[HLS] Calling webhook — masterHlsUrl: ${masterHlsUrl}`);
+    console.log(`[HLS]                 — previewUrl:   ${previewUrl}`);
 
     await axios.post(
       `${BACKEND_URL}/api/internal/hls-complete`,
-      { rawS3Key: rawKey, masterHlsUrl },
+      { rawS3Key: rawKey, masterHlsUrl, previewUrl },
       {
         headers: {
           'Content-Type': 'application/json',

@@ -4,11 +4,12 @@
 // The Lambda sends:
 //   POST /api/internal/hls-complete
 //   x-hls-secret: <HLS_WEBHOOK_SECRET>
-//   { "rawS3Key": "Videos/raw/<uuid>/filename.mp4",
-//     "masterHlsUrl": "https://cdn.example.com/Videos/hls/<uuid>/master.m3u8" }
+//   { "rawS3Key":    "Videos/raw/<uuid>/filename.mp4",
+//     "masterHlsUrl": "https://cdn.example.com/Videos/hls/<uuid>/master.m3u8",
+//     "previewUrl":   "https://cdn.example.com/Videos/hls/<uuid>/preview.mp4" }
 //
-// We verify the shared secret, find the Video by its S3_url, set hlsUrl and
-// flip status to 'ready', then bust the relevant Redis caches.
+// We verify the shared secret, find the Video by its S3_url, set hlsUrl,
+// previewUrl, and flip status to 'ready', then bust the relevant Redis caches.
 
 import { Request, Response } from 'express';
 import { Video } from '../models/video';
@@ -22,9 +23,10 @@ export async function hlsWebhookController(req: Request, res: Response): Promise
     return;
   }
 
-  const { rawS3Key, masterHlsUrl } = req.body as {
+  const { rawS3Key, masterHlsUrl, previewUrl } = req.body as {
     rawS3Key?: string;
     masterHlsUrl?: string;
+    previewUrl?: string;
   };
 
   if (!rawS3Key || !masterHlsUrl) {
@@ -43,8 +45,9 @@ export async function hlsWebhookController(req: Request, res: Response): Promise
   }
 
   // ── Update the video document ─────────────────────────────────────────────
-  video.hlsUrl = masterHlsUrl;
-  video.status = 'ready';
+  video.hlsUrl    = masterHlsUrl;
+  video.previewUrl = previewUrl ?? null;
+  video.status    = 'ready';
   await video.save();
 
   // ── Bust Redis caches so the video appears in the feed immediately ─────────
