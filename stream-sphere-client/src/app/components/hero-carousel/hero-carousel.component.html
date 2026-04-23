@@ -60,18 +60,18 @@
             Play Now
           </button>
 
-          <!-- Shown before first interaction, only if video has audio -->
+          <!-- Shown before first interaction -->
           <button
             class="hero-sound-btn"
-            *ngIf="!userInteracted && hasAudio"
+            *ngIf="!userInteracted"
             (click)="handleWatchWithSound()">
             🔇 Watch with Sound
           </button>
 
-          <!-- Shown after interaction, only if video has audio -->
+          <!-- Shown after interaction — always visible so it never disappears mid-play -->
           <button
             class="hero-mute-btn"
-            *ngIf="userInteracted && hasAudio"
+            *ngIf="userInteracted"
             (click)="toggleMute()">
             {{ isMuted ? '🔇 Unmute' : '🔊 Mute' }}
           </button>

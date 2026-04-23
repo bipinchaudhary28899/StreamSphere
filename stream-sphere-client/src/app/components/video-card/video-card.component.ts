@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { MediaManagerService } from '../../services/media-manager.service';
 
 @Component({
   selector: 'app-video-card',
@@ -26,7 +27,8 @@ export class VideoCardComponent implements OnInit {
 
   constructor(
     private sanitizer: DomSanitizer,
-    private router: Router
+    private router: Router,
+    private mediaManager: MediaManagerService,
   ) {}
 
   ngOnInit() {
@@ -70,6 +72,7 @@ export class VideoCardComponent implements OnInit {
 
   onThumbHover(event: MouseEvent): void {
     const thumbWrap = event.currentTarget as HTMLElement;
+    this.mediaManager.cardHoverStart();   // pause the hero carousel
 
     if (!this.previewLoaded) {
       // First hover — inject the <source> then wait one tick for Angular
@@ -88,6 +91,7 @@ export class VideoCardComponent implements OnInit {
       video.pause();
       video.currentTime = 0;
     }
+    this.mediaManager.cardHoverEnd();     // allow the hero carousel to resume
   }
 
   private playPreview(thumbWrap: HTMLElement): void {
