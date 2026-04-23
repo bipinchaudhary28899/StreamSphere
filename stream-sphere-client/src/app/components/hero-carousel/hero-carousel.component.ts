@@ -1,7 +1,9 @@
 import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Subscription } from 'rxjs';
 import { VideoService } from '../../services/video.service';
 import { Video } from '../../models/video';
+import { MediaManagerService } from '../../services/media-manager.service';
 
 @Component({
   selector: 'app-hero-carousel',
@@ -18,7 +20,7 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
   isLoading = true;
   error = '';
   isMuted = true;
-  hasAudio = false;
+  hasAudio = true;   // default true; checkAudioTrack() may override if API available
   userInteracted = false;
   descriptionExpanded = false;
 
@@ -31,16 +33,19 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
   private autoAdvanceTimer: any = null;
   private readonly AUTO_ADVANCE_INTERVAL = 8000;
   private visibilityChangeHandler = this.handleVisibilityChange.bind(this);
+  private mediaSubs = new Subscription();
 
   constructor(
     private videoService: VideoService,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private mediaManager: MediaManagerService,
   ) {}
 
   ngOnInit(): void {
     this.loadTopVideos();
     this.setupIntersectionObserver();
     document.addEventListener('visibilitychange', this.visibilityChangeHandler);
+    this.subscribeToMediaManager();
   }
 
   ngAfterViewInit(): void {
@@ -56,6 +61,7 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
       this.intersectionObserver = null;
     }
     this.stopAutoAdvance();
+    this.mediaSubs.unsubscribe();
     document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
   }
 
@@ -90,6 +96,23 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
         this.startAutoAdvance();
       }
     }
+  }
+
+  private subscribeToMediaManager(): void {
+    // A card preview started — pause the carousel and its auto-advance timer
+    this.mediaSubs.add(
+      this.mediaManager.pauseCarousel$.subscribe(() => {
+        this.stopAutoAdvance();
+        this.videoElement?.nativeElement?.pause();
+      })
+    );
+
+    // Last card hover ended — resume carousel from where it left off
+    this.mediaSubs.add(
+      this.mediaManager.resumeCarousel$.subscribe(() => {
+        this.forcePlayIfVisible();
+      })
+    );
   }
 
   private startAutoAdvance(): void {
@@ -262,7 +285,6 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
   nextVideo(): void {
     this.unobserveCurrentVideo();
     this.stopAutoAdvance();
-    this.hasAudio = false;
     this.descriptionExpanded = false;
     this.currentIndex = (this.currentIndex + 1) % this.videos.length;
     setTimeout(() => {
@@ -280,7 +302,6 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
   previousVideo(): void {
     this.unobserveCurrentVideo();
     this.stopAutoAdvance();
-    this.hasAudio = false;
     this.descriptionExpanded = false;
     this.currentIndex = (this.currentIndex - 1 + this.videos.length) % this.videos.length;
     setTimeout(() => {
