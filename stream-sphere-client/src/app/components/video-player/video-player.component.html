@@ -18,9 +18,11 @@
   <div *ngIf="video && !loading && !error" class="vp-content">
 
     <!-- ── Player ──────────────────────────────────────────────────────── -->
-    <div class="vp-player-wrap">
+    <div class="vp-player-wrap" #playerContainer
+         (mousemove)="onPlayerMouseMove()"
+         (mouseleave)="onPlayerMouseLeave()">
 
-      <!-- Processing state — video still being transcoded -->
+      <!-- Processing state -->
       <div *ngIf="video.status === 'processing'" class="vp-processing">
         <div class="vp-spinner"></div>
         <p>Video is being processed — please check back in a few minutes.</p>
@@ -28,34 +30,100 @@
 
       <!-- HLS player (status === 'ready') -->
       <ng-container *ngIf="video.status === 'ready'">
+
         <video
           #videoElement
-          controls
-          controlsList="nodownload"
           class="vp-player"
-          preload="metadata">
-          Your browser does not support the video tag.
+          preload="metadata"
+          playsinline
+          (play)="onVideoPlay()"
+          (pause)="onVideoPause()"
+          (timeupdate)="onTimeUpdate()"
+          (loadedmetadata)="onLoadedMetadata()"
+          (volumechange)="onVolumeChange()"
+          (ended)="onVideoEnded()">
         </video>
 
-        <!-- Quality selector — only shown when HLS levels are available -->
-        <div class="vp-quality-wrap" *ngIf="hlsLevels.length > 1">
-          <button class="vp-quality-btn" (click)="showQualityMenu = !showQualityMenu">
-            <mat-icon>hd</mat-icon>
-            <span>{{ currentQualityLabel }}</span>
-          </button>
-          <div class="vp-quality-menu" *ngIf="showQualityMenu">
-            <button
-              *ngFor="let lvl of hlsLevels"
-              class="vp-quality-item"
-              [class.vp-quality-item--active]="hlsCurrentLevel === lvl.index"
-              (click)="setQuality(lvl.index)">
-              {{ lvl.name }}
-            </button>
-          </div>
-        </div>
-      </ng-container>
+        <!-- Transparent click zone — play/pause on tap, excludes control bar -->
+        <div class="vp-click-zone" (click)="togglePlay()"></div>
 
-    </div>
+        <!-- ── Custom controls overlay ──────────────────────────────── -->
+        <div class="vp-controls" [class.vp-controls--hidden]="!controlsVisible">
+
+          <!-- Seekbar -->
+          <div class="vp-seekbar-wrap">
+            <input
+              type="range"
+              class="vp-seekbar"
+              min="0"
+              [max]="duration || 100"
+              [value]="currentTime"
+              step="0.1"
+              [style.--pct]="seekPercent + '%'"
+              (input)="seek($event)"
+              (click)="$event.stopPropagation()">
+          </div>
+
+          <!-- Controls bar -->
+          <div class="vp-controls-bar" (click)="$event.stopPropagation()">
+
+            <!-- Left cluster -->
+            <div class="vp-ctrl-left">
+              <!-- Play / Pause -->
+              <button class="vp-ctrl-btn" (click)="togglePlay()" [attr.aria-label]="isPlaying ? 'Pause' : 'Play'">
+                <mat-icon>{{ isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
+              </button>
+
+              <!-- Mute / Unmute -->
+              <button class="vp-ctrl-btn" (click)="toggleMute()" [attr.aria-label]="isMuted ? 'Unmute' : 'Mute'">
+                <mat-icon>{{ isMuted ? 'volume_off' : 'volume_up' }}</mat-icon>
+              </button>
+
+              <!-- Time display -->
+              <span class="vp-time">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span>
+            </div>
+
+            <!-- Right cluster -->
+            <div class="vp-ctrl-right">
+
+              <!-- Settings (3-dot) — quality lives here -->
+              <div class="vp-settings-wrap" *ngIf="hlsLevels.length > 1">
+                <button
+                  class="vp-ctrl-btn"
+                  (click)="showSettingsMenu = !showSettingsMenu; $event.stopPropagation()"
+                  aria-label="Settings">
+                  <mat-icon>settings</mat-icon>
+                </button>
+
+                <div class="vp-settings-menu" *ngIf="showSettingsMenu" (click)="$event.stopPropagation()">
+                  <div class="vp-settings-header">Quality</div>
+                  <button
+                    *ngFor="let lvl of hlsLevels"
+                    class="vp-settings-item"
+                    [class.active]="hlsCurrentLevel === lvl.index"
+                    (click)="setQuality(lvl.index); showSettingsMenu = false">
+                    <mat-icon class="vp-check">{{ hlsCurrentLevel === lvl.index ? 'check' : '' }}</mat-icon>
+                    <span class="vp-settings-label">
+                      {{ lvl.name }}
+                      <span class="vp-auto-badge" *ngIf="lvl.index === -1 && hlsAutoLevel !== -1">
+                        ({{ getAutoLevelName() }})
+                      </span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Fullscreen -->
+              <button class="vp-ctrl-btn" (click)="toggleFullscreen()" aria-label="Fullscreen">
+                <mat-icon>{{ isFullscreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+              </button>
+            </div>
+
+          </div><!-- /vp-controls-bar -->
+        </div><!-- /vp-controls -->
+
+      </ng-container>
+    </div><!-- /vp-player-wrap -->
 
     <!-- ── Below-player panel ─────────────────────────────────────────── -->
     <div class="vp-panel">

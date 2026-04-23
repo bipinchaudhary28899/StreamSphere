@@ -8,8 +8,8 @@
           <div class="video-card-inner">
 
             <!-- Thumbnail + overlays -->
-            <div class="thumb-wrap" (mouseenter)="onThumbHover()">
-              <video class="video-preview" preload="none" controlsList="nodownload">
+            <div class="thumb-wrap" (mouseenter)="onThumbHover($event)" (mouseleave)="onThumbLeave($event)">
+              <video class="video-preview" preload="none" muted playsinline loop controlsList="nodownload">
                 <source *ngIf="previewLoaded" [src]="safeUrl" type="video/mp4" />
               </video>
               <!-- Hover overlay with play hint -->
@@ -103,8 +103,8 @@
 <ng-template #normalCard>
   <mat-card (click)="onVideoClick()" class="video-card" [ngClass]="{ faded: faded }">
     <div class="video-card-inner">
-      <div class="thumb-wrap" (mouseenter)="onThumbHover()">
-        <video class="video-preview" preload="none" controlsList="nodownload">
+      <div class="thumb-wrap" (mouseenter)="onThumbHover($event)" (mouseleave)="onThumbLeave($event)">
+        <video class="video-preview" preload="none" muted playsinline loop controlsList="nodownload">
           <source *ngIf="previewLoaded" [src]="safeUrl" type="video/mp4" />
         </video>
         <div class="thumb-overlay">

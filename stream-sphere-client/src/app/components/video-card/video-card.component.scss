@@ -86,11 +86,12 @@
   pointer-events: none;
 }
 
-// Hover overlay — dark scrim + centred play icon
+// Hover overlay — light scrim + centred play icon
+// Kept intentionally subtle (0.22) so the playing preview shows through clearly
 .thumb-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.38);
+  background: rgba(0, 0, 0, 0.22);
   display: flex;
   align-items: center;
   justify-content: center;
