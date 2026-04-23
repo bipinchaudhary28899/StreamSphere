@@ -77,17 +77,17 @@ Users authenticate with a single click using Google OAuth. No passwords are stor
 
 ### Feature 2: Video Upload with HLS Transcoding
 
-Videos are uploaded directly from the browser to S3 via a presigned URL, keeping the backend out of the data path. After upload, an AWS Lambda function automatically transcodes the video into HLS streams and generates a short preview clip.
+Videos are uploaded directly from the browser to S3 via a presigned URL, keeping the backend out of the data path. After upload, an AWS Lambda function automatically transcodes the video into HLS streams, generates a short preview clip, and extracts a thumbnail image.
 
 **Upload flow:**
 1. Frontend requests a presigned S3 URL from `POST /api/upload-url`
 2. Browser uploads the file directly to S3 (progress tracked in the UI)
 3. Frontend calls `POST /api/save-video` to store metadata — video is saved with `status: 'processing'`
 4. S3 ObjectCreated event triggers the Lambda HLS transcoder
-5. Lambda transcodes the video into 360p and 720p HLS streams plus an 8-second MP4 preview
+5. Lambda transcodes the video into 360p and 720p HLS streams, an 8-second MP4 preview clip, and a JPEG thumbnail (single frame extracted at the 1-second mark)
 6. Lambda calls `POST /api/internal/hls-complete` (authenticated with a shared secret)
-7. Backend updates the video: `status → 'ready'`, stores `hlsUrl` and `previewUrl`, busts Redis cache
-8. The video appears in the feed
+7. Backend updates the video: `status → 'ready'`, stores `hlsUrl`, `previewUrl`, and `thumbnailUrl`, busts Redis cache
+8. The video appears in the feed with its thumbnail visible immediately
 
 **During processing:**
 - The uploader sees a "processing" banner in the feed (persists across page refreshes)
@@ -238,7 +238,7 @@ Videos can be deleted from three places: the video player, the user profile tabl
 **What gets deleted:**
 - The video document in MongoDB (including all like/dislike data)
 - The raw MP4 from S3 (`Videos/raw/<uuid>/`)
-- All HLS files from S3 (`Videos/hls/<uuid>/` — master playlist, segment playlists, `.ts` chunks, and `preview.mp4`)
+- All HLS files from S3 (`Videos/hls/<uuid>/` — master playlist, segment playlists, `.ts` chunks, `preview.mp4`, and `thumbnail.jpg`)
 
 **Authorization:** The backend verifies that the requesting user's ID matches the video's `user_id` before deleting anything. The frontend hides the delete button for non-owners, but the backend enforces it regardless.
 
@@ -266,10 +266,11 @@ Upload → S3 (raw MP4)
             ↓
     S3 (HLS files: master.m3u8, 360p.m3u8, 720p.m3u8, *.ts segments)
     S3 (preview.mp4 — 8-second clip at 480p)
+    S3 (thumbnail.jpg — single frame at 1s, 854×480)
             ↓
-    Webhook → Backend → DB (hlsUrl, previewUrl, status: ready)
+    Webhook → Backend → DB (hlsUrl, previewUrl, thumbnailUrl, status: ready)
             ↓
-    CloudFront serves all HLS + preview files
+    CloudFront serves all HLS, preview, and thumbnail files
 ```
 
 ---
@@ -361,27 +362,38 @@ Angular's router is configured to lazy-load every route. The JavaScript bundle f
 
 ---
 
-### Hover-Based Lazy Loading for Video Previews
+### Thumbnail Images and Hover-Based Preview Loading
 
-**Problem:** Rendering 12+ video cards on the home page, each with a `<video>` element pointing to a CloudFront URL, caused the browser to fire a network request for every card immediately on page load — even for videos far below the fold.
+**Problem:** Rendering 12+ video cards on the home page with eager `<video>` elements fired a network request for every card immediately on load — even for videos far below the fold. Cards also showed a blank black area before the preview loaded, giving a poor first impression.
 
-**Solution:** Video card previews use `preload="none"` and a lazy source injection pattern. The `<source>` element that points to the video URL is only added to the DOM when the user hovers over a card:
+**Solution — Thumbnail:** Lambda extracts a single JPEG frame at the 1-second mark (`thumbnail.jpg`, 854×480, quality 2) during transcoding. The thumbnail is stored in S3 and served via CloudFront. Each video card displays this image as a static cover immediately on load — no video request needed.
+
+**Solution — Hover preview:** The preview video only starts loading after the user hovers over a card for 2 seconds. A `<source>` element pointing to `previewUrl` is injected into the DOM after that delay, replacing the thumbnail with the playing clip:
 
 ```typescript
-previewLoaded = false;
-
 onThumbHover(): void {
-  this.previewLoaded = true;  // triggers *ngIf on the <source> element
+  this.previewDelayTimer = setTimeout(() => {
+    this.isPreviewPlaying = true;  // shows video, fades out thumbnail
+  }, 2000);
+}
+
+onThumbLeave(): void {
+  clearTimeout(this.previewDelayTimer);
+  this.isPreviewPlaying = false;   // thumbnail fades back in
 }
 ```
 
 ```html
+<!-- Thumbnail visible until hover preview kicks in -->
+<img class="thumb-cover" [class.thumb-cover--hidden]="isPreviewPlaying" [src]="video.thumbnailUrl" />
+
+<!-- Preview video — source only injected on hover -->
 <video preload="none">
-  <source *ngIf="previewLoaded" [src]="safeUrl" type="video/mp4" />
+  <source *ngIf="isPreviewPlaying" [src]="safeUrl" type="video/mp4" />
 </video>
 ```
 
-Zero video network requests on page load. Previews only load when the user actively hovers over a card.
+Zero video network requests on page load. Cards look fully populated from the first paint. Previews only load when the user intentionally hovers.
 
 ---
 

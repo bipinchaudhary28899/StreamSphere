@@ -197,6 +197,7 @@
   }
   .content-section { margin-top: -80px; }
   .content-section.no-hero { padding-top: 76px; } /* 60px navbar + 16px */
+  .processing-banner { top: 60px; } /* navbar is 60px at this breakpoint */
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -263,13 +264,15 @@
   .empty-state {
     padding: 24px 16px;
   }
+
+  .processing-banner { top: 56px; } /* navbar is 56px at ≤600px */
 }
 
 // ── Processing banner ─────────────────────────────────────────────────────────
 .processing-banner {
   position: sticky;
-  top: 0;
-  z-index: 50;
+  top: 64px;   /* sits just below the fixed navbar (64px tall on desktop) */
+  z-index: 499; /* below navbar (500) but above all page content */
   background: linear-gradient(90deg, #f39c12, #e67e22);
   color: #fff;
   padding: 0;
