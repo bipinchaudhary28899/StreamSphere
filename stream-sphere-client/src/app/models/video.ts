@@ -5,7 +5,7 @@ export interface Video {
     S3_url: string;
     hlsUrl?: string | null;
     previewUrl?: string | null;
-    thumbnail_url: string;
+    thumbnailUrl?: string | null;
     user_id: string;
     category?: string;
     likes: number;

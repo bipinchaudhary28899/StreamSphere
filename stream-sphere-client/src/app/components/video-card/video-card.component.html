@@ -9,9 +9,19 @@
 
             <!-- Thumbnail + overlays -->
             <div class="thumb-wrap" (mouseenter)="onThumbHover($event)" (mouseleave)="onThumbLeave($event)">
+              <!-- Preview video (lazy-loaded on first hover after 2 s) -->
               <video class="video-preview" preload="none" muted playsinline loop controlsList="nodownload">
                 <source *ngIf="previewLoaded" [src]="safeUrl" type="video/mp4" />
               </video>
+
+              <!-- Thumbnail cover — shown until preview plays, fades out after 2 s hover -->
+              <img
+                *ngIf="video?.thumbnailUrl"
+                class="thumb-cover"
+                [class.thumb-cover--hidden]="isPreviewPlaying"
+                [src]="video.thumbnailUrl"
+                [alt]="video?.title" />
+
               <!-- Hover overlay with play hint -->
               <div class="thumb-overlay">
                 <mat-icon class="play-hint">play_circle</mat-icon>
@@ -21,8 +31,8 @@
               <ng-template #noCat1>
                 <span class="cat-badge cat-badge--empty">Uncategorised</span>
               </ng-template>
-              <!-- Processing badge — shown while HLS transcoding is in progress -->
-              <span class="processing-badge" *ngIf="video?.status === 'processing'">
+              <!-- Processing badge — owner only -->
+              <span class="processing-badge" *ngIf="video?.status === 'processing' && isOwner">
                 <mat-icon>hourglass_empty</mat-icon> Processing
               </span>
               <!-- Flip trigger — top-right of thumbnail -->
@@ -104,9 +114,19 @@
   <mat-card (click)="onVideoClick()" class="video-card" [ngClass]="{ faded: faded }">
     <div class="video-card-inner">
       <div class="thumb-wrap" (mouseenter)="onThumbHover($event)" (mouseleave)="onThumbLeave($event)">
+        <!-- Preview video -->
         <video class="video-preview" preload="none" muted playsinline loop controlsList="nodownload">
           <source *ngIf="previewLoaded" [src]="safeUrl" type="video/mp4" />
         </video>
+
+        <!-- Thumbnail cover -->
+        <img
+          *ngIf="video?.thumbnailUrl"
+          class="thumb-cover"
+          [class.thumb-cover--hidden]="isPreviewPlaying"
+          [src]="video.thumbnailUrl"
+          [alt]="video?.title" />
+
         <div class="thumb-overlay">
           <mat-icon class="play-hint">play_circle</mat-icon>
         </div>
@@ -114,7 +134,8 @@
         <ng-template #noCat3>
           <span class="cat-badge cat-badge--empty">Uncategorised</span>
         </ng-template>
-        <span class="processing-badge" *ngIf="video?.status === 'processing'">
+        <!-- Processing badge — owner only -->
+        <span class="processing-badge" *ngIf="video?.status === 'processing' && isOwner">
           <mat-icon>hourglass_empty</mat-icon> Processing
         </span>
       </div>

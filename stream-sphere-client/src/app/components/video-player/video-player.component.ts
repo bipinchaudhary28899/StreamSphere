@@ -260,6 +260,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     }
   }
 
+
   // ── Video element event handlers ──────────────────────────────────────────
 
   onVideoPlay(): void {

@@ -23,7 +23,9 @@ export class VideoCardComponent implements OnInit {
   currentUserId: string | null = null;
   isOwner: boolean = false;
   flip = false;
-  previewLoaded = false; // true once the user hovers — lazy-loads the video src
+  previewLoaded    = false;  // true once the 2s delay fires — lazy-loads the video src
+  isPreviewPlaying = false;  // true while the preview video is active (thumbnail fades out)
+  private previewDelayTimer: any = null;
 
   constructor(
     private sanitizer: DomSanitizer,
@@ -74,17 +76,25 @@ export class VideoCardComponent implements OnInit {
     const thumbWrap = event.currentTarget as HTMLElement;
     this.mediaManager.cardHoverStart();   // pause the hero carousel
 
-    if (!this.previewLoaded) {
-      // First hover — inject the <source> then wait one tick for Angular
-      // to render it before calling play().
-      this.previewLoaded = true;
-      setTimeout(() => this.playPreview(thumbWrap), 50);
-    } else {
-      this.playPreview(thumbWrap);
-    }
+    // Wait 2 s before starting the preview so brief mouseovers don't trigger it
+    this.previewDelayTimer = setTimeout(() => {
+      this.isPreviewPlaying = true;       // fades out the thumbnail cover
+      if (!this.previewLoaded) {
+        // First time — inject <source>, let Angular render it, then play
+        this.previewLoaded = true;
+        setTimeout(() => this.playPreview(thumbWrap), 50);
+      } else {
+        this.playPreview(thumbWrap);
+      }
+    }, 2000);
   }
 
   onThumbLeave(event: MouseEvent): void {
+    // Cancel the pending delay if the user left before 2 s
+    clearTimeout(this.previewDelayTimer);
+    this.previewDelayTimer = null;
+    this.isPreviewPlaying = false;        // thumbnail cover fades back in
+
     const thumbWrap = event.currentTarget as HTMLElement;
     const video = thumbWrap.querySelector<HTMLVideoElement>('video.video-preview');
     if (video) {

@@ -167,7 +167,7 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
           S3_url: backendVideo.S3_url,
           hlsUrl: backendVideo.hlsUrl || null,
           previewUrl: backendVideo.previewUrl || null,
-          thumbnail_url: backendVideo.thumbnail_url || '',
+          thumbnailUrl: backendVideo.thumbnailUrl || null,
           user_id: backendVideo.user_id || '',
           category: backendVideo.category,
           likes: backendVideo.likes || 0,

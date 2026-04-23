@@ -4,12 +4,13 @@
 // The Lambda sends:
 //   POST /api/internal/hls-complete
 //   x-hls-secret: <HLS_WEBHOOK_SECRET>
-//   { "rawS3Key":    "Videos/raw/<uuid>/filename.mp4",
+//   { "rawS3Key":     "Videos/raw/<uuid>/filename.mp4",
 //     "masterHlsUrl": "https://cdn.example.com/Videos/hls/<uuid>/master.m3u8",
-//     "previewUrl":   "https://cdn.example.com/Videos/hls/<uuid>/preview.mp4" }
+//     "previewUrl":   "https://cdn.example.com/Videos/hls/<uuid>/preview.mp4",
+//     "thumbnailUrl": "https://cdn.example.com/Videos/hls/<uuid>/thumbnail.jpg" }
 //
 // We verify the shared secret, find the Video by its S3_url, set hlsUrl,
-// previewUrl, and flip status to 'ready', then bust the relevant Redis caches.
+// previewUrl, thumbnailUrl, and flip status to 'ready', then bust caches.
 
 import { Request, Response } from 'express';
 import { Video } from '../models/video';
@@ -23,10 +24,11 @@ export async function hlsWebhookController(req: Request, res: Response): Promise
     return;
   }
 
-  const { rawS3Key, masterHlsUrl, previewUrl } = req.body as {
+  const { rawS3Key, masterHlsUrl, previewUrl, thumbnailUrl } = req.body as {
     rawS3Key?: string;
     masterHlsUrl?: string;
     previewUrl?: string;
+    thumbnailUrl?: string;
   };
 
   if (!rawS3Key || !masterHlsUrl) {
@@ -38,17 +40,25 @@ export async function hlsWebhookController(req: Request, res: Response): Promise
   const cloudfrontBase = process.env.CLOUDFRONT_URL!.replace(/\/$/, '');
   const rawCloudfrontUrl = `${cloudfrontBase}/${rawS3Key}`;
 
-  const video = await Video.findOne({ S3_url: rawCloudfrontUrl });
+  // ── Update via $set — bypasses Mongoose change-tracking so all four fields
+  //    are always written to MongoDB regardless of their previous value. ──────
+  const video = await Video.findOneAndUpdate(
+    { S3_url: rawCloudfrontUrl },
+    {
+      $set: {
+        hlsUrl:       masterHlsUrl,
+        previewUrl:   previewUrl   ?? null,
+        thumbnailUrl: thumbnailUrl ?? null,
+        status:       'ready',
+      },
+    },
+    { new: true },   // return the updated document
+  );
+
   if (!video) {
     res.status(404).json({ message: `No video found for S3_url: ${rawCloudfrontUrl}` });
     return;
   }
-
-  // ── Update the video document ─────────────────────────────────────────────
-  video.hlsUrl    = masterHlsUrl;
-  video.previewUrl = previewUrl ?? null;
-  video.status    = 'ready';
-  await video.save();
 
   // ── Bust Redis caches so the video appears in the feed immediately ─────────
   await Promise.all([
