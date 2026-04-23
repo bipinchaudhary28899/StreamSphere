@@ -122,6 +122,21 @@ function transcodeRendition(inputPath, outputDir, rendition) {
   });
 }
 
+// ── Helper: generate thumbnail JPEG (single frame at 1 s) ────────────────────
+// 854×480 with aspect-ratio letterboxing, JPEG quality 2 (high; scale 1–31).
+function generateThumbnail(inputPath, outputPath) {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .seekInput(1)
+      .videoFilter('scale=854:480:force_original_aspect_ratio=decrease,pad=854:480:(ow-iw)/2:(oh-ih)/2')
+      .outputOptions(['-vframes 1', '-q:v 2'])
+      .output(outputPath)
+      .on('end', resolve)
+      .on('error', (err) => reject(new Error(`Thumbnail generation failed: ${err.message}`)))
+      .run();
+  });
+}
+
 // ── Helper: generate 8-second MP4 preview (for carousel / hover) ──────────────
 // 854×480, scale preserves aspect ratio with letterbox if needed.
 // faststart moves the moov atom to the front so the browser can play
@@ -188,7 +203,13 @@ exports.handler = async (event) => {
       console.log(`[HLS] ${rendition.name} done.`);
     }
 
-    // 3. Generate 8-second preview MP4 (used by carousel and hover previews)
+    // 3a. Generate thumbnail JPEG (shown on video cards before hover)
+    console.log('[HLS] Generating thumbnail.jpg…');
+    const thumbnailLocalPath = path.join(tmpDir, 'thumbnail.jpg');
+    await generateThumbnail(rawLocalPath, thumbnailLocalPath);
+    console.log('[HLS] thumbnail.jpg done.');
+
+    // 3b. Generate 8-second preview MP4 (used by carousel and hover previews)
     console.log('[HLS] Generating preview.mp4…');
     const previewLocalPath = path.join(tmpDir, 'preview.mp4');
     await generatePreview(rawLocalPath, previewLocalPath);
@@ -216,14 +237,16 @@ exports.handler = async (event) => {
     console.log('[HLS] Upload complete.');
 
     // 6. Notify backend
-    const masterHlsUrl = `${CLOUDFRONT_URL}/${hlsPrefix}master.m3u8`;
-    const previewUrl   = `${CLOUDFRONT_URL}/${hlsPrefix}preview.mp4`;
+    const masterHlsUrl  = `${CLOUDFRONT_URL}/${hlsPrefix}master.m3u8`;
+    const previewUrl    = `${CLOUDFRONT_URL}/${hlsPrefix}preview.mp4`;
+    const thumbnailUrl  = `${CLOUDFRONT_URL}/${hlsPrefix}thumbnail.jpg`;
     console.log(`[HLS] Calling webhook — masterHlsUrl: ${masterHlsUrl}`);
     console.log(`[HLS]                 — previewUrl:   ${previewUrl}`);
+    console.log(`[HLS]                 — thumbnailUrl: ${thumbnailUrl}`);
 
     await axios.post(
       `${BACKEND_URL}/api/internal/hls-complete`,
-      { rawS3Key: rawKey, masterHlsUrl, previewUrl },
+      { rawS3Key: rawKey, masterHlsUrl, previewUrl, thumbnailUrl },
       {
         headers: {
           'Content-Type': 'application/json',

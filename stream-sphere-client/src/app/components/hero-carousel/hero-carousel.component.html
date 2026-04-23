@@ -16,8 +16,8 @@
       </video>
 
       <img
-        *ngIf="!currentVideo?.S3_url && currentVideo?.thumbnail_url"
-        [src]="currentVideo?.thumbnail_url"
+        *ngIf="!currentVideo?.S3_url && currentVideo?.thumbnailUrl"
+        [src]="currentVideo?.thumbnailUrl"
         [alt]="currentVideo?.title"
         class="hero-image">
     </div>

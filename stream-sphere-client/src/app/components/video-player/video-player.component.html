@@ -21,12 +21,15 @@
     <div class="vp-player-wrap" #playerContainer
          [class.vp-player-wrap--fs]="isFullscreen"
          (mousemove)="onPlayerMouseMove()"
-         (mouseleave)="onPlayerMouseLeave()">
+         (mouseleave)="onPlayerMouseLeave()"
+         (click)="onClickZone()">
 
-      <!-- Processing state -->
+      <!-- Processing state — owner sees spinner + personal message; others see "unavailable" -->
       <div *ngIf="video.status === 'processing'" class="vp-processing">
-        <div class="vp-spinner"></div>
-        <p>Video is being processed — please check back in a few minutes.</p>
+        <div class="vp-spinner" *ngIf="isOwner"></div>
+        <mat-icon *ngIf="!isOwner" style="font-size:48px;width:48px;height:48px;color:var(--text-muted)">videocam_off</mat-icon>
+        <p *ngIf="isOwner">Your video is being processed — it will be ready shortly.</p>
+        <p *ngIf="!isOwner">This video is not yet available.</p>
       </div>
 
       <!-- HLS player (status === 'ready') -->
@@ -45,8 +48,8 @@
           (ended)="onVideoEnded()">
         </video>
 
-        <!-- Transparent click zone — toggles controls visibility, excludes control bar -->
-        <div class="vp-click-zone" (click)="onClickZone()"></div>
+        <!-- Transparent overlay — no click handler here; click bubbles to vp-player-wrap -->
+        <div class="vp-click-zone"></div>
 
         <!-- ── Center play / pause button ────────────────────────────── -->
         <div class="vp-center-btn"
@@ -58,8 +61,9 @@
         <!-- ── Custom controls overlay ──────────────────────────────── -->
         <div class="vp-controls" [class.vp-controls--hidden]="!controlsVisible">
 
-          <!-- Seekbar -->
-          <div class="vp-seekbar-wrap">
+          <!-- Seekbar — stopPropagation on the wrap so dragging/tapping the bar
+               never also toggles controls visibility -->
+          <div class="vp-seekbar-wrap" (click)="$event.stopPropagation()">
             <input
               type="range"
               class="vp-seekbar"
@@ -68,27 +72,31 @@
               [value]="currentTime"
               step="0.1"
               [style.--pct]="seekPercent + '%'"
-              (input)="seek($event)"
-              (click)="$event.stopPropagation()">
+              (input)="seek($event)">
           </div>
 
-          <!-- Controls bar -->
-          <div class="vp-controls-bar" (click)="$event.stopPropagation()">
+          <!-- Controls bar — NO blanket stopPropagation; each interactive element
+               handles its own so empty space in the bar still bubbles to onClickZone() -->
+          <div class="vp-controls-bar">
 
             <!-- Left cluster -->
             <div class="vp-ctrl-left">
               <!-- Play / Pause -->
-              <button class="vp-ctrl-btn" (click)="togglePlay()" [attr.aria-label]="isPlaying ? 'Pause' : 'Play'">
+              <button class="vp-ctrl-btn"
+                      (click)="togglePlay(); $event.stopPropagation()"
+                      [attr.aria-label]="isPlaying ? 'Pause' : 'Play'">
                 <mat-icon>{{ isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
               </button>
 
               <!-- Mute / Unmute -->
-              <button class="vp-ctrl-btn" (click)="toggleMute()" [attr.aria-label]="isMuted ? 'Unmute' : 'Mute'">
+              <button class="vp-ctrl-btn"
+                      (click)="toggleMute(); $event.stopPropagation()"
+                      [attr.aria-label]="isMuted ? 'Unmute' : 'Mute'">
                 <mat-icon>{{ isMuted ? 'volume_off' : 'volume_up' }}</mat-icon>
               </button>
 
               <!-- Time display -->
-              <span class="vp-time">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span>
+              <span class="vp-time" (click)="$event.stopPropagation()">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span>
             </div>
 
             <!-- Right cluster -->
@@ -109,7 +117,7 @@
                     *ngFor="let lvl of hlsLevels"
                     class="vp-settings-item"
                     [class.active]="hlsCurrentLevel === lvl.index"
-                    (click)="setQuality(lvl.index); showSettingsMenu = false">
+                    (click)="setQuality(lvl.index); showSettingsMenu = false; $event.stopPropagation()">
                     <mat-icon class="vp-check">{{ hlsCurrentLevel === lvl.index ? 'check' : '' }}</mat-icon>
                     <span class="vp-settings-label">
                       {{ lvl.name }}
@@ -122,7 +130,7 @@
               </div>
 
               <!-- Fullscreen -->
-              <button class="vp-ctrl-btn" (click)="toggleFullscreen()" aria-label="Fullscreen">
+              <button class="vp-ctrl-btn" (click)="toggleFullscreen(); $event.stopPropagation()" aria-label="Fullscreen">
                 <mat-icon>{{ isFullscreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
               </button>
             </div>
@@ -163,7 +171,7 @@
           <mat-icon>visibility</mat-icon>
           {{ formatViews(video.views || 0) }} views
         </span>
-        <span class="vp-chip vp-chip--processing" *ngIf="video.status === 'processing'">
+        <span class="vp-chip vp-chip--processing" *ngIf="video.status === 'processing' && isOwner">
           <mat-icon>hourglass_empty</mat-icon>
           Processing…
         </span>
