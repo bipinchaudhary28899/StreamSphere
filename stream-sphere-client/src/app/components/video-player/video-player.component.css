@@ -87,6 +87,44 @@
   cursor: pointer;
 }
 
+/* ── Center play / pause button ─────────────────────────────────────────── */
+.vp-center-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.60);
+  border: 2px solid rgba(255, 255, 255, 0.80);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.3s ease, transform 0.3s ease, background 0.2s;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: all;
+}
+.vp-center-btn mat-icon {
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+  color: #fff;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.95));
+}
+.vp-center-btn:hover {
+  background: rgba(0, 0, 0, 0.80);
+  transform: translate(-50%, -50%) scale(1.10);
+}
+.vp-center-btn--hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.82);
+}
+
 /* ── Controls overlay ───────────────────────────────────────────────────── */
 .vp-controls {
   position: absolute;
@@ -95,8 +133,17 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  /* gradient fade — makes controls readable on any video */
-  background: linear-gradient(transparent 60%, rgba(0,0,0,0.78) 100%);
+  /*
+   * Gradient extends 140px up from the bottom so the seekbar always sits
+   * on a dark-enough surface even on bright/white video frames.
+   */
+  min-height: 140px;
+  background: linear-gradient(
+    rgba(0,0,0,0)    0%,
+    rgba(0,0,0,0.45) 40%,
+    rgba(0,0,0,0.82) 75%,
+    rgba(0,0,0,0.94) 100%
+  );
   z-index: 2;
   transition: opacity 0.3s ease;
   pointer-events: none; /* children opt-in below */
@@ -125,8 +172,9 @@
   background: linear-gradient(
     to right,
     var(--accent) var(--pct, 0%),
-    rgba(255,255,255,0.28) var(--pct, 0%)
+    rgba(255,255,255,0.55) var(--pct, 0%)   /* brighter unfilled track */
   );
+  box-shadow: 0 1px 4px rgba(0,0,0,0.6);   /* depth so it reads on light frames */
   transition: height 0.15s;
 }
 .vp-seekbar:hover { height: 6px; }
@@ -192,6 +240,8 @@
   width: 22px;
   height: 22px;
   color: #fff;
+  /* drop-shadow guarantees icon contrast on any video frame colour */
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.95));
 }
 
 /* ── Time display ───────────────────────────────────────────────────────── */
@@ -201,7 +251,7 @@
   color: #fff;
   white-space: nowrap;
   padding: 0 6px;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  text-shadow: 0 1px 4px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.7);
   font-family: 'Roboto Mono', monospace, sans-serif;
 }
 
@@ -428,9 +478,32 @@
 }
 .vp-processing p { margin: 0; font-size: 0.95rem; }
 
-/* ── Fullscreen: fill the screen ────────────────────────────────────────── */
-:host-context(:fullscreen) .vp-player { max-height: 100vh; height: 100vh; }
-:host-context(:-webkit-full-screen) .vp-player { max-height: 100vh; height: 100vh; }
+/* ── Fullscreen: fill the entire viewport ───────────────────────────────── */
+/*
+ * :host-context(:fullscreen) looks UP the tree — it never matches because the
+ * fullscreen element is INSIDE the component.  Instead we toggle a class via
+ * the isFullscreen flag that is already kept in sync by @HostListener.
+ */
+.vp-player-wrap--fs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #000;
+}
+
+.vp-player-wrap--fs .vp-player {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  object-fit: contain;   /* letterbox — never crops the video */
+}
+
+/* Controls overlay must also fill the fullscreen wrap */
+.vp-player-wrap--fs .vp-controls {
+  width: 100vw;
+}
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {

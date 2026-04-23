@@ -150,6 +150,8 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
         ];
         this.hlsCurrentLevel = -1;
         this.cdr.detectChanges();
+        // Auto-play when manifest is ready — user navigated here intentionally
+        videoEl.play().catch(() => {});
       });
 
       this.hls.on(Hls.Events.LEVEL_SWITCHED, (_evt, data) => {
@@ -160,6 +162,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
       // Safari native HLS
       videoEl.src = this.video.hlsUrl;
+      videoEl.play().catch(() => {});
     }
   }
 
@@ -192,6 +195,26 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     const v = this.videoRef?.nativeElement;
     if (!v) return;
     v.paused ? v.play() : v.pause();
+  }
+
+  /**
+   * Clicking the transparent video area (not on a control):
+   *  - If controls are hidden  → reveal them (auto-hide again if playing)
+   *  - If controls are visible → hide them immediately
+   */
+  onClickZone(): void {
+    clearTimeout(this.controlsTimer);
+    if (!this.controlsVisible) {
+      this.controlsVisible = true;
+      if (this.isPlaying) {
+        this.controlsTimer = setTimeout(() => {
+          this.controlsVisible = false;
+          this.cdr.detectChanges();
+        }, 3000);
+      }
+    } else {
+      this.controlsVisible = false;
+    }
   }
 
   toggleMute(): void {

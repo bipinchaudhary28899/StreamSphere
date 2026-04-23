@@ -19,6 +19,7 @@
 
     <!-- ── Player ──────────────────────────────────────────────────────── -->
     <div class="vp-player-wrap" #playerContainer
+         [class.vp-player-wrap--fs]="isFullscreen"
          (mousemove)="onPlayerMouseMove()"
          (mouseleave)="onPlayerMouseLeave()">
 
@@ -44,8 +45,15 @@
           (ended)="onVideoEnded()">
         </video>
 
-        <!-- Transparent click zone — play/pause on tap, excludes control bar -->
-        <div class="vp-click-zone" (click)="togglePlay()"></div>
+        <!-- Transparent click zone — toggles controls visibility, excludes control bar -->
+        <div class="vp-click-zone" (click)="onClickZone()"></div>
+
+        <!-- ── Center play / pause button ────────────────────────────── -->
+        <div class="vp-center-btn"
+             [class.vp-center-btn--hidden]="!controlsVisible"
+             (click)="togglePlay(); $event.stopPropagation()">
+          <mat-icon>{{ isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
+        </div>
 
         <!-- ── Custom controls overlay ──────────────────────────────── -->
         <div class="vp-controls" [class.vp-controls--hidden]="!controlsVisible">
