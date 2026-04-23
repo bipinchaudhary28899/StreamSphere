@@ -131,27 +131,17 @@ The home page feed supports category filtering, keyword search, and infinite scr
 
 ### Feature 5: Video Player with Adaptive Quality
 
-The video player uses HLS.js for adaptive streaming with a fully custom control bar — no browser native controls. Everything from play/pause to quality switching lives in a single unified overlay.
+The video player uses HLS.js to play videos delivered as HLS adaptive streams, with a manual quality selector overlay.
 
 **Playback:**
-- HLS.js loads the `master.m3u8` playlist and automatically selects the best quality based on real-time network conditions (ABR — Adaptive Bitrate)
-- Quality options: Auto, 360p, 720p (populated dynamically from the HLS manifest)
-- Auto mode shows the level currently playing in parentheses, e.g. `Auto (720p)`
+- HLS.js loads the `master.m3u8` playlist and automatically selects the best quality level based on network conditions (ABR — Adaptive Bitrate)
+- Quality options: Auto, 360p, 720p
+- The quality badge shows the actual level currently playing, even in Auto mode (e.g., "Auto (720p)")
 
-**Custom controls bar:**
-
-The control overlay auto-hides 3 seconds after playback starts and reappears on any mouse movement. It is organized into two clusters:
-
-| Left cluster | Right cluster |
-|---|---|
-| Play / Pause | ⚙ Settings (quality selector) |
-| Mute / Unmute | ⛶ Fullscreen |
-| Elapsed / Total time | |
-
-- **Seekbar:** A styled range input sits above the controls bar. The filled portion tracks current playback position using a CSS `--pct` custom property — no JavaScript required to draw the fill color.
-- **Click-to-play zone:** A transparent overlay covers the video frame (excluding the controls bar) so clicking anywhere on the video toggles play/pause.
-- **Settings (⚙) menu:** Opens a compact dropdown above the gear button listing all HLS quality levels. Selecting a level immediately switches quality; Auto re-enables ABR. The menu closes on any click outside the player (`@HostListener('document:click')`).
-- **Fullscreen:** Uses the Fullscreen API on the player container (not the whole page). State is tracked via `@HostListener('document:fullscreenchange')` so the icon updates correctly even when the user presses `Esc` to exit.
+**Quality selector:**
+- A floating overlay button shows the current quality label
+- Clicking it opens a menu of available levels
+- Selecting a level immediately switches quality; selecting Auto re-enables ABR
 
 **Video actions:**
 - Like / dislike with toggle behavior (clicking the active reaction removes it)
