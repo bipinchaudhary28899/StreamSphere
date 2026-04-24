@@ -56,6 +56,12 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   controlsVisible = true;
   isFullscreen = false;
   private controlsTimer: any = null;
+  // Set to true by onTouchZone() so the immediately-following synthesised
+  // click event (fired by mobile browsers after every touch) is ignored.
+  // Without this, the synthesised mousemove makes controls visible and the
+  // synthesised click sees them as visible and hides them again — net result:
+  // a single tap on mobile never shows the controls.
+  private _touchHandled = false;
 
   get seekPercent(): number {
     return this.duration > 0 ? (this.currentTime / this.duration) * 100 : 0;
@@ -199,11 +205,46 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Clicking the transparent video area (not on a control):
+   * Mobile touch handler — fires on touchstart, before the browser synthesises
+   * mousemove / click events.  Manages the controls toggle directly and sets
+   * _touchHandled so onClickZone() (which fires ~300ms later as a synthesised
+   * click) knows to skip the toggle and not undo what we just did.
+   *
+   * Touches on interactive controls (.vp-controls, .vp-center-btn) are ignored
+   * here so those elements' own click handlers remain in charge.
+   */
+  onTouchZone(event: TouchEvent): void {
+    const target = event.target as HTMLElement;
+    if (target.closest('.vp-controls, .vp-center-btn')) return;
+
+    this._touchHandled = true;
+    clearTimeout(this.controlsTimer);
+
+    if (!this.controlsVisible) {
+      this.controlsVisible = true;
+      if (this.isPlaying) {
+        this.controlsTimer = setTimeout(() => {
+          this.controlsVisible = false;
+          this.cdr.detectChanges();
+        }, 3000);
+      }
+    } else {
+      this.controlsVisible = false;
+    }
+    this.cdr.detectChanges();
+
+    // Synthesised click fires within ~300ms — clear flag after that window
+    setTimeout(() => { this._touchHandled = false; }, 400);
+  }
+
+  /**
+   * Desktop click handler for the transparent video area:
    *  - If controls are hidden  → reveal them (auto-hide again if playing)
    *  - If controls are visible → hide them immediately
+   * On mobile this is skipped because onTouchZone() already handled it.
    */
   onClickZone(): void {
+    if (this._touchHandled) return; // touch already toggled visibility
     clearTimeout(this.controlsTimer);
     if (!this.controlsVisible) {
       this.controlsVisible = true;
@@ -241,6 +282,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   }
 
   onPlayerMouseMove(): void {
+    if (this._touchHandled) return; // synthesised mousemove from a touch tap — ignore
     this.controlsVisible = true;
     clearTimeout(this.controlsTimer);
     if (this.isPlaying) {

@@ -1,6 +1,6 @@
 # StreamSphere — Video Streaming Platform
 
-A full-stack YouTube-style video platform built with Angular 17 and Node.js/Express. StreamSphere supports Google OAuth login, direct-to-S3 video uploads, HLS adaptive streaming, AI-powered auto-categorization, comments, likes, watch history, a Netflix-style hero carousel, and a layered performance architecture that keeps the feed fast at scale.
+A full-stack YouTube-style video platform built with Angular 17 and Node.js/Express. StreamSphere supports Google OAuth login, direct-to-S3 video uploads, HLS adaptive streaming, a fully serverless AI pipeline (Whisper transcription + GPT-4o-mini vision + synthesis + HuggingFace categorization), comments, likes, watch history, a Netflix-style hero carousel, and a layered performance architecture that keeps the feed fast at scale.
 
 ---
 
@@ -10,7 +10,7 @@ A full-stack YouTube-style video platform built with Angular 17 and Node.js/Expr
 - [Features](#-features)
   - [Google Login](#feature-1-google-login)
   - [Video Upload with HLS Transcoding](#feature-2-video-upload-with-hls-transcoding)
-  - [AI Auto-Categorization](#feature-3-ai-auto-categorization)
+  - [AI Pipeline — Transcription, Visual Analysis & Auto-Categorization](#feature-3-ai-pipeline--transcription-visual-analysis--auto-categorization)
   - [Video Feed with Search & Filters](#feature-4-video-feed-with-search--filters)
   - [Video Player with Adaptive Quality](#feature-5-video-player-with-adaptive-quality)
   - [Like / Dislike](#feature-6-like--dislike)
@@ -20,6 +20,7 @@ A full-stack YouTube-style video platform built with Angular 17 and Node.js/Expr
   - [User Profile & Video Management](#feature-10-user-profile--video-management)
   - [Video Deletion](#feature-11-video-deletion)
 - [⚡ Performance Architecture](#-performance-architecture)
+- [🛡️ Resilience & Fallbacks](#️-resilience--fallbacks)
 - [🔧 Technical Architecture](#-technical-architecture)
 - [Environment Variables](#-environment-variables)
 
@@ -45,10 +46,19 @@ npm start
 ### Lambda (HLS transcoder)
 ```bash
 cd stream-sphere-lambda
-npm install
+# Install production deps only — ffmpeg-static, ffprobe-static, and @aws-sdk/client-s3
+# are devDependencies (provided by the Lambda layer / runtime), so --omit=dev keeps
+# the zip small (~2.7 MB unzipped vs 148 MB if dev deps are included)
+rm -rf node_modules package-lock.json
+npm install --omit=dev
 zip -r function.zip handler.js node_modules
 # Upload to AWS Lambda via console or CLI
 ```
+
+> **Lambda layer required:** The FFmpeg binary must be available at `/opt/bin/ffmpeg`.
+> Use a pre-built layer (e.g. [github.com/nicktindall/lambda-ffmpeg-layer](https://github.com/nicktindall/lambda-ffmpeg-layer)) or build your own for `linux/x86_64`.
+>
+> **Runtime:** Node.js 20.x — required for native `fetch`, `FormData`, and `Blob` (used by the Whisper and OpenAI API calls). Memory: 2048 MB. Timeout: 12 min. Ephemeral storage: 2048 MB.
 
 ---
 
@@ -107,24 +117,40 @@ After transcoding, the Lambda function runs a multi-stage AI pipeline that enric
 
 **Pipeline stages (all in Lambda):**
 
-**Stage 1 — Deterministic decision:** `ffprobe` checks whether the video has an audio track. If yes, transcription is added to the steps. Visual description always runs.
+**Phase 1 — FFmpeg:** HLS renditions (360p, 720p), 8-second MP4 preview, JPEG thumbnail, and a 90-second mono MP3 audio clip are all produced in parallel.
 
-**Stage 2 — Parallel AI:**
-- *Whisper (OpenAI):* The first 90 seconds of audio (extracted as mono MP3 by FFmpeg) are sent to Whisper API. Transcripts with fewer than 20 words are discarded as music-only garble.
-- *GPT-4o-mini vision:* FFmpeg extracts keyframes using scene-change detection (`select=gt(scene,0.4)`) — meaningful cuts rather than arbitrary timestamps. Falls back to frames at 1s / 10s / 30s if scene detection yields nothing. Each frame is sent to GPT-4o-mini (`detail: low`, ~85 tokens/image) for a concise visual description.
+**Phase 2 — Deterministic metadata:** Audio detection runs via `ffmpeg -i` stderr parsing (no ffprobe needed — ffmpeg always writes stream info to stderr). If the output contains `"Audio:"`, transcription is added to the steps. Visual description always runs regardless.
+
+**Phase 3 — Parallel AI:**
+- *Whisper (OpenAI):* The 90-second mono MP3 is sent to the Whisper API. Transcripts with fewer than 20 words are discarded as music-only or near-silent audio.
+- *GPT-4o-mini vision:* FFmpeg extracts up to 5 keyframes using scene-change detection (`select=gt(scene,0.3)`) — meaningful cuts rather than arbitrary timestamps. Falls back to fixed timestamps (1s / 10s / 30s) if scene detection yields nothing. Each frame is sent to GPT-4o-mini (`detail: low`, ~85 tokens/image) for a concise visual description.
 
 Both steps run with `Promise.allSettled` — if one fails, the other still contributes.
 
-**Stage 3 — Synthesis:** GPT-4o-mini (text) merges title, user description, transcript, and visual summary into a single rich `aiSummary` paragraph (3–4 sentences). This is stored on the video and used as the classification input.
+**Phase 4 — Synthesis:** GPT-4o-mini (text) merges all available signals — video title, uploader description, Whisper transcript, and GPT-4o-mini visual summary — into a single rich `aiSummary` paragraph (3–4 sentences). This is stored on the video document and shown to viewers in the player page.
 
-**Stage 4 — Categorization:** `facebook/bart-large-mnli` zero-shot classification scores the `aiSummary` against 44 candidate categories. Using the full `aiSummary` instead of just the title produces significantly higher accuracy. Retries up to 3× on HTTP 429/503 with backoff.
+**Phase 5 — Categorization:** `facebook/bart-large-mnli` zero-shot classification scores the `aiSummary` against 44 candidate categories using the hypothesis template `"This video belongs to the {} genre or category."` — the genre/category framing gives the model sharper separation between content-type labels (Music, Gaming) and topic labels (Motivation, History). High-priority genre categories (Music, Gaming) are anchored at the top of the candidate list, taking advantage of bart-large-mnli's small positional preference when scores are close. Retries up to 3× on HTTP 429/503 with backoff.
 
-**Result:** Lambda sends `category` and `aiSummary` in the webhook payload. The backend writes both to MongoDB in the same `$set` that flips the video to `ready`.
+**Result:** Lambda sends `category` and `aiSummary` in the webhook payload. The backend writes both to MongoDB in the same `$set` that flips the video to `ready`. The `aiSummary` is displayed as a collapsible section in the video player page.
 
-**Categories supported:**
-Music, Gaming, Sports, Movies, Comedy, Web Series, Learning, Podcasts, News, Fitness, Vlogs, Travel, Tech, Food & Recipes, Motivation, Short Films, Art & Design, Fashion, Kids, History, DIY, Documentaries, Spirituality, Real Estate, Automotive, Science, Nature, Animals, Health & Wellness, Business & Finance, and more.
+**What goes into the summary (example — music video):**
+```
+Video title: UP!
+Uploader description: Official music video...
+Spoken content (transcript): [261 words of lyrics from Whisper]
+Visual content (from keyframes): music video with two individuals in lively dance...
+→ aiSummary: "The video for 'UP!' by Connor Price and Forrest Frank is an official
+   music video featuring energetic choreography and vibrant visuals. The content
+   blends hip-hop performance with motivational themes aimed at a young adult audience."
+→ category: Music
+```
 
-**Error resilience:** Every AI step is independently wrapped — a Whisper failure doesn't block vision, a vision failure doesn't block synthesis, and a synthesis failure falls back to concatenating the raw signals. The video always becomes `ready` regardless of AI failures; it just gets `category: 'General'` as a fallback.
+**Categories supported (44 total):**
+Music, Gaming, Sports, Movies, Comedy, Web Series, Learning, Podcasts, News, Fitness, Vlogs, Travel, Tech, Food & Recipes, Motivation, Short Films, Art & Design, Fashion, Kids, History, DIY, Documentaries, Spirituality, Real Estate, Automotive, Science, Nature, Animals, Health & Wellness, Business & Finance, Personal Development, Unboxing & Reviews, Live Streams, Events & Conferences, Memes & Challenges, Festivals, Interviews, Trailers & Teasers, Animation, Magic & Illusions, Comedy Skits, Parodies, Reaction Videos, ASMR.
+
+**Lambda bundle size:** Only `axios` and `fluent-ffmpeg` are production dependencies. `@aws-sdk/client-s3` is provided natively by the Lambda Node.js 20 runtime and never bundled. `ffmpeg-static` and `ffprobe-static` are dev-only (the Lambda layer provides the FFmpeg binary at `/opt/bin/ffmpeg`). Final zip: ~2.7 MB.
+
+**Error resilience:** Every AI phase is independently wrapped — a Whisper failure doesn't block vision, a vision failure doesn't block synthesis, and a synthesis failure falls back to concatenating the raw signals. The video always becomes `ready` regardless of AI failures; it just gets `category: 'General'` and `aiSummary: null` as fallbacks.
 
 ---
 
@@ -159,6 +185,7 @@ The video player uses HLS.js to play videos delivered as HLS adaptive streams, w
 - Delete button shown only to the video owner
 - View count incremented once per page load
 - Collapsible description section
+- Collapsible **AI Summary** section — shown below the description when an `aiSummary` exists. Styled with a subtle purple-blue gradient border and a ✨ AI Summary badge to distinguish it from the user-written description.
 
 **Processing state:**
 - If a video's `status` is still `'processing'`, the player shows a "transcoding in progress" message instead of a broken player
@@ -437,6 +464,191 @@ All video files (HLS segments, preview clips, and the original raw MP4s) are sto
 
 ---
 
+## 🛡️ Resilience & Fallbacks
+
+Every layer of StreamSphere is designed so that a failure in one component degrades gracefully rather than taking down the whole application. This section documents what happens when each subsystem fails, and what the fallback behaviour is.
+
+---
+
+### Quick-Reference Table
+
+| Component | What can fail | Fallback behaviour | App stays up? |
+|---|---|---|---|
+| Redis | Unreachable / crashed | All cache reads return `null` → every request falls through to MongoDB | ✅ Yes |
+| Redis | `REDIS_URL` not set | Caching silently disabled; every method is a no-op | ✅ Yes |
+| MongoDB | Startup failure | Server exits with a clear error (no MongoDB = no data, cannot operate) | ❌ Intentional crash |
+| MongoDB | Mid-runtime disconnect | Mongoose auto-reconnects; in-flight requests return 500 until reconnected | ⚠️ Degraded |
+| Lambda — Whisper | API error / key not set | `transcript = null`; synthesis continues with remaining signals | ✅ Yes |
+| Lambda — Vision (GPT-4o-mini) | API error / no frames | `visualSummary = null`; synthesis continues with title + transcript | ✅ Yes |
+| Lambda — Synthesis | API error | Falls back to concatenating title + description + visual summary | ✅ Yes |
+| Lambda — HuggingFace | API error / key not set | `category = 'General'`; retries 3× on 429/503 before giving up | ✅ Yes |
+| Lambda — scene detection | 0 keyframes found | Falls back to fixed-timestamp frames (1s / 10s / 30s) | ✅ Yes |
+| Lambda — audio extraction | FFmpeg error | `audioExtracted = false`; Whisper step is skipped | ✅ Yes |
+| Lambda — entire AI pipeline | All AI steps fail | Webhook still fires; video becomes `ready` with `category: 'General'`, `aiSummary: null` | ✅ Yes |
+| Lambda — webhook never fires | Lambda crashes mid-run | Video stays at `status: 'processing'` permanently | ⚠️ Video stuck |
+| HLS player | Browser doesn't support HLS.js | Falls back to native HLS (Safari's built-in MSE) | ✅ Yes |
+| HLS player | Video still processing | Shows "processing" state instead of a broken player | ✅ Yes |
+| HLS player | Network / load error | Error state with retry button | ✅ Yes |
+| Rate limiter | Request limit hit | Returns structured JSON `{ error: "..." }` with correct HTTP status | ✅ Yes |
+| JWT | Invalid / missing token | Returns `401 Unauthorized`; protected routes reject cleanly | ✅ Yes |
+| View deduplication | Redis down | Dedup key unreadable → view may be counted more than once per session | ⚠️ Count inflated |
+| CORS | Unknown origin | Request rejected at the CORS middleware before reaching any route | ✅ Yes |
+
+---
+
+### 1. Redis — Graceful Cache Degradation
+
+Redis is a performance layer, not a critical path. Every single Redis method (`get`, `set`, `del`, `incr`, `delPattern`) is wrapped in a `try/catch` that swallows the error, logs it, and returns `null` or a no-op.
+
+```
+Redis unavailable
+  → redisService.get() returns null
+  → cache miss path executes
+  → MongoDB query runs instead
+  → response is slower (no cache hit) but 100% correct
+```
+
+**Connection settings that keep it safe:**
+- `connectTimeout: 4000ms` — doesn't hang the startup sequence
+- `commandTimeout: 3000ms` — a slow Redis command fails fast rather than blocking the request
+- `maxRetriesPerRequest: 1` — single retry, then give up
+- `retryStrategy` — exponential backoff up to 10s, abandons after 10 attempts (no infinite retry loop)
+
+If `REDIS_URL` is not set at all (local dev without Redis), the client is never created and every method returns immediately. The app works without Redis.
+
+---
+
+### 2. MongoDB — The Only Hard Dependency
+
+MongoDB is the only subsystem that can take the application down intentionally. If `mongoose.connect()` fails at startup, the process exits immediately with a clear error message. Trying to serve requests without a database would produce silent failures that are much harder to debug than a clean crash.
+
+```
+MongoDB connection fails at startup → process.exit(1)
+  → deployment platform restarts the container
+  → operator is alerted by crash logs
+```
+
+After startup, if MongoDB disconnects mid-runtime, Mongoose's built-in reconnect logic attempts to restore the connection. In-flight requests during the disconnect window will receive `500` errors, but the process stays alive and resumes serving once the connection is restored.
+
+---
+
+### 3. Lambda AI Pipeline — Every Phase is Independent
+
+The AI pipeline is designed so that any single failure never prevents the video from becoming ready. Each phase is individually try/caught, and `Promise.allSettled` (not `Promise.all`) is used for the parallel Whisper + vision step so one rejection never cancels the other.
+
+```
+Phase 4a — Whisper fails
+  → transcript = null
+  → Phase 4b (vision) continues normally
+  → Phase 5 (synthesis) uses: title + description + visual summary
+  → Phase 6 (categorization) runs on the partial aiSummary
+
+Phase 4b — Vision fails (0 frames / OpenAI error)
+  → Scene detection falls back to fixed timestamps (1s, 10s, 30s)
+  → If that also fails → visualSummary = null
+  → Phase 5 (synthesis) uses: title + description + transcript
+
+Phase 5 — Synthesis fails (OpenAI error)
+  → aiSummary = title + " " + description + " " + visualSummary
+    (raw concatenation — not beautiful, but better than nothing)
+
+Phase 6 — HuggingFace fails
+  → Retries up to 3× with linear backoff (1s → 2s → 3s) on HTTP 429/503
+  → If all retries fail → category = 'General'
+
+All AI phases fail
+  → webhook fires with category = 'General', aiSummary = null
+  → video.status flips to 'ready'
+  → video is visible in the feed immediately
+  → AI Summary section simply doesn't appear in the player (hidden by *ngIf)
+```
+
+**Missing API keys** are also handled: if `OPENAI_API_KEY` is absent, all three OpenAI calls (Whisper, vision, synthesis) are skipped with a warning log and return `null`. If `HUGGING_FACE_API_KEY` is absent, categorization returns `'General'` immediately.
+
+---
+
+### 4. Audio Detection — Fails Open
+
+Audio detection uses `ffmpeg -i` stderr parsing instead of a separate `ffprobe` call. If `spawnSync` itself fails (binary error, timeout), the function returns `true` — it **assumes audio is present** rather than assuming silence. This means Whisper is called unnecessarily on a truly silent file, but it's never accidentally skipped on a file that has audio.
+
+---
+
+### 5. HLS Video Player — Three Layers of Fallback
+
+```
+Browser doesn't support HLS.js (older Android, niche browsers)
+  → Checks canPlayType('application/vnd.apple.mpegurl')
+  → If supported (Safari), uses native HLS via videoEl.src
+  → If neither works, player is blank (no crash)
+
+Video still transcoding (status = 'processing')
+  → *ngIf renders the processing state div, not the <video> element
+  → Uploader sees a spinner + message; others see "not yet available"
+  → No broken player, no 404 on missing HLS segments
+
+API call to load video fails
+  → Error state renders with a "Try Again" button
+  → retryLoad() re-fetches from the same video ID
+```
+
+HLS.js itself handles network interruptions during playback — it buffers ahead and retries failed segment requests automatically.
+
+---
+
+### 6. Rate Limiting — Structured Rejection
+
+All four rate limiter tiers (`authLimiter`, `uploadLimiter`, `writeLimiter`, `globalLimiter`) use a shared JSON error formatter so clients always receive a machine-readable response:
+
+```json
+{ "error": "Too many login attempts — please wait 15 minutes and try again." }
+```
+
+No HTML error pages leak through to API consumers. The global backstop (300 req/15min) catches any route not covered by a specific limiter.
+
+> **Note:** The default `MemoryStore` does not share state across multiple process instances. For a multi-instance deployment, swap it for [rate-limit-redis](https://github.com/wyattjoh/rate-limit-redis).
+
+---
+
+### 7. Webhook Authentication — Internal Endpoint Protection
+
+The Lambda → backend webhook (`POST /api/internal/hls-complete`) is not protected by JWT — it's called by Lambda, not a browser user. Instead it uses a shared secret (`x-hls-secret` header). If the secret is missing or wrong, the controller returns `401` immediately before touching the database.
+
+```
+Lambda calls webhook with wrong / missing secret
+  → 401 Unauthorized
+  → Video stays at 'processing'
+  → Operator should check Lambda env vars (HLS_WEBHOOK_SECRET must match backend)
+```
+
+---
+
+### 8. View Count Deduplication — Acceptable Degradation
+
+View deduplication uses a Redis key (`ss:view:<videoId>:<userId>`) with a 24-hour TTL to prevent a user from incrementing the counter on repeated page loads. If Redis is unavailable, the dedup key can't be read, so the view is always counted.
+
+```
+Redis down
+  → dedup key unreadable (returns null)
+  → every page load increments the counter
+  → view count may be inflated until Redis recovers
+  → not a crash, not a data loss event — just a metric inaccuracy
+```
+
+This is an accepted trade-off. View counts are a soft metric, not billing data.
+
+---
+
+### Known Gaps (No Fallback Today)
+
+| Gap | Risk | Suggested fix |
+|---|---|---|
+| Lambda webhook never fires (Lambda crash mid-run) | Video stuck at `'processing'` permanently | Add a scheduled cleanup job: find videos with `status: 'processing'` older than 15 min and re-trigger or mark as `'failed'` |
+| JWT tokens never expire | A stolen token is valid forever | Add `expiresIn: '7d'` to `jwt.sign()` and implement refresh tokens or re-login on expiry |
+| Multi-instance rate limiting | Rate limits are per-process, not per-cluster | Replace `MemoryStore` with a Redis store (`rate-limit-redis`) |
+| S3 presigned URL expiry | If the user's upload takes >1 hour the PUT returns a 403 from S3 | The frontend shows a generic error; consider a shorter TTL with a progress-aware retry |
+
+---
+
 ## 🔧 Technical Architecture
 
 ### Stack
@@ -451,7 +663,10 @@ All video files (HLS segments, preview clips, and the original raw MP4s) are sto
 | Video storage | AWS S3 |
 | CDN | Amazon CloudFront |
 | HLS transcoding | AWS Lambda + FFmpeg |
-| AI categorization | Hugging Face (facebook/bart-large-mnli) |
+| AI transcription | OpenAI Whisper API |
+| AI vision | GPT-4o-mini (scene keyframes, `detail: low`) |
+| AI synthesis | GPT-4o-mini (text — merges all signals into `aiSummary`) |
+| AI categorization | HuggingFace `facebook/bart-large-mnli` zero-shot classification |
 | Deployment | Vercel (backend + frontend), AWS Lambda |
 
 ### Key Design Patterns

@@ -12,7 +12,7 @@ import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { UploadStatusService } from '../../services/upload-status.service';
 
-type UploadPhase = 'idle' | 'uploading' | 'processing' | 'categorizing' | 'success';
+type UploadPhase = 'idle' | 'uploading' | 'saving' | 'success';
 
 @Component({
   selector: 'app-upload-video',
@@ -32,7 +32,6 @@ export class UploadVideoComponent {
   uploadSuccess: boolean = false;
   errorMessage: string = '';
   uploadPhase: UploadPhase = 'idle';
-  private categorizingTimer: any = null;
 
   // dialogRef is null when the component is opened as a full page (via router)
   constructor(
@@ -128,18 +127,12 @@ export class UploadVideoComponent {
             }
 
             if (event.type === HttpEventType.Response) {
-              // S3 upload complete — switch to "processing" phase while backend saves
-              this.uploadPhase    = 'processing';
+              // S3 upload complete — switch to "saving" phase while backend saves metadata
+              this.uploadPhase    = 'saving';
               this.uploadProgress = 100;
 
-              // After ~1.2 s the backend is likely running category detection — reflect that
-              this.categorizingTimer = setTimeout(() => {
-                if (this.uploadPhase === 'processing') {
-                  this.uploadPhase = 'categorizing';
-                }
-              }, 1200);
-
-              // Step 3: Save metadata + trigger category detection on backend
+              // Step 3: Save metadata to backend (Lambda transcoding + AI start automatically
+              // via S3 event — the backend just stores title/description/status:'processing')
               const user = localStorage.getItem('user')
                 ? JSON.parse(localStorage.getItem('user')!)
                 : null;
@@ -155,7 +148,6 @@ export class UploadVideoComponent {
 
               this.uploadService.saveVideoMetadata(metadata).subscribe({
                 next: (savedVideo: any) => {
-                  clearTimeout(this.categorizingTimer);
                   // Register video for processing status tracking
                   if (savedVideo?.video?._id) {
                     this.uploadStatus.track(savedVideo.video._id, title);
@@ -176,15 +168,12 @@ export class UploadVideoComponent {
                   }, 1800);
                 },
                 error: (err) => {
-                  clearTimeout(this.categorizingTimer);
                   console.error('[upload] Error saving metadata:', err);
                   this.isUploading  = false;
                   this.uploadPhase  = 'idle';
 
                   if (err.error?.error?.includes('duration exceeds')) {
                     this.errorMessage = err.error.error;
-                  } else if (err.error?.error?.includes('Category prediction failed')) {
-                    this.errorMessage = 'Could not categorize video. Please try again.';
                   } else if (err.status === 503) {
                     this.errorMessage = 'Service temporarily unavailable. Please try again later.';
                   } else {
