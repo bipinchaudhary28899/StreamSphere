@@ -39,34 +39,26 @@ const axios  = require('axios');
 const fs     = require('fs');
 const path   = require('path');
 const os     = require('os');
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
 
 // ── FFmpeg binary setup ───────────────────────────────────────────────────────
 // Copy binaries from the read-only Lambda layer (/opt/bin/) to /tmp so we can
 // chmod +x them. /tmp is the only writable directory in Lambda.
 
-const BINARIES = [
-  { layer: '/opt/bin/ffmpeg',  tmp: '/tmp/ffmpeg',  setter: (p) => ffmpeg.setFfmpegPath(p)  },
-  { layer: '/opt/bin/ffprobe', tmp: '/tmp/ffprobe', setter: (p) => ffmpeg.setFfprobePath(p) },
-];
-
-for (const { layer, tmp, setter } of BINARIES) {
-  if (fs.existsSync(layer) && !fs.existsSync(tmp)) {
-    fs.copyFileSync(layer, tmp);
-    execSync(`chmod +x ${tmp}`);
-    console.log(`[INIT] Copied ${path.basename(layer)} from layer to /tmp`);
-  }
-  if (fs.existsSync(tmp)) setter(tmp);
+// ── ffmpeg ────────────────────────────────────────────────────────────────────
+// The Lambda layer provides /opt/bin/ffmpeg. Copy to /tmp so we can chmod +x.
+// ffmpeg-static is devDependency only (local dev) — not bundled in the zip.
+const layerFfmpeg = '/opt/bin/ffmpeg';
+const tmpFfmpeg   = '/tmp/ffmpeg';
+if (fs.existsSync(layerFfmpeg) && !fs.existsSync(tmpFfmpeg)) {
+  fs.copyFileSync(layerFfmpeg, tmpFfmpeg);
+  execSync(`chmod +x ${tmpFfmpeg}`);
+  console.log('[INIT] Copied ffmpeg from layer to /tmp');
 }
-
-// Fallback: use ffmpeg-static if the layer binary is absent (local dev)
-if (!fs.existsSync('/tmp/ffmpeg')) {
-  const staticPath = require('ffmpeg-static');
-  ffmpeg.setFfmpegPath(staticPath);
-  console.log(`[INIT] Using ffmpeg-static: ${staticPath}`);
-}
-
-console.log(`[INIT] ffmpeg  : ${ffmpeg.getFfmpegPath?.() ?? 'unknown'}`);
+if (!fs.existsSync(tmpFfmpeg)) throw new Error('ffmpeg binary not found — ensure the Lambda layer is attached');
+const ffmpegBin = tmpFfmpeg;
+ffmpeg.setFfmpegPath(ffmpegBin);
+console.log(`[INIT] ffmpeg: ${ffmpegBin}`);
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const s3 = new S3Client({ region: process.env.AWS_REGION || 'ap-south-1' });
@@ -79,17 +71,53 @@ const HF_API_KEY         = process.env.HUGGING_FACE_API_KEY;
 
 // ── HuggingFace categories ────────────────────────────────────────────────────
 // Identical list to what the backend used — kept here so Node.js never needs HF.
+// ORDER MATTERS: bart-large-mnli has a small positional bias toward earlier
+// labels when scores are very close — so anchor the highest-priority genres first.
 const CATEGORIES = [
-  'Music', 'Gaming', 'Sports', 'Movies', 'Comedy', 'Web Series',
-  'Learning', 'Podcasts', 'News', 'Fitness', 'Vlogs', 'Travel',
-  'Tech', 'Food & Recipes', 'Motivation', 'Short Films', 'Art & Design',
-  'Fashion', 'Kids', 'History', 'DIY', 'Documentaries', 'Spirituality',
-  'Real Estate', 'Automotive', 'Science', 'Nature', 'Animals',
-  'Health & Wellness', 'Business & Finance', 'Personal Development',
-  'Unboxing & Reviews', 'Live Streams', 'Events & Conferences',
-  'Memes & Challenges', 'festivals', 'Interviews', 'Trailers & Teasers',
-  'Animation', 'Magic & Illusions', 'Comedy Skits', 'Parodies',
-  'Reaction Videos', 'ASMR',
+  'Music',            // ← anchored first: music videos often also score on Motivation/Fitness
+  'Gaming',           // ← anchored second: gaming content clear-cut
+  'Sports',
+  'Movies',
+  'Comedy',
+  'Web Series',
+  'Learning',
+  'Podcasts',
+  'News',
+  'Fitness',
+  'Vlogs',
+  'Travel',
+  'Tech',
+  'Food & Recipes',
+  'Motivation',
+  'Short Films',
+  'Art & Design',
+  'Fashion',
+  'Kids',
+  'History',
+  'DIY',
+  'Documentaries',
+  'Spirituality',
+  'Real Estate',
+  'Automotive',
+  'Science',
+  'Nature',
+  'Animals',
+  'Health & Wellness',
+  'Business & Finance',
+  'Personal Development',
+  'Unboxing & Reviews',
+  'Live Streams',
+  'Events & Conferences',
+  'Memes & Challenges',
+  'festivals',
+  'Interviews',
+  'Trailers & Teasers',
+  'Animation',
+  'Magic & Illusions',
+  'Comedy Skits',
+  'Parodies',
+  'Reaction Videos',
+  'ASMR',
 ];
 
 // ── Rendition definitions ─────────────────────────────────────────────────────
@@ -200,16 +228,17 @@ function buildMasterPlaylist(renditions) {
 // PHASE 2 — Metadata (no AI)
 // ════════════════════════════════════════════════════════════════════════════════
 
-// Use ffprobe to detect whether the video has an audio stream.
-// Fails open (returns true) so we always attempt transcription on error.
+// Detect audio stream using ffmpeg -i (no ffprobe needed).
+// ffmpeg always writes stream info to stderr when given -i — we just parse it.
+// Fails open (returns true) so we always attempt transcription on ambiguity.
 function checkHasAudio(inputPath) {
-  return new Promise((resolve) => {
-    ffmpeg.ffprobe(inputPath, (err, metadata) => {
-      if (err) { console.warn('[META] ffprobe error — assuming audio present'); resolve(true); return; }
-      const hasAudio = (metadata.streams || []).some(s => s.codec_type === 'audio');
-      resolve(hasAudio);
-    });
-  });
+  const result = spawnSync(ffmpegBin, ['-i', inputPath], { timeout: 10000 });
+  // ffmpeg exits with code 1 when no output is specified — that's expected.
+  // Stream info is always written to stderr regardless of exit code.
+  const stderr = result.stderr?.toString() ?? '';
+  const hasAudio = stderr.includes('Audio:');
+  console.log(`[META] Audio stream detected: ${hasAudio}`);
+  return hasAudio;
 }
 
 // Call the backend's internal endpoint to get the video's title + description.
@@ -293,59 +322,60 @@ async function transcribeAudio(audioPath) {
 // ════════════════════════════════════════════════════════════════════════════════
 
 // Scene detection: FFmpeg scores every frame 0.0–1.0 based on how different it
-// is from the previous. Threshold 0.4 catches genuine scene cuts without
+// is from the previous. Threshold 0.3 catches genuine scene cuts without
 // firing on every camera shake. Capped at 5 frames to control cost.
+// Using spawnSync (not fluent-ffmpeg) for reliable filter argument passing
+// and stderr capture to diagnose failures.
 function extractSceneFrames(inputPath, framesDir) {
-  return new Promise((resolve) => {
-    fs.mkdirSync(framesDir, { recursive: true });
-    ffmpeg(inputPath)
-      .outputOptions([
-        '-vf', 'select=gt(scene,0.4),scale=512:288',
-        '-vsync', 'vfr',
-        '-q:v', '3',
-        '-frames:v', '5',
-      ])
-      .output(path.join(framesDir, 'scene_%03d.jpg'))
-      .on('end', () => {
-        const frames = fs.readdirSync(framesDir)
-          .filter(f => f.startsWith('scene_'))
-          .map(f => path.join(framesDir, f));
-        resolve(frames);
-      })
-      .on('error', () => resolve([])) // scene detection failed → trigger fallback
-      .run();
-  });
+  fs.mkdirSync(framesDir, { recursive: true });
+
+  const result = spawnSync(ffmpegBin, [
+    '-i', inputPath,
+    '-vf', 'select=gt(scene\\,0.3),scale=512:288', // \, escapes comma inside select expr
+    '-vsync', 'vfr',
+    '-q:v', '3',
+    '-frames:v', '5',
+    path.join(framesDir, 'scene_%03d.jpg'),
+  ], { timeout: 30000 });
+
+  if (result.status !== 0 && result.stderr) {
+    // Log last 300 chars of stderr — ffmpeg is verbose, only tail matters
+    console.warn('[AI] Scene detection stderr:', result.stderr.toString().slice(-300));
+  }
+
+  return fs.readdirSync(framesDir)
+    .filter(f => f.startsWith('scene_'))
+    .map(f => path.join(framesDir, f));
 }
 
 // Fallback: extract frames at fixed timestamps (1s, 10s, 30s).
 // Works for any video length — shorter videos just skip the later timestamps.
-async function extractFallbackFrames(inputPath, framesDir) {
+function extractFallbackFrames(inputPath, framesDir) {
   const timestamps = [1, 10, 30];
   const frames = [];
   for (let i = 0; i < timestamps.length; i++) {
     const outputPath = path.join(framesDir, `fallback_${i}.jpg`);
-    await new Promise((resolve) => {
-      ffmpeg(inputPath)
-        .seekInput(timestamps[i])
-        .outputOptions(['-vframes', '1', '-q:v', '3'])
-        .videoFilter('scale=512:288:force_original_aspect_ratio=decrease')
-        .output(outputPath)
-        .on('end', () => { if (fs.existsSync(outputPath)) frames.push(outputPath); resolve(); })
-        .on('error', () => resolve()) // silent fail for videos shorter than timestamp
-        .run();
-    });
+    spawnSync(ffmpegBin, [
+      '-ss', String(timestamps[i]),
+      '-i', inputPath,
+      '-vframes', '1',
+      '-q:v', '3',
+      '-vf', 'scale=512:288:force_original_aspect_ratio=decrease',
+      outputPath,
+    ], { timeout: 15000 });
+    if (fs.existsSync(outputPath)) frames.push(outputPath);
   }
   return frames;
 }
 
-async function extractKeyframes(inputPath, framesDir) {
-  const sceneFrames = await extractSceneFrames(inputPath, framesDir);
+function extractKeyframes(inputPath, framesDir) {
+  const sceneFrames = extractSceneFrames(inputPath, framesDir);
   if (sceneFrames.length > 0) {
     console.log(`[AI] Scene detection: ${sceneFrames.length} keyframes`);
     return sceneFrames;
   }
   console.log('[AI] Scene detection yielded 0 frames — using timestamp fallback');
-  const fallbackFrames = await extractFallbackFrames(inputPath, framesDir);
+  const fallbackFrames = extractFallbackFrames(inputPath, framesDir);
   console.log(`[AI] Fallback frames: ${fallbackFrames.length}`);
   return fallbackFrames;
 }
@@ -464,7 +494,11 @@ async function categorize(aiSummary) {
           headers: { Authorization: `Bearer ${HF_API_KEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             inputs: aiSummary,
-            parameters: { candidate_labels: CATEGORIES, hypothesis_template: 'This video is about {}.' },
+            // "This video belongs to the X genre/category" gives bart-large-mnli
+            // sharper separation between content-type labels (Music, Gaming, etc.)
+            // vs topic labels (Motivation, History, etc.) because "genre/category"
+            // is a stronger signal than the vague "is about".
+            parameters: { candidate_labels: CATEGORIES, hypothesis_template: 'This video belongs to the {} genre or category.' },
           }),
           signal: AbortSignal.timeout(25000),
         },
@@ -472,9 +506,28 @@ async function categorize(aiSummary) {
 
       if (res.ok) {
         const raw = await res.json();
+        console.log('[AI] HuggingFace raw:', JSON.stringify(raw).slice(0, 300));
+
+        // Handle all known HF response shapes:
+        //   Shape A — object:  { sequence, labels: [...], scores: [...] }
+        //   Shape B — array:   [{ sequence, labels: [...], scores: [...] }]
+        //   Shape C — router:  { label: "Music", score: 0.9 }  (single best)
         const result = Array.isArray(raw) ? raw[0] : raw;
-        const category = result?.labels?.[0] ?? 'General';
-        console.log(`[AI] HuggingFace category: ${category} (score: ${result?.scores?.[0]?.toFixed(3)})`);
+
+        let category = 'General';
+        let score;
+
+        if (result?.labels?.length) {
+          // Shape A or B — full zero-shot response with ranked labels
+          category = result.labels[0];
+          score    = result.scores?.[0];
+        } else if (result?.label) {
+          // Shape C — single label response
+          category = result.label;
+          score    = result.score;
+        }
+
+        console.log(`[AI] HuggingFace category: ${category} (score: ${score?.toFixed?.(3) ?? score})`);
         return category;
       }
 
@@ -544,7 +597,7 @@ exports.handler = async (event) => {
     console.log('[AI] Fetching video metadata and checking audio track…');
     const [{ title, description }, hasAudio] = await Promise.all([
       fetchVideoMeta(rawKey),
-      checkHasAudio(rawLocalPath),
+      Promise.resolve(checkHasAudio(rawLocalPath)),
     ]);
     console.log(`[AI] title="${title}" hasAudio=${hasAudio} audioExtracted=${audioExtracted}`);
 
@@ -560,8 +613,8 @@ exports.handler = async (event) => {
         ? transcribeAudio(audioPath)
         : Promise.resolve(null),
 
-      // 4b: Extract keyframes then describe with GPT-4o-mini vision
-      extractKeyframes(rawLocalPath, framesDir)
+      // 4b: Extract keyframes (sync) then describe with GPT-4o-mini vision
+      Promise.resolve(extractKeyframes(rawLocalPath, framesDir))
         .then(frames => describeFrames(frames)),
     ]);
 

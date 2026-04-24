@@ -35,6 +35,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   isOwner = false;
   isDeleteHovered = false;
   descOpen = false;
+  aiSummaryOpen = false;
   currentUserId: string | null = null;
   userReaction: 'liked' | 'disliked' | 'none' = 'none';
   isLiking = false;

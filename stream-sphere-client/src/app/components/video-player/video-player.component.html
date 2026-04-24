@@ -229,6 +229,23 @@
         </button>
       </div>
 
+      <!-- ── AI Summary ─────────────────────────────────────────────── -->
+      <div class="vp-ai-summary" *ngIf="video.aiSummary" [class.vp-ai-summary--expanded]="aiSummaryOpen">
+        <div class="vp-ai-summary-header">
+          <div class="vp-ai-badge">
+            <mat-icon>auto_awesome</mat-icon>
+            AI Summary
+          </div>
+        </div>
+        <div class="vp-ai-summary-body">
+          <p>{{ video.aiSummary }}</p>
+        </div>
+        <button class="vp-ai-toggle" (click)="aiSummaryOpen = !aiSummaryOpen">
+          {{ aiSummaryOpen ? 'Show less' : 'Show more' }}
+          <mat-icon>{{ aiSummaryOpen ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </button>
+      </div>
+
     </div><!-- /vp-panel -->
 
     <!-- ── Comments ───────────────────────────────────────────────────── -->

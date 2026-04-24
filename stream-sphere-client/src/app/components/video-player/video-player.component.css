@@ -472,6 +472,104 @@
 .vp-desc-toggle:hover { background: var(--bg-surface-3); }
 .vp-desc-toggle mat-icon { font-size: 18px; width: 18px; height: 18px; transition: transform 0.25s; }
 
+/* ── AI Summary ─────────────────────────────────────────────────────────── */
+.vp-ai-summary {
+  margin-top: 16px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg,
+    rgba(102, 126, 234, 0.06) 0%,
+    rgba(118, 75, 162, 0.06) 100%
+  );
+  transition: background var(--transition);
+}
+
+.vp-ai-summary-header {
+  padding: 12px 20px 0;
+  display: flex;
+  align-items: center;
+}
+
+.vp-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--accent);
+  background: rgba(102, 126, 234, 0.12);
+  border: 1px solid rgba(102, 126, 234, 0.25);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+.vp-ai-badge mat-icon {
+  font-size: 13px;
+  width: 13px;
+  height: 13px;
+}
+
+.vp-ai-summary-body {
+  padding: 10px 20px 0;
+  max-height: 84px;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+  position: relative;
+}
+
+.vp-ai-summary:not(.vp-ai-summary--expanded) .vp-ai-summary-body::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 36px;
+  background: linear-gradient(transparent,
+    rgba(102, 126, 234, 0.06)
+  );
+  pointer-events: none;
+}
+
+.vp-ai-summary--expanded .vp-ai-summary-body {
+  max-height: 400px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.vp-ai-summary--expanded .vp-ai-summary-body::-webkit-scrollbar { width: 4px; }
+.vp-ai-summary--expanded .vp-ai-summary-body::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+.vp-ai-summary-body p {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.vp-ai-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  border-top: 1px solid rgba(102, 126, 234, 0.2);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+  transition: background var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+.vp-ai-toggle:hover { background: rgba(102, 126, 234, 0.08); }
+.vp-ai-toggle mat-icon { font-size: 18px; width: 18px; height: 18px; transition: transform 0.25s; }
+
 /* ── Processing state ───────────────────────────────────────────────────── */
 .vp-processing {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
