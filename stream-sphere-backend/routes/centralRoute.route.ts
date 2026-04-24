@@ -8,6 +8,7 @@ import { authenticateJWT }        from '../services/auth.service';
 import { WatchHistoryController } from '../controllers/watchHistory.controller';
 import { adminStatsController }   from '../controllers/admin.controller';
 import { hlsWebhookController }   from '../controllers/hlsWebhook.controller';
+import { Video }                  from '../models/video';
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 import { validate }        from '../middleware/validate.middleware';
@@ -188,9 +189,35 @@ router.get('/history',
   wrap((req, res) => watchHistoryController.getWatchHistory(req, res)),
 );
 
-// ── HLS webhook (called by Lambda after transcoding) ─────────────────────────
-// No JWT — authenticated by x-hls-secret header instead.
+// ── Internal Lambda endpoints (authenticated by x-hls-secret, no JWT) ────────
+
+// POST /api/internal/hls-complete — called by Lambda after transcoding + AI
 router.post('/internal/hls-complete', wrap(hlsWebhookController));
+
+// GET /api/internal/video-meta?s3url=<encoded-cloudfront-url>
+// Called by Lambda early in the AI pipeline to retrieve the user-supplied
+// title + description, which are not available from the S3 event alone.
+router.get('/internal/video-meta', async (req: Request, res: Response): Promise<void> => {
+  const secret = req.headers['x-hls-secret'];
+  if (!secret || secret !== process.env.HLS_WEBHOOK_SECRET) {
+    res.status(401).json({ message: 'Unauthorized' });
+    return;
+  }
+
+  const { s3url } = req.query;
+  if (!s3url || typeof s3url !== 'string') {
+    res.status(400).json({ message: 's3url query parameter is required' });
+    return;
+  }
+
+  const video = await Video.findOne({ S3_url: s3url }, 'title description').lean();
+  if (!video) {
+    res.status(404).json({ message: 'Video not found' });
+    return;
+  }
+
+  res.json({ title: video.title || '', description: video.description || '' });
+});
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 router.get('/admin/stats',

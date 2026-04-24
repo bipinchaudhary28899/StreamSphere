@@ -101,19 +101,30 @@ Videos are uploaded directly from the browser to S3 via a presigned URL, keeping
 
 ---
 
-### Feature 3: AI Auto-Categorization
+### Feature 3: AI Pipeline — Transcription, Visual Analysis & Auto-Categorization
 
-When a video is uploaded, the backend automatically assigns it a category using zero-shot classification via the Hugging Face inference API.
+After transcoding, the Lambda function runs a multi-stage AI pipeline that enriches each video with a synthesized summary and an accurate category. The Node.js backend contains zero AI logic — it only stores the results delivered by Lambda via webhook.
 
-**How it works:**
-- Model: `facebook/bart-large-mnli` (zero-shot text classification)
-- The video's title and description are combined into a single input string
-- The model scores each of 44 possible categories (Music, Gaming, Tech, Travel, etc.) against the hypothesis: *"This video is about {}."*
-- The highest-scoring category is assigned to the video
-- If the Hugging Face API returns HTTP 429 or 503 (rate limit / model loading), the service retries up to 3 times with exponential backoff (1s → 2s)
+**Pipeline stages (all in Lambda):**
+
+**Stage 1 — Deterministic decision:** `ffprobe` checks whether the video has an audio track. If yes, transcription is added to the steps. Visual description always runs.
+
+**Stage 2 — Parallel AI:**
+- *Whisper (OpenAI):* The first 90 seconds of audio (extracted as mono MP3 by FFmpeg) are sent to Whisper API. Transcripts with fewer than 20 words are discarded as music-only garble.
+- *GPT-4o-mini vision:* FFmpeg extracts keyframes using scene-change detection (`select=gt(scene,0.4)`) — meaningful cuts rather than arbitrary timestamps. Falls back to frames at 1s / 10s / 30s if scene detection yields nothing. Each frame is sent to GPT-4o-mini (`detail: low`, ~85 tokens/image) for a concise visual description.
+
+Both steps run with `Promise.allSettled` — if one fails, the other still contributes.
+
+**Stage 3 — Synthesis:** GPT-4o-mini (text) merges title, user description, transcript, and visual summary into a single rich `aiSummary` paragraph (3–4 sentences). This is stored on the video and used as the classification input.
+
+**Stage 4 — Categorization:** `facebook/bart-large-mnli` zero-shot classification scores the `aiSummary` against 44 candidate categories. Using the full `aiSummary` instead of just the title produces significantly higher accuracy. Retries up to 3× on HTTP 429/503 with backoff.
+
+**Result:** Lambda sends `category` and `aiSummary` in the webhook payload. The backend writes both to MongoDB in the same `$set` that flips the video to `ready`.
 
 **Categories supported:**
 Music, Gaming, Sports, Movies, Comedy, Web Series, Learning, Podcasts, News, Fitness, Vlogs, Travel, Tech, Food & Recipes, Motivation, Short Films, Art & Design, Fashion, Kids, History, DIY, Documentaries, Spirituality, Real Estate, Automotive, Science, Nature, Animals, Health & Wellness, Business & Finance, and more.
+
+**Error resilience:** Every AI step is independently wrapped — a Whisper failure doesn't block vision, a vision failure doesn't block synthesis, and a synthesis failure falls back to concatenating the raw signals. The video always becomes `ready` regardless of AI failures; it just gets `category: 'General'` as a fallback.
 
 ---
 
@@ -470,7 +481,6 @@ All video files (HLS segments, preview clips, and the original raw MP4s) are sto
 | `AWS_SECRET_ACCESS_KEY` | AWS secret key |
 | `AWS_S3_BUCKET_NAME` | S3 bucket name |
 | `CLOUDFRONT_URL` | CloudFront distribution base URL (no trailing slash) |
-| `HUGGING_FACE_API_KEY` | Hugging Face inference API key for auto-categorization |
 | `HLS_WEBHOOK_SECRET` | Shared secret for the Lambda → backend webhook |
 | `BACKEND_URL` | Public URL of the backend (used by Lambda to call the webhook) |
 
@@ -482,3 +492,5 @@ All video files (HLS segments, preview clips, and the original raw MP4s) are sto
 | `CLOUDFRONT_URL` | CloudFront base URL |
 | `BACKEND_URL` | Public backend URL |
 | `HLS_WEBHOOK_SECRET` | Must match the backend value |
+| `OPENAI_API_KEY` | For Whisper transcription + GPT-4o-mini (vision + synthesis) |
+| `HUGGING_FACE_API_KEY` | For `facebook/bart-large-mnli` zero-shot categorization |

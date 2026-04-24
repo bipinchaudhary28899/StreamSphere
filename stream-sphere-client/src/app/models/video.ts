@@ -8,10 +8,14 @@ export interface Video {
     thumbnailUrl?: string | null;
     user_id: string;
     category?: string;
+    aiSummary?: string | null;   // AI-generated summary from Lambda pipeline
     likes: number;
     dislikes: number;
+    views?: number;
     uploadedAt: string;
     commentCount?: number;
+    status?: string;
+    userName?: string;
 }
 
 export interface VideoResponse {
