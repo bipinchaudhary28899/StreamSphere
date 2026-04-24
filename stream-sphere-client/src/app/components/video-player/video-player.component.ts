@@ -143,7 +143,20 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.destroyHls();
 
     if (Hls.isSupported()) {
-      this.hls = new Hls({ startLevel: -1, capLevelToPlayerSize: true });
+      this.hls = new Hls({
+        startLevel:          -1,    // ABR auto-selects quality based on bandwidth
+        capLevelToPlayerSize: true, // never fetch higher quality than player dimensions
+
+        // Buffer tuning — HLS.js default is 30s which fires ~5 segment requests
+        // upfront. 10s is enough for smooth VOD playback while halving CDN load.
+        maxBufferLength:    10,   // target 10s of forward buffer (default: 30)
+        maxMaxBufferLength: 30,   // hard cap — never exceed 30s total (default: 600)
+        maxBufferSize:      20 * 1000 * 1000, // 20MB cap (default: 60MB)
+
+        // Start playback as soon as the first segment is ready, not after a
+        // full buffer fill — reduces perceived time-to-first-frame on mobile.
+        maxBufferHole: 0.5,
+      });
       this.hls.loadSource(this.video.hlsUrl);
       this.hls.attachMedia(videoEl);
 
