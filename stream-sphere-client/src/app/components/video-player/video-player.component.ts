@@ -282,6 +282,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   }
 
   onPlayerMouseMove(): void {
+    if (this._touchHandled) return; // synthesised mousemove from a touch tap — ignore
     this.controlsVisible = true;
     clearTimeout(this.controlsTimer);
     if (this.isPlaying) {
