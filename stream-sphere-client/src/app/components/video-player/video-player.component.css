@@ -68,6 +68,8 @@
   line-height: 0;
   /* Prevent text cursor while dragging seekbar */
   user-select: none;
+  /* Remove blue tap highlight on mobile */
+  -webkit-tap-highlight-color: transparent;
 }
 
 .vp-player {
@@ -87,6 +89,7 @@
   inset: 0;
   z-index: 1;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ── Center play / pause button ─────────────────────────────────────────── */
