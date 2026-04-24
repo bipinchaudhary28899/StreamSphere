@@ -1,16 +1,20 @@
 // controllers/hlsWebhook.controller.ts
 //
-// Called by the HLS Lambda after it finishes transcoding a video.
+// Called by the HLS Lambda after it finishes transcoding + AI pipeline.
 // The Lambda sends:
 //   POST /api/internal/hls-complete
 //   x-hls-secret: <HLS_WEBHOOK_SECRET>
 //   { "rawS3Key":     "Videos/raw/<uuid>/filename.mp4",
 //     "masterHlsUrl": "https://cdn.example.com/Videos/hls/<uuid>/master.m3u8",
 //     "previewUrl":   "https://cdn.example.com/Videos/hls/<uuid>/preview.mp4",
-//     "thumbnailUrl": "https://cdn.example.com/Videos/hls/<uuid>/thumbnail.jpg" }
+//     "thumbnailUrl": "https://cdn.example.com/Videos/hls/<uuid>/thumbnail.jpg",
+//     "category":     "Music",
+//     "aiSummary":    "This is a music video by..." }
 //
-// We verify the shared secret, find the Video by its S3_url, set hlsUrl,
-// previewUrl, thumbnailUrl, and flip status to 'ready', then bust caches.
+// We verify the shared secret, find the Video by its S3_url, and write all
+// fields in one $set (bypasses Mongoose change-tracking), then bust caches.
+// category and aiSummary are produced entirely inside Lambda — the Node.js
+// backend no longer calls HuggingFace or any AI service directly.
 
 import { Request, Response } from 'express';
 import { Video } from '../models/video';
@@ -24,11 +28,13 @@ export async function hlsWebhookController(req: Request, res: Response): Promise
     return;
   }
 
-  const { rawS3Key, masterHlsUrl, previewUrl, thumbnailUrl } = req.body as {
-    rawS3Key?: string;
+  const { rawS3Key, masterHlsUrl, previewUrl, thumbnailUrl, category, aiSummary } = req.body as {
+    rawS3Key?:     string;
     masterHlsUrl?: string;
-    previewUrl?: string;
+    previewUrl?:   string;
     thumbnailUrl?: string;
+    category?:     string;
+    aiSummary?:    string;
   };
 
   if (!rawS3Key || !masterHlsUrl) {
@@ -36,11 +42,11 @@ export async function hlsWebhookController(req: Request, res: Response): Promise
     return;
   }
 
-  // Reconstruct the CloudFront URL that was stored in the Video document
-  const cloudfrontBase = process.env.CLOUDFRONT_URL!.replace(/\/$/, '');
+  // Reconstruct the CloudFront URL that was stored in the Video document at upload time
+  const cloudfrontBase   = process.env.CLOUDFRONT_URL!.replace(/\/$/, '');
   const rawCloudfrontUrl = `${cloudfrontBase}/${rawS3Key}`;
 
-  // ── Update via $set — bypasses Mongoose change-tracking so all four fields
+  // ── Update via $set — bypasses Mongoose change-tracking so all fields
   //    are always written to MongoDB regardless of their previous value. ──────
   const video = await Video.findOneAndUpdate(
     { S3_url: rawCloudfrontUrl },
@@ -49,10 +55,12 @@ export async function hlsWebhookController(req: Request, res: Response): Promise
         hlsUrl:       masterHlsUrl,
         previewUrl:   previewUrl   ?? null,
         thumbnailUrl: thumbnailUrl ?? null,
+        category:     category     ?? 'General',   // set by Lambda AI pipeline
+        aiSummary:    aiSummary    ?? null,         // set by Lambda AI pipeline
         status:       'ready',
       },
     },
-    { new: true },   // return the updated document
+    { new: true },  // return the updated document
   );
 
   if (!video) {
@@ -68,5 +76,5 @@ export async function hlsWebhookController(req: Request, res: Response): Promise
     redisService.del(CK.topLiked()),
   ]);
 
-  res.json({ ok: true, videoId: video._id });
+  res.json({ ok: true, videoId: video._id, category: video.category });
 }

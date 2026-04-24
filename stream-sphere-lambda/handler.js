@@ -3,76 +3,105 @@
  *
  * Triggered by: S3 ObjectCreated event on prefix Videos/raw/
  *
- * Flow:
- *  1. Parse the S3 key from the event.
- *  2. Download the raw video to /tmp.
- *  3. Run FFmpeg to produce three HLS renditions:
- *       360p  — 640×360  @ 800 kbps
- *       720p  — 1280×720 @ 2800 kbps
- *       1080p — 1920×1080 @ 5000 kbps
- *  4. Build a master.m3u8 playlist.
- *  5. Upload every .m3u8 and .ts file to Videos/hls/<uuid>/ on S3.
- *  6. Call POST <BACKEND_URL>/api/internal/hls-complete with the master URL.
+ * Pipeline:
+ *  Phase 1 — FFmpeg: HLS renditions, thumbnail, preview, audio extraction
+ *  Phase 2 — Metadata: ffprobe audio check + fetch title/description from backend
+ *  Phase 3 — Decision: deterministic if/else → which AI steps to run
+ *  Phase 4 — Parallel AI:
+ *              ├── Whisper API → transcript (if has_audio)
+ *              └── GPT-4o-mini vision → visual summary (always)
+ *  Phase 5 — Synthesis: GPT-4o-mini text → aiSummary (rich context)
+ *  Phase 6 — Categorization: HuggingFace bart-large-mnli → category
+ *  Phase 7 — Webhook: POST all results to backend
  *
  * Environment variables (set in Lambda configuration):
  *   AWS_S3_BUCKET_NAME    — same bucket as the backend
  *   CLOUDFRONT_URL        — CloudFront distribution base URL (no trailing slash)
  *   BACKEND_URL           — public URL of the Express backend
  *   HLS_WEBHOOK_SECRET    — shared secret for the webhook endpoint
- *
- * Deploy:
- *   npm ci --omit=dev
- *   zip -r function.zip handler.js node_modules
- *   aws lambda update-function-code --function-name StreamSphereHLS \
- *       --zip-file fileb://function.zip
+ *   OPENAI_API_KEY        — for Whisper transcription + GPT-4o-mini
+ *   HUGGING_FACE_API_KEY  — for bart-large-mnli zero-shot classification
  *
  * Lambda settings:
- *   Runtime      : Node.js 20.x
- *   Architecture : x86_64  (ffmpeg-static ships a Linux x64 binary)
- *   Memory       : 2048 MB (FFmpeg transcoding is CPU/RAM intensive)
- *   Timeout      : 10 min  (3-min videos take ~2-4 min to transcode)
- *   Ephemeral storage: 2048 MB (/tmp for raw + transcoded files)
+ *   Runtime      : Node.js 20.x  (native fetch + FormData + Blob — no extra deps)
+ *   Architecture : x86_64
+ *   Memory       : 2048 MB
+ *   Timeout      : 12 min
+ *   Ephemeral    : 2048 MB
  */
 
 'use strict';
 
-const { S3Client, GetObjectCommand, PutObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const { S3Client, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { Readable } = require('stream');
 const ffmpeg = require('fluent-ffmpeg');
-const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+const axios  = require('axios');
+const fs     = require('fs');
+const path   = require('path');
+const os     = require('os');
 const { execSync } = require('child_process');
 
-// Copy the FFmpeg binary from the read-only layer (/opt/bin/ffmpeg) to /tmp
-// so we can chmod +x it. /tmp is the only writable directory on Lambda.
-const layerBinary = '/opt/bin/ffmpeg';
-const tmpBinary   = '/tmp/ffmpeg';
+// ── FFmpeg binary setup ───────────────────────────────────────────────────────
+// Copy binaries from the read-only Lambda layer (/opt/bin/) to /tmp so we can
+// chmod +x them. /tmp is the only writable directory in Lambda.
 
-if (fs.existsSync(layerBinary) && !fs.existsSync(tmpBinary)) {
-  fs.copyFileSync(layerBinary, tmpBinary);
-  execSync(`chmod +x ${tmpBinary}`);
-  console.log('[HLS] Copied ffmpeg from layer to /tmp and set +x');
+const BINARIES = [
+  { layer: '/opt/bin/ffmpeg',  tmp: '/tmp/ffmpeg',  setter: (p) => ffmpeg.setFfmpegPath(p)  },
+  { layer: '/opt/bin/ffprobe', tmp: '/tmp/ffprobe', setter: (p) => ffmpeg.setFfprobePath(p) },
+];
+
+for (const { layer, tmp, setter } of BINARIES) {
+  if (fs.existsSync(layer) && !fs.existsSync(tmp)) {
+    fs.copyFileSync(layer, tmp);
+    execSync(`chmod +x ${tmp}`);
+    console.log(`[INIT] Copied ${path.basename(layer)} from layer to /tmp`);
+  }
+  if (fs.existsSync(tmp)) setter(tmp);
 }
 
-const ffmpegPath = fs.existsSync(tmpBinary) ? tmpBinary : require('ffmpeg-static');
-console.log(`[HLS] Using ffmpeg at: ${ffmpegPath}`);
-ffmpeg.setFfmpegPath(ffmpegPath);
+// Fallback: use ffmpeg-static if the layer binary is absent (local dev)
+if (!fs.existsSync('/tmp/ffmpeg')) {
+  const staticPath = require('ffmpeg-static');
+  ffmpeg.setFfmpegPath(staticPath);
+  console.log(`[INIT] Using ffmpeg-static: ${staticPath}`);
+}
 
+console.log(`[INIT] ffmpeg  : ${ffmpeg.getFfmpegPath?.() ?? 'unknown'}`);
+
+// ── Config ────────────────────────────────────────────────────────────────────
 const s3 = new S3Client({ region: process.env.AWS_REGION || 'ap-south-1' });
-const BUCKET = process.env.AWS_S3_BUCKET_NAME;
-const CLOUDFRONT_URL = (process.env.CLOUDFRONT_URL || '').replace(/\/$/, '');
-const BACKEND_URL = (process.env.BACKEND_URL || '').replace(/\/$/, '');
+const BUCKET             = process.env.AWS_S3_BUCKET_NAME;
+const CLOUDFRONT_URL     = (process.env.CLOUDFRONT_URL    || '').replace(/\/$/, '');
+const BACKEND_URL        = (process.env.BACKEND_URL       || '').replace(/\/$/, '');
 const HLS_WEBHOOK_SECRET = process.env.HLS_WEBHOOK_SECRET;
+const OPENAI_API_KEY     = process.env.OPENAI_API_KEY;
+const HF_API_KEY         = process.env.HUGGING_FACE_API_KEY;
+
+// ── HuggingFace categories ────────────────────────────────────────────────────
+// Identical list to what the backend used — kept here so Node.js never needs HF.
+const CATEGORIES = [
+  'Music', 'Gaming', 'Sports', 'Movies', 'Comedy', 'Web Series',
+  'Learning', 'Podcasts', 'News', 'Fitness', 'Vlogs', 'Travel',
+  'Tech', 'Food & Recipes', 'Motivation', 'Short Films', 'Art & Design',
+  'Fashion', 'Kids', 'History', 'DIY', 'Documentaries', 'Spirituality',
+  'Real Estate', 'Automotive', 'Science', 'Nature', 'Animals',
+  'Health & Wellness', 'Business & Finance', 'Personal Development',
+  'Unboxing & Reviews', 'Live Streams', 'Events & Conferences',
+  'Memes & Challenges', 'festivals', 'Interviews', 'Trailers & Teasers',
+  'Animation', 'Magic & Illusions', 'Comedy Skits', 'Parodies',
+  'Reaction Videos', 'ASMR',
+];
 
 // ── Rendition definitions ─────────────────────────────────────────────────────
 const RENDITIONS = [
-  { name: '360p', width: 640,  height: 360, videoBitrate: '800k',  audioBitrate: '96k'  },
-  { name: '720p', width: 1280, height: 720, videoBitrate: '2800k', audioBitrate: '128k' },
+  { name: '360p', width: 640,  height: 360,  videoBitrate: '800k',  audioBitrate: '96k'  },
+  { name: '720p', width: 1280, height: 720,  videoBitrate: '2800k', audioBitrate: '128k' },
 ];
 
-// ── Helper: stream S3 object to a local file ──────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════════
+// PHASE 1 — FFmpeg processing helpers
+// ════════════════════════════════════════════════════════════════════════════════
+
 async function downloadFromS3(bucket, key, localPath) {
   const res = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
   await new Promise((resolve, reject) => {
@@ -83,22 +112,14 @@ async function downloadFromS3(bucket, key, localPath) {
   });
 }
 
-// ── Helper: upload a local file to S3 with public MIME type ──────────────────
 async function uploadToS3(localPath, bucket, key, contentType) {
   const body = fs.readFileSync(localPath);
-  await s3.send(new PutObjectCommand({
-    Bucket: bucket,
-    Key: key,
-    Body: body,
-    ContentType: contentType,
-  }));
+  await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: contentType }));
 }
 
-// ── Helper: transcode one rendition ──────────────────────────────────────────
 function transcodeRendition(inputPath, outputDir, rendition) {
   return new Promise((resolve, reject) => {
     const playlistPath = path.join(outputDir, `${rendition.name}.m3u8`);
-
     ffmpeg(inputPath)
       .videoCodec('libx264')
       .audioCodec('aac')
@@ -106,12 +127,9 @@ function transcodeRendition(inputPath, outputDir, rendition) {
       .videoBitrate(rendition.videoBitrate)
       .audioBitrate(rendition.audioBitrate)
       .outputOptions([
-        '-profile:v baseline',
-        '-level 3.0',
-        '-start_number 0',
-        '-hls_time 6',
-        '-hls_list_size 0',
-        '-hls_playlist_type vod',
+        '-profile:v baseline', '-level 3.0',
+        '-start_number 0', '-hls_time 6',
+        '-hls_list_size 0', '-hls_playlist_type vod',
         `-hls_segment_filename ${path.join(outputDir, `${rendition.name}_%03d.ts`)}`,
         '-f hls',
       ])
@@ -122,8 +140,6 @@ function transcodeRendition(inputPath, outputDir, rendition) {
   });
 }
 
-// ── Helper: generate thumbnail JPEG (single frame at 1 s) ────────────────────
-// 854×480 with aspect-ratio letterboxing, JPEG quality 2 (high; scale 1–31).
 function generateThumbnail(inputPath, outputPath) {
   return new Promise((resolve, reject) => {
     ffmpeg(inputPath)
@@ -132,39 +148,44 @@ function generateThumbnail(inputPath, outputPath) {
       .outputOptions(['-vframes 1', '-q:v 2'])
       .output(outputPath)
       .on('end', resolve)
-      .on('error', (err) => reject(new Error(`Thumbnail generation failed: ${err.message}`)))
+      .on('error', (err) => reject(new Error(`Thumbnail failed: ${err.message}`)))
       .run();
   });
 }
 
-// ── Helper: generate 8-second MP4 preview (for carousel / hover) ──────────────
-// 854×480, scale preserves aspect ratio with letterbox if needed.
-// faststart moves the moov atom to the front so the browser can play
-// immediately without downloading the whole file.
 function generatePreview(inputPath, outputPath) {
   return new Promise((resolve, reject) => {
     ffmpeg(inputPath)
-      .setStartTime(0)
-      .setDuration(8)
-      .videoCodec('libx264')
-      .audioCodec('aac')
+      .setStartTime(0).setDuration(8)
+      .videoCodec('libx264').audioCodec('aac')
       .videoFilter('scale=854:480:force_original_aspect_ratio=decrease,pad=854:480:(ow-iw)/2:(oh-ih)/2')
-      .videoBitrate('600k')
-      .audioBitrate('64k')
-      .outputOptions([
-        '-profile:v baseline',
-        '-level 3.0',
-        '-movflags +faststart',
-        '-pix_fmt yuv420p',
-      ])
+      .videoBitrate('600k').audioBitrate('64k')
+      .outputOptions(['-profile:v baseline', '-level 3.0', '-movflags +faststart', '-pix_fmt yuv420p'])
       .output(outputPath)
       .on('end', resolve)
-      .on('error', (err) => reject(new Error(`Preview generation failed: ${err.message}`)))
+      .on('error', (err) => reject(new Error(`Preview failed: ${err.message}`)))
       .run();
   });
 }
 
-// ── Helper: build a master HLS playlist ──────────────────────────────────────
+// NEW: mono MP3 clip (first 90s) — input for Whisper
+function extractAudio(inputPath, outputPath) {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .outputOptions([
+        '-t',  '90',           // first 90 seconds — Whisper sweet spot
+        '-vn',                 // drop video stream
+        '-acodec', 'libmp3lame',
+        '-q:a', '4',           // ~165 kbps
+        '-ac', '1',            // mono — halves file size, Whisper doesn't need stereo
+      ])
+      .output(outputPath)
+      .on('end', resolve)
+      .on('error', (err) => reject(new Error(`Audio extraction failed: ${err.message}`)))
+      .run();
+  });
+}
+
 function buildMasterPlaylist(renditions) {
   const BANDWIDTH = { '360p': 896000, '720p': 2928000 };
   let m3u8 = '#EXTM3U\n#EXT-X-VERSION:3\n\n';
@@ -175,92 +196,433 @@ function buildMasterPlaylist(renditions) {
   return m3u8;
 }
 
-// ── Main handler ──────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════════
+// PHASE 2 — Metadata (no AI)
+// ════════════════════════════════════════════════════════════════════════════════
+
+// Use ffprobe to detect whether the video has an audio stream.
+// Fails open (returns true) so we always attempt transcription on error.
+function checkHasAudio(inputPath) {
+  return new Promise((resolve) => {
+    ffmpeg.ffprobe(inputPath, (err, metadata) => {
+      if (err) { console.warn('[META] ffprobe error — assuming audio present'); resolve(true); return; }
+      const hasAudio = (metadata.streams || []).some(s => s.codec_type === 'audio');
+      resolve(hasAudio);
+    });
+  });
+}
+
+// Call the backend's internal endpoint to get the video's title + description.
+// Lambda only receives the S3 key, not the user-supplied metadata.
+async function fetchVideoMeta(rawS3Key) {
+  try {
+    const s3url = `${CLOUDFRONT_URL}/${rawS3Key}`;
+    const res = await fetch(
+      `${BACKEND_URL}/api/internal/video-meta?s3url=${encodeURIComponent(s3url)}`,
+      { headers: { 'x-hls-secret': HLS_WEBHOOK_SECRET }, signal: AbortSignal.timeout(8000) },
+    );
+    if (!res.ok) { console.warn(`[META] video-meta ${res.status}`); return { title: '', description: '' }; }
+    return await res.json(); // { title, description }
+  } catch (err) {
+    console.warn('[META] fetchVideoMeta error:', err.message);
+    return { title: '', description: '' };
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// PHASE 3 — Deterministic decision layer (no LLM)
+// ════════════════════════════════════════════════════════════════════════════════
+
+function decideSteps(hasAudio) {
+  // Always describe frames visually — even music videos and silent content benefit.
+  // Only transcribe when an audio track is present (avoids wasting Whisper quota).
+  const steps = ['visual_describe'];
+  if (hasAudio) steps.push('transcribe');
+  return steps;
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// PHASE 4a — Whisper transcription
+// ════════════════════════════════════════════════════════════════════════════════
+
+async function transcribeAudio(audioPath) {
+  if (!OPENAI_API_KEY) { console.warn('[AI] OPENAI_API_KEY not set — skipping Whisper'); return null; }
+  if (!audioPath || !fs.existsSync(audioPath) || fs.statSync(audioPath).size < 1000) {
+    console.log('[AI] Audio file absent or too small — skipping Whisper');
+    return null;
+  }
+
+  try {
+    // Node.js 20 has native FormData + Blob — no form-data package needed
+    const audioBuffer = fs.readFileSync(audioPath);
+    const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+    const formData = new FormData();
+    formData.append('file', blob, 'audio.mp3');
+    formData.append('model', 'whisper-1');
+    formData.append('response_format', 'text');
+
+    const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+      body: formData,
+      signal: AbortSignal.timeout(60000), // Whisper can take time for long clips
+    });
+
+    if (!res.ok) { console.warn(`[AI] Whisper HTTP ${res.status}`); return null; }
+
+    const text = (await res.text()).trim();
+    const wordCount = text.split(/\s+/).filter(Boolean).length;
+
+    // Whisper on music-only / near-silent audio returns very short garbled text.
+    // Treat fewer than 20 words as "no spoken content".
+    if (wordCount < 20) {
+      console.log(`[AI] Whisper returned only ${wordCount} words — treated as non-speech audio`);
+      return null;
+    }
+
+    console.log(`[AI] Whisper: ${wordCount} words transcribed`);
+    return text;
+  } catch (err) {
+    console.warn('[AI] Whisper error:', err.message);
+    return null;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// PHASE 4b — Scene-detected keyframes + GPT-4o-mini vision
+// ════════════════════════════════════════════════════════════════════════════════
+
+// Scene detection: FFmpeg scores every frame 0.0–1.0 based on how different it
+// is from the previous. Threshold 0.4 catches genuine scene cuts without
+// firing on every camera shake. Capped at 5 frames to control cost.
+function extractSceneFrames(inputPath, framesDir) {
+  return new Promise((resolve) => {
+    fs.mkdirSync(framesDir, { recursive: true });
+    ffmpeg(inputPath)
+      .outputOptions([
+        '-vf', 'select=gt(scene,0.4),scale=512:288',
+        '-vsync', 'vfr',
+        '-q:v', '3',
+        '-frames:v', '5',
+      ])
+      .output(path.join(framesDir, 'scene_%03d.jpg'))
+      .on('end', () => {
+        const frames = fs.readdirSync(framesDir)
+          .filter(f => f.startsWith('scene_'))
+          .map(f => path.join(framesDir, f));
+        resolve(frames);
+      })
+      .on('error', () => resolve([])) // scene detection failed → trigger fallback
+      .run();
+  });
+}
+
+// Fallback: extract frames at fixed timestamps (1s, 10s, 30s).
+// Works for any video length — shorter videos just skip the later timestamps.
+async function extractFallbackFrames(inputPath, framesDir) {
+  const timestamps = [1, 10, 30];
+  const frames = [];
+  for (let i = 0; i < timestamps.length; i++) {
+    const outputPath = path.join(framesDir, `fallback_${i}.jpg`);
+    await new Promise((resolve) => {
+      ffmpeg(inputPath)
+        .seekInput(timestamps[i])
+        .outputOptions(['-vframes', '1', '-q:v', '3'])
+        .videoFilter('scale=512:288:force_original_aspect_ratio=decrease')
+        .output(outputPath)
+        .on('end', () => { if (fs.existsSync(outputPath)) frames.push(outputPath); resolve(); })
+        .on('error', () => resolve()) // silent fail for videos shorter than timestamp
+        .run();
+    });
+  }
+  return frames;
+}
+
+async function extractKeyframes(inputPath, framesDir) {
+  const sceneFrames = await extractSceneFrames(inputPath, framesDir);
+  if (sceneFrames.length > 0) {
+    console.log(`[AI] Scene detection: ${sceneFrames.length} keyframes`);
+    return sceneFrames;
+  }
+  console.log('[AI] Scene detection yielded 0 frames — using timestamp fallback');
+  const fallbackFrames = await extractFallbackFrames(inputPath, framesDir);
+  console.log(`[AI] Fallback frames: ${fallbackFrames.length}`);
+  return fallbackFrames;
+}
+
+async function describeFrames(framePaths) {
+  if (!framePaths.length) { console.log('[AI] No frames — skipping vision'); return null; }
+  if (!OPENAI_API_KEY)    { console.warn('[AI] OPENAI_API_KEY not set — skipping vision'); return null; }
+
+  try {
+    // detail:'low' = 85 tokens/image. 5 frames ≈ 425 tokens ≈ $0.00006.
+    const imageContent = framePaths.slice(0, 5).map(fp => ({
+      type: 'image_url',
+      image_url: {
+        url: `data:image/jpeg;base64,${fs.readFileSync(fp).toString('base64')}`,
+        detail: 'low',
+      },
+    }));
+
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        max_tokens: 200,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'These are keyframes from a video. Describe: the type of content (tutorial, music video, gaming, vlog, etc.), the setting or environment, people or activity visible, and any text or branding on screen. 2–3 sentences, factual and specific.',
+            },
+            ...imageContent,
+          ],
+        }],
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!res.ok) { console.warn(`[AI] GPT-4o-mini vision HTTP ${res.status}`); return null; }
+    const data = await res.json();
+    const result = data.choices?.[0]?.message?.content?.trim() ?? null;
+    if (result) console.log(`[AI] Visual summary: ${result.slice(0, 100)}…`);
+    return result;
+  } catch (err) {
+    console.warn('[AI] Vision error:', err.message);
+    return null;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// PHASE 5 — Synthesis (GPT-4o-mini text — separate concern from vision)
+// ════════════════════════════════════════════════════════════════════════════════
+
+async function synthesizeSummary({ title, description, transcript, visualSummary }) {
+  // Build only the signals we actually have
+  const signals = [
+    title         ? `Video title: ${title}`                                              : null,
+    description   ? `Uploader description: ${description}`                               : null,
+    transcript    ? `Spoken content (transcript): ${transcript.slice(0, 800)}`           : null,
+    visualSummary ? `Visual content (from keyframes): ${visualSummary}`                  : null,
+  ].filter(Boolean).join('\n\n');
+
+  // Fallback if no OpenAI key or no signals at all
+  if (!OPENAI_API_KEY || !signals) {
+    return [title, description, visualSummary].filter(Boolean).join('. ') || title || 'Video';
+  }
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        max_tokens: 250,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You write concise video summaries for content classification. ' +
+              'Output a single paragraph (3–4 sentences) covering: what the video is about, ' +
+              'its genre or format, key topics or themes, and intended audience. ' +
+              'Be specific and factual. Do not speculate beyond what the signals tell you.',
+          },
+          { role: 'user', content: signals },
+        ],
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const summary = data.choices?.[0]?.message?.content?.trim();
+    if (summary) { console.log(`[AI] aiSummary: ${summary.slice(0, 120)}…`); return summary; }
+    return signals; // fallback to raw signals
+  } catch (err) {
+    console.warn('[AI] Synthesis error:', err.message);
+    // Fallback: concatenate raw signals — still much richer than title alone
+    return [title, description, visualSummary].filter(Boolean).join('. ') || title || 'Video';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// PHASE 6 — HuggingFace categorization (moved from Node.js backend)
+// ════════════════════════════════════════════════════════════════════════════════
+
+async function categorize(aiSummary) {
+  if (!HF_API_KEY) { console.warn('[AI] HUGGING_FACE_API_KEY not set — defaulting to General'); return 'General'; }
+
+  const MAX_RETRIES = 3;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch(
+        'https://router.huggingface.co/hf-inference/models/facebook/bart-large-mnli',
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${HF_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            inputs: aiSummary,
+            parameters: { candidate_labels: CATEGORIES, hypothesis_template: 'This video is about {}.' },
+          }),
+          signal: AbortSignal.timeout(25000),
+        },
+      );
+
+      if (res.ok) {
+        const raw = await res.json();
+        const result = Array.isArray(raw) ? raw[0] : raw;
+        const category = result?.labels?.[0] ?? 'General';
+        console.log(`[AI] HuggingFace category: ${category} (score: ${result?.scores?.[0]?.toFixed(3)})`);
+        return category;
+      }
+
+      if ([429, 503].includes(res.status) && attempt < MAX_RETRIES) {
+        const delay = attempt * 1000;
+        console.warn(`[AI] HuggingFace attempt ${attempt} failed (${res.status}) — retrying in ${delay}ms`);
+        await new Promise(r => setTimeout(r, delay));
+      } else {
+        console.warn(`[AI] HuggingFace non-retryable HTTP ${res.status}`);
+        return 'General';
+      }
+    } catch (err) {
+      if (attempt < MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, attempt * 1000));
+      } else {
+        console.warn('[AI] HuggingFace error:', err.message);
+        return 'General';
+      }
+    }
+  }
+  return 'General';
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// MAIN HANDLER
+// ════════════════════════════════════════════════════════════════════════════════
+
 exports.handler = async (event) => {
   const record = event.Records[0];
   const rawKey = decodeURIComponent(record.s3.object.key.replace(/\+/g, ' '));
-
   console.log(`[HLS] Processing: ${rawKey}`);
 
-  // Extract uuid from Videos/raw/<uuid>/filename
   const match = rawKey.match(/^Videos\/raw\/([^/]+)\//);
   if (!match) throw new Error(`Unexpected key format: ${rawKey}`);
   const uuid = match[1];
 
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), `hls-${uuid}-`));
+  const tmpDir       = fs.mkdtempSync(path.join(os.tmpdir(), `hls-${uuid}-`));
   const rawLocalPath = path.join(tmpDir, 'source' + path.extname(rawKey));
+  const audioPath    = path.join(tmpDir, 'audio.mp3');
+  const framesDir    = path.join(tmpDir, 'frames');
 
   try {
-    // 1. Download raw video
+    // ── Phase 1: FFmpeg ───────────────────────────────────────────────────────
     console.log('[HLS] Downloading source video…');
     await downloadFromS3(BUCKET, rawKey, rawLocalPath);
     console.log('[HLS] Download complete.');
 
-    // 2. Transcode each rendition
+    // HLS transcoding (sequential — each rendition is RAM/CPU intensive)
     for (const rendition of RENDITIONS) {
       console.log(`[HLS] Transcoding ${rendition.name}…`);
       await transcodeRendition(rawLocalPath, tmpDir, rendition);
       console.log(`[HLS] ${rendition.name} done.`);
     }
 
-    // 3a. Generate thumbnail JPEG (shown on video cards before hover)
-    console.log('[HLS] Generating thumbnail.jpg…');
-    const thumbnailLocalPath = path.join(tmpDir, 'thumbnail.jpg');
-    await generateThumbnail(rawLocalPath, thumbnailLocalPath);
-    console.log('[HLS] thumbnail.jpg done.');
+    // Thumbnail, preview, and audio extraction in parallel
+    const [, , audioExtracted] = await Promise.all([
+      generateThumbnail(rawLocalPath, path.join(tmpDir, 'thumbnail.jpg'))
+        .then(() => console.log('[HLS] thumbnail.jpg done.')),
+      generatePreview(rawLocalPath, path.join(tmpDir, 'preview.mp4'))
+        .then(() => console.log('[HLS] preview.mp4 done.')),
+      extractAudio(rawLocalPath, audioPath)
+        .then(() => { console.log('[AI] audio.mp3 done.'); return true; })
+        .catch((err) => { console.warn('[AI] Audio extraction failed:', err.message); return false; }),
+    ]);
 
-    // 3b. Generate 8-second preview MP4 (used by carousel and hover previews)
-    console.log('[HLS] Generating preview.mp4…');
-    const previewLocalPath = path.join(tmpDir, 'preview.mp4');
-    await generatePreview(rawLocalPath, previewLocalPath);
-    console.log('[HLS] preview.mp4 done.');
+    // ── Phase 2: Metadata (no AI) ─────────────────────────────────────────────
+    console.log('[AI] Fetching video metadata and checking audio track…');
+    const [{ title, description }, hasAudio] = await Promise.all([
+      fetchVideoMeta(rawKey),
+      checkHasAudio(rawLocalPath),
+    ]);
+    console.log(`[AI] title="${title}" hasAudio=${hasAudio} audioExtracted=${audioExtracted}`);
 
-    // 4. Build and write master.m3u8
+    // ── Phase 3: Deterministic decision ──────────────────────────────────────
+    const steps = decideSteps(hasAudio && audioExtracted);
+    console.log('[AI] Steps:', steps);
+
+    // ── Phase 4: Parallel AI ──────────────────────────────────────────────────
+    console.log('[AI] Running parallel AI steps…');
+    const [transcriptResult, visualResult] = await Promise.allSettled([
+      // 4a: Whisper — only if we decided to transcribe
+      steps.includes('transcribe')
+        ? transcribeAudio(audioPath)
+        : Promise.resolve(null),
+
+      // 4b: Extract keyframes then describe with GPT-4o-mini vision
+      extractKeyframes(rawLocalPath, framesDir)
+        .then(frames => describeFrames(frames)),
+    ]);
+
+    const transcript    = transcriptResult.status === 'fulfilled' ? transcriptResult.value : null;
+    const visualSummary = visualResult.status   === 'fulfilled' ? visualResult.value   : null;
+
+    if (transcriptResult.status === 'rejected') console.warn('[AI] Transcript step rejected:', transcriptResult.reason);
+    if (visualResult.status     === 'rejected') console.warn('[AI] Visual step rejected:',    visualResult.reason);
+
+    // ── Phase 5: Synthesis ────────────────────────────────────────────────────
+    console.log('[AI] Synthesizing aiSummary…');
+    const aiSummary = await synthesizeSummary({ title, description, transcript, visualSummary });
+
+    // ── Phase 6: Categorization ───────────────────────────────────────────────
+    console.log('[AI] Categorizing…');
+    const category = await categorize(aiSummary);
+
+    // ── Upload all HLS + media files to S3 ────────────────────────────────────
     const masterContent = buildMasterPlaylist(RENDITIONS);
-    const masterPath = path.join(tmpDir, 'master.m3u8');
-    fs.writeFileSync(masterPath, masterContent);
+    fs.writeFileSync(path.join(tmpDir, 'master.m3u8'), masterContent);
 
-    // 5. Upload all HLS + preview files to S3
     const hlsPrefix = `Videos/hls/${uuid}/`;
-    const files = fs.readdirSync(tmpDir).filter(f => f !== path.basename(rawLocalPath));
+    const uploadable = fs.readdirSync(tmpDir).filter(f => {
+      const fullPath = path.join(tmpDir, f);
+      if (fs.statSync(fullPath).isDirectory()) return false; // skip frames/ dir
+      if (f === path.basename(rawLocalPath)) return false;  // skip source video
+      if (f === 'audio.mp3') return false;                  // audio is temp-only, not needed on S3
+      return true;
+    });
 
-    console.log(`[HLS] Uploading ${files.length} files to ${hlsPrefix}…`);
-    for (const file of files) {
-      const localFile = path.join(tmpDir, file);
-      const s3Key = hlsPrefix + file;
-      const contentType = file.endsWith('.m3u8')   ? 'application/vnd.apple.mpegurl'
-                        : file.endsWith('.ts')     ? 'video/mp2t'
-                        : file.endsWith('.mp4')    ? 'video/mp4'
-                        : 'application/octet-stream';
-      await uploadToS3(localFile, BUCKET, s3Key, contentType);
+    console.log(`[HLS] Uploading ${uploadable.length} files to ${hlsPrefix}…`);
+    for (const file of uploadable) {
+      const contentType =
+        file.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl' :
+        file.endsWith('.ts')   ? 'video/mp2t'                    :
+        file.endsWith('.mp4')  ? 'video/mp4'                     :
+        file.endsWith('.jpg')  ? 'image/jpeg'                    :
+                                 'application/octet-stream';
+      await uploadToS3(path.join(tmpDir, file), BUCKET, hlsPrefix + file, contentType);
     }
     console.log('[HLS] Upload complete.');
 
-    // 6. Notify backend
-    const masterHlsUrl  = `${CLOUDFRONT_URL}/${hlsPrefix}master.m3u8`;
-    const previewUrl    = `${CLOUDFRONT_URL}/${hlsPrefix}preview.mp4`;
-    const thumbnailUrl  = `${CLOUDFRONT_URL}/${hlsPrefix}thumbnail.jpg`;
-    console.log(`[HLS] Calling webhook — masterHlsUrl: ${masterHlsUrl}`);
-    console.log(`[HLS]                 — previewUrl:   ${previewUrl}`);
-    console.log(`[HLS]                 — thumbnailUrl: ${thumbnailUrl}`);
+    // ── Phase 7: Webhook → backend ────────────────────────────────────────────
+    const masterHlsUrl = `${CLOUDFRONT_URL}/${hlsPrefix}master.m3u8`;
+    const previewUrl   = `${CLOUDFRONT_URL}/${hlsPrefix}preview.mp4`;
+    const thumbnailUrl = `${CLOUDFRONT_URL}/${hlsPrefix}thumbnail.jpg`;
 
+    console.log(`[HLS] Calling webhook — category="${category}"`);
     await axios.post(
       `${BACKEND_URL}/api/internal/hls-complete`,
-      { rawS3Key: rawKey, masterHlsUrl, previewUrl, thumbnailUrl },
+      { rawS3Key: rawKey, masterHlsUrl, previewUrl, thumbnailUrl, category, aiSummary },
       {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-hls-secret': HLS_WEBHOOK_SECRET,
-        },
+        headers: { 'Content-Type': 'application/json', 'x-hls-secret': HLS_WEBHOOK_SECRET },
         timeout: 15000,
       },
     );
 
-    console.log('[HLS] Webhook acknowledged. Done.');
+    console.log('[HLS] Done ✓');
     return { statusCode: 200, body: 'OK' };
 
   } finally {
-    // Clean up /tmp to avoid filling Lambda ephemeral storage across warm starts
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 };

@@ -14,6 +14,7 @@ interface IVideo extends Document {
   user_profile_image?: string;
   uploadedAt: Date;
   category: string;
+  aiSummary: string | null;
   likes: number;
   dislikes: number;
   likedBy: string[];
@@ -34,7 +35,8 @@ const videoSchema: Schema = new Schema(
     userName: { type: String },
     user_profile_image: { type: String, default: null },
     uploadedAt: { type: Date, required: true },
-    category: { type: String, default: 'Uncategorized' },
+    category:   { type: String, default: 'Uncategorized' },
+    aiSummary:  { type: String, default: null },           // AI-generated summary from Lambda pipeline
     likes: { type: Number, default: 0 },
     dislikes: { type: Number, default: 0 },
     likedBy: [{ type: String }],
