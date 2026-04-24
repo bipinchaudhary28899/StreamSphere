@@ -41,8 +41,7 @@
       <mat-icon *ngIf="!isUploading">upload</mat-icon>
       <ng-container [ngSwitch]="uploadPhase">
         <ng-container *ngSwitchCase="'uploading'">Uploading… {{ uploadProgress }}%</ng-container>
-        <ng-container *ngSwitchCase="'processing'">Saving to storage…</ng-container>
-        <ng-container *ngSwitchCase="'categorizing'">Generating category…</ng-container>
+        <ng-container *ngSwitchCase="'saving'">Saving…</ng-container>
         <ng-container *ngSwitchDefault>Upload Video</ng-container>
       </ng-container>
     </button>
@@ -55,18 +54,17 @@
       class="upload-progress-bar">
     </mat-progress-bar>
 
-    <!-- Indeterminate bar while backend processes (save + category detection) -->
+    <!-- Indeterminate bar while metadata is being saved to the backend -->
     <mat-progress-bar
-      *ngIf="uploadPhase === 'processing' || uploadPhase === 'categorizing'"
+      *ngIf="uploadPhase === 'saving'"
       mode="indeterminate"
       class="upload-progress-bar">
     </mat-progress-bar>
 
-    <!-- Phase status label shown below the bar -->
-    <div *ngIf="uploadPhase === 'processing' || uploadPhase === 'categorizing'" class="upload-phase-label">
+    <!-- Phase status label -->
+    <div *ngIf="uploadPhase === 'saving'" class="upload-phase-label">
       <mat-icon class="phase-icon spin">sync</mat-icon>
-      <span *ngIf="uploadPhase === 'processing'">Saving your video…</span>
-      <span *ngIf="uploadPhase === 'categorizing'">Generating category…</span>
+      <span>Saving your video…</span>
     </div>
 
     <div *ngIf="uploadPhase === 'success'" class="success-message">

@@ -22,6 +22,7 @@
          [class.vp-player-wrap--fs]="isFullscreen"
          (mousemove)="onPlayerMouseMove()"
          (mouseleave)="onPlayerMouseLeave()"
+         (touchstart)="onTouchZone($event)"
          (click)="onClickZone()">
 
       <!-- Processing state — owner sees spinner + personal message; others see "unavailable" -->

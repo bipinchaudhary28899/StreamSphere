@@ -229,7 +229,7 @@ button[type="submit"]:not(:disabled):hover {
 
 .success-message mat-icon { font-size: 20px; width: 20px; height: 20px; }
 
-/* ── Upload phase label (shown during processing / categorizing) ─────────── */
+/* ── Upload phase label (shown while saving metadata to backend) ─────────── */
 .upload-phase-label {
   display: flex;
   align-items: center;
