@@ -8,7 +8,7 @@ export class WatchHistoryController {
     try {
       const { videoId } = req.params;
       const userId = (req as any).user?.userId;
-      if (\!userId) { res.status(401).json({ message: 'Unauthorized' }); return; }
+      if (!userId) { res.status(401).json({ message: 'Unauthorized' }); return; }
       await watchHistoryService.upsertWatchHistory(userId, videoId);
       res.json({ message: 'Watch history updated' });
     } catch (error: any) {
@@ -19,7 +19,7 @@ export class WatchHistoryController {
   async getWatchHistory(req: Request, res: Response): Promise<void> {
     try {
       const userId = (req as any).user?.userId;
-      if (\!userId) { res.status(401).json({ message: 'Unauthorized' }); return; }
+      if (!userId) { res.status(401).json({ message: 'Unauthorized' }); return; }
       const history = await watchHistoryService.getWatchHistory(userId);
       res.json(history);
     } catch (error: any) {

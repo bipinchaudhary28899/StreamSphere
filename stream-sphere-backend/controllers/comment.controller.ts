@@ -11,7 +11,7 @@ export class CommentController {
   async getCommentsByVideoId(req: Request, res: Response) {
     try {
       const { videoId } = req.params;
-      if (\!videoId) return res.status(400).json({ error: 'Video ID is required' });
+      if (!videoId) return res.status(400).json({ error: 'Video ID is required' });
       const comments = await commentService.getCommentsByVideoId(videoId);
       res.status(200).json({ success: true, comments });
     } catch (error) {
@@ -23,8 +23,8 @@ export class CommentController {
     try {
       const { video_id, content, parent_id } = req.body;
       const user = req.user;
-      if (\!user)                           return res.status(401).json({ error: 'User not authenticated' });
-      if (\!video_id || \!content)           return res.status(400).json({ error: 'Video ID and content are required' });
+      if (!user)                           return res.status(401).json({ error: 'User not authenticated' });
+      if (!video_id || !content)           return res.status(400).json({ error: 'Video ID and content are required' });
       if (content.trim().length === 0)     return res.status(400).json({ error: 'Comment content cannot be empty' });
       if (content.length > 1000)           return res.status(400).json({ error: 'Comment content cannot exceed 1000 characters' });
 
@@ -47,13 +47,13 @@ export class CommentController {
       const { commentId } = req.params;
       const { content }   = req.body;
       const user          = req.user;
-      if (\!user)                       return res.status(401).json({ error: 'User not authenticated' });
-      if (\!content)                    return res.status(400).json({ error: 'Content is required' });
+      if (!user)                       return res.status(401).json({ error: 'User not authenticated' });
+      if (!content)                    return res.status(400).json({ error: 'Content is required' });
       if (content.trim().length === 0) return res.status(400).json({ error: 'Comment content cannot be empty' });
       if (content.length > 1000)       return res.status(400).json({ error: 'Comment content cannot exceed 1000 characters' });
 
       const updatedComment = await commentService.updateComment(commentId, user.userId, content.trim());
-      if (\!updatedComment) return res.status(404).json({ error: 'Comment not found or unauthorized' });
+      if (!updatedComment) return res.status(404).json({ error: 'Comment not found or unauthorized' });
       res.status(200).json({ success: true, comment: updatedComment });
     } catch (error) {
       res.status(500).json({ error: 'Failed to update comment' });
@@ -64,9 +64,9 @@ export class CommentController {
     try {
       const { commentId } = req.params;
       const user          = req.user;
-      if (\!user) return res.status(401).json({ error: 'User not authenticated' });
+      if (!user) return res.status(401).json({ error: 'User not authenticated' });
       const deleted = await commentService.deleteComment(commentId, user.userId);
-      if (\!deleted) return res.status(404).json({ error: 'Comment not found or unauthorized' });
+      if (!deleted) return res.status(404).json({ error: 'Comment not found or unauthorized' });
       res.status(200).json({ success: true, message: 'Comment deleted successfully' });
     } catch (error) {
       res.status(500).json({ error: 'Failed to delete comment' });
@@ -76,7 +76,7 @@ export class CommentController {
   async getCommentCount(req: Request, res: Response) {
     try {
       const { videoId } = req.params;
-      if (\!videoId) return res.status(400).json({ error: 'Video ID is required' });
+      if (!videoId) return res.status(400).json({ error: 'Video ID is required' });
       const count = await commentService.getCommentCount(videoId);
       res.status(200).json({ success: true, count });
     } catch (error) {
@@ -87,7 +87,7 @@ export class CommentController {
   async getCommentsByUserId(req: AuthenticatedRequest, res: Response) {
     try {
       const user = req.user;
-      if (\!user) return res.status(401).json({ error: 'User not authenticated' });
+      if (!user) return res.status(401).json({ error: 'User not authenticated' });
       const comments = await commentService.getCommentsByUserId(user.userId);
       res.status(200).json({ success: true, comments });
     } catch (error) {
@@ -98,7 +98,7 @@ export class CommentController {
   async getReplies(req: Request, res: Response) {
     try {
       const { commentId } = req.params;
-      if (\!commentId) return res.status(400).json({ error: 'Comment ID is required' });
+      if (!commentId) return res.status(400).json({ error: 'Comment ID is required' });
       const replies = await commentService.getReplies(commentId);
       res.status(200).json({ success: true, replies });
     } catch (error) {

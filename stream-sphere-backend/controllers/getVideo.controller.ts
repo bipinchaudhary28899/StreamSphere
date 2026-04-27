@@ -22,7 +22,7 @@ export class VideoController {
     try {
       const term     = (req.query.q        as string || '').trim();
       const category = (req.query.category as string || '').trim() || undefined;
-      if (\!term || term.length < 2)  return res.status(400).json({ message: 'Search term must be at least 2 characters' });
+      if (!term || term.length < 2)  return res.status(400).json({ message: 'Search term must be at least 2 characters' });
       if (term.length > 100)         return res.status(400).json({ message: 'Search term too long' });
       const videos = await videoService.searchVideos(term, category);
       res.json({ videos });
@@ -43,7 +43,7 @@ export class VideoController {
   static async getVideoById(req: Request, res: Response) {
     try {
       const video = await videoService.getVideoById(req.params.videoId);
-      if (\!video) return res.status(404).json({ message: 'Video not found' });
+      if (!video) return res.status(404).json({ message: 'Video not found' });
       res.json(video);
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch video', error });
@@ -54,7 +54,7 @@ export class VideoController {
     try {
       const { videoId } = req.params;
       const userId = (req as any).user?.userId;
-      if (\!userId) return res.status(401).json({ message: 'User not authenticated' });
+      if (!userId) return res.status(401).json({ message: 'User not authenticated' });
       const updatedVideo = await videoService.likeVideo(videoId, userId);
       res.json(updatedVideo);
     } catch (error) {
@@ -66,7 +66,7 @@ export class VideoController {
     try {
       const { videoId } = req.params;
       const userId = (req as any).user?.userId;
-      if (\!userId) return res.status(401).json({ message: 'User not authenticated' });
+      if (!userId) return res.status(401).json({ message: 'User not authenticated' });
       const updatedVideo = await videoService.dislikeVideo(videoId, userId);
       res.json(updatedVideo);
     } catch (error) {
@@ -78,7 +78,7 @@ export class VideoController {
     try {
       const { videoId } = req.params;
       const userId = (req as any).user?.userId;
-      if (\!userId) return res.status(401).json({ message: 'User not authenticated' });
+      if (!userId) return res.status(401).json({ message: 'User not authenticated' });
       const reaction = await videoService.getUserReaction(videoId, userId);
       res.json({ reaction });
     } catch (error) {
@@ -89,7 +89,7 @@ export class VideoController {
   static async getLikedVideos(req: Request, res: Response) {
     try {
       const userId = (req as any).user?.userId;
-      if (\!userId) return res.status(401).json({ message: 'User not authenticated' });
+      if (!userId) return res.status(401).json({ message: 'User not authenticated' });
       const videos = await videoService.getLikedVideos(userId);
       res.json(videos);
     } catch (error) {
@@ -100,7 +100,7 @@ export class VideoController {
   static async getDislikedVideos(req: Request, res: Response) {
     try {
       const userId = (req as any).user?.userId;
-      if (\!userId) return res.status(401).json({ message: 'User not authenticated' });
+      if (!userId) return res.status(401).json({ message: 'User not authenticated' });
       const videos = await videoService.getDislikedVideos(userId);
       res.json(videos);
     } catch (error) {
@@ -111,7 +111,7 @@ export class VideoController {
   static async getMyVideos(req: Request, res: Response) {
     try {
       const userId = (req as any).user?.userId;
-      if (\!userId) return res.status(401).json({ message: 'User not authenticated' });
+      if (!userId) return res.status(401).json({ message: 'User not authenticated' });
       const videos = await videoService.getMyVideos(userId);
       res.json(videos);
     } catch (error) {
@@ -123,7 +123,7 @@ export class VideoController {
     try {
       const { videoId } = req.params;
       const userId = req.query.userId as string;
-      if (\!userId) return res.status(400).json({ message: 'User ID is required' });
+      if (!userId) return res.status(400).json({ message: 'User ID is required' });
       await videoService.deleteVideo(videoId, userId);
       res.json({ message: 'Video deleted successfully' });
     } catch (error: any) {

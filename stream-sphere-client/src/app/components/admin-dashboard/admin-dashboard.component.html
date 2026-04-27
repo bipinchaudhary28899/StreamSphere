@@ -24,170 +24,410 @@
     <div class="ad-skel-card" *ngFor="let i of [1,2,3,4]"></div>
   </div>
 
-  <div class="ad-grid" *ngIf="stats && !loading">
+  <ng-container *ngIf="stats && !loading">
 
-    <!-- ── CloudFront ───────────────────────────────────────────────────── -->
-    <div class="ad-card">
-      <div class="ad-card-header">
-        <span class="ad-card-icon">🌐</span>
-        <h2>CloudFront</h2>
-        <span class="ad-note">Free: 10M req + 1TB / month (12 mo)</span>
-      </div>
+    <!-- ── Infrastructure grid ──────────────────────────────────────────── -->
+    <div class="ad-grid">
 
-      <div class="ad-warn" *ngIf="!stats.cloudfront.distributionConfigured">
-        ⚠️ Add <code>CLOUDFRONT_DISTRIBUTION_ID</code> to your <code>.env</code> to see CloudFront metrics.
-      </div>
-
-      <div class="ad-warn" *ngIf="stats.errors.cloudfront">
-        CloudWatch error: {{ stats.errors.cloudfront }}
-      </div>
-
-      <!-- Requests -->
-      <div class="ad-metric">
-        <div class="ad-metric-row">
-          <span class="ad-metric-label">HTTP Requests</span>
-          <span class="ad-metric-value">
-            {{ fmt(stats.cloudfront.requests) }}
-            <span class="ad-limit">/ {{ fmt(stats.limits.cloudfront.requests) }}</span>
-          </span>
+      <!-- CloudFront -->
+      <div class="ad-card">
+        <div class="ad-card-header">
+          <span class="ad-card-icon">🌐</span>
+          <h2>CloudFront</h2>
+          <span class="ad-note">Free: 10M req + 1TB / month (12 mo)</span>
         </div>
-        <div class="ad-bar-track">
-          <div class="ad-bar-fill {{ level(stats.cloudfront.requests, stats.limits.cloudfront.requests) }}"
-               [style.width.%]="pct(stats.cloudfront.requests, stats.limits.cloudfront.requests)">
+
+        <div class="ad-warn" *ngIf="!stats.cloudfront.distributionConfigured">
+          ⚠️ Add <code>CLOUDFRONT_DISTRIBUTION_ID</code> to your <code>.env</code> to see CloudFront metrics.
+        </div>
+
+        <div class="ad-warn" *ngIf="stats.errors.cloudfront">
+          CloudWatch error: {{ stats.errors.cloudfront }}
+        </div>
+
+        <div class="ad-metric">
+          <div class="ad-metric-row">
+            <span class="ad-metric-label">HTTP Requests</span>
+            <span class="ad-metric-value">
+              {{ fmt(stats.cloudfront.requests) }}
+              <span class="ad-limit">/ {{ fmt(stats.limits.cloudfront.requests) }}</span>
+            </span>
+          </div>
+          <div class="ad-bar-track">
+            <div class="ad-bar-fill {{ level(stats.cloudfront.requests, stats.limits.cloudfront.requests) }}"
+                 [style.width.%]="pct(stats.cloudfront.requests, stats.limits.cloudfront.requests)">
+            </div>
+          </div>
+          <div class="ad-pct {{ level(stats.cloudfront.requests, stats.limits.cloudfront.requests) }}">
+            {{ pct(stats.cloudfront.requests, stats.limits.cloudfront.requests).toFixed(1) }}% of free tier
           </div>
         </div>
-        <div class="ad-pct {{ level(stats.cloudfront.requests, stats.limits.cloudfront.requests) }}">
-          {{ pct(stats.cloudfront.requests, stats.limits.cloudfront.requests).toFixed(1) }}% of free tier
+
+        <div class="ad-metric">
+          <div class="ad-metric-row">
+            <span class="ad-metric-label">Data Transfer Out</span>
+            <span class="ad-metric-value">
+              {{ fmtGB(stats.cloudfront.dataTransferGB) }}
+              <span class="ad-limit">/ {{ stats.limits.cloudfront.dataTransferGB }} GB</span>
+            </span>
+          </div>
+          <div class="ad-bar-track">
+            <div class="ad-bar-fill {{ level(stats.cloudfront.dataTransferGB, stats.limits.cloudfront.dataTransferGB) }}"
+                 [style.width.%]="pct(stats.cloudfront.dataTransferGB, stats.limits.cloudfront.dataTransferGB)">
+            </div>
+          </div>
+          <div class="ad-pct {{ level(stats.cloudfront.dataTransferGB, stats.limits.cloudfront.dataTransferGB) }}">
+            {{ pct(stats.cloudfront.dataTransferGB, stats.limits.cloudfront.dataTransferGB).toFixed(2) }}% of free tier
+          </div>
         </div>
       </div>
 
-      <!-- Data Transfer -->
-      <div class="ad-metric">
-        <div class="ad-metric-row">
-          <span class="ad-metric-label">Data Transfer Out</span>
-          <span class="ad-metric-value">
-            {{ fmtGB(stats.cloudfront.dataTransferGB) }}
-            <span class="ad-limit">/ {{ stats.limits.cloudfront.dataTransferGB }} GB</span>
-          </span>
+      <!-- S3 -->
+      <div class="ad-card">
+        <div class="ad-card-header">
+          <span class="ad-card-icon">🗄️</span>
+          <h2>Amazon S3</h2>
+          <span class="ad-note">Free: 5 GB storage · 2K PUTs / month (always)</span>
         </div>
-        <div class="ad-bar-track">
-          <div class="ad-bar-fill {{ level(stats.cloudfront.dataTransferGB, stats.limits.cloudfront.dataTransferGB) }}"
-               [style.width.%]="pct(stats.cloudfront.dataTransferGB, stats.limits.cloudfront.dataTransferGB)">
+
+        <div class="ad-warn" *ngIf="stats.errors.s3">
+          S3 error: {{ stats.errors.s3 }}
+        </div>
+
+        <div class="ad-metric">
+          <div class="ad-metric-row">
+            <span class="ad-metric-label">Storage Used</span>
+            <span class="ad-metric-value">
+              {{ fmtGB(stats.s3.storageGB) }}
+              <span class="ad-limit">/ {{ stats.limits.s3.storageGB }} GB</span>
+            </span>
+          </div>
+          <div class="ad-bar-track">
+            <div class="ad-bar-fill {{ level(stats.s3.storageGB, stats.limits.s3.storageGB) }}"
+                 [style.width.%]="pct(stats.s3.storageGB, stats.limits.s3.storageGB)">
+            </div>
+          </div>
+          <div class="ad-pct {{ level(stats.s3.storageGB, stats.limits.s3.storageGB) }}">
+            {{ pct(stats.s3.storageGB, stats.limits.s3.storageGB).toFixed(2) }}% of free tier
           </div>
         </div>
-        <div class="ad-pct {{ level(stats.cloudfront.dataTransferGB, stats.limits.cloudfront.dataTransferGB) }}">
-          {{ pct(stats.cloudfront.dataTransferGB, stats.limits.cloudfront.dataTransferGB).toFixed(2) }}% of free tier
+
+        <div class="ad-metric">
+          <div class="ad-metric-row">
+            <span class="ad-metric-label">Upload Requests (PUTs)</span>
+            <span class="ad-metric-value">
+              {{ fmt(stats.s3.putRequests) }}
+              <span class="ad-limit">/ {{ fmt(stats.limits.s3.putRequests) }}</span>
+            </span>
+          </div>
+          <div class="ad-bar-track">
+            <div class="ad-bar-fill {{ level(stats.s3.putRequests, stats.limits.s3.putRequests) }}"
+                 [style.width.%]="pct(stats.s3.putRequests, stats.limits.s3.putRequests)">
+            </div>
+          </div>
+          <div class="ad-pct {{ level(stats.s3.putRequests, stats.limits.s3.putRequests) }}">
+            {{ pct(stats.s3.putRequests, stats.limits.s3.putRequests).toFixed(1) }}% of free tier
+          </div>
         </div>
+
+        <div class="ad-info-row" *ngIf="stats.s3.objectCount !== null">
+          <span>Total objects in bucket:</span>
+          <strong>{{ stats.s3.objectCount }}</strong>
+        </div>
+      </div>
+
+      <!-- Backend API -->
+      <div class="ad-card">
+        <div class="ad-card-header">
+          <span class="ad-card-icon">⚡</span>
+          <h2>Backend API</h2>
+          <span class="ad-note">Tracked in Redis</span>
+        </div>
+
+        <div class="ad-stat-pair">
+          <div class="ad-stat">
+            <div class="ad-stat-value">{{ fmt(stats.backend.apiRequestsToday) }}</div>
+            <div class="ad-stat-label">Requests today</div>
+          </div>
+          <div class="ad-stat">
+            <div class="ad-stat-value">{{ fmt(stats.backend.apiRequestsMonth) }}</div>
+            <div class="ad-stat-label">Requests this month</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- App Stats -->
+      <div class="ad-card">
+        <div class="ad-card-header">
+          <span class="ad-card-icon">📊</span>
+          <h2>App Stats</h2>
+          <span class="ad-note">MongoDB counts</span>
+        </div>
+
+        <div class="ad-stat-pair">
+          <div class="ad-stat">
+            <div class="ad-stat-value">{{ stats.app.videos }}</div>
+            <div class="ad-stat-label">Videos</div>
+          </div>
+          <div class="ad-stat">
+            <div class="ad-stat-value">{{ stats.app.users }}</div>
+            <div class="ad-stat-label">Users</div>
+          </div>
+          <div class="ad-stat">
+            <div class="ad-stat-value">{{ stats.app.comments }}</div>
+            <div class="ad-stat-label">Comments</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /ad-grid -->
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- GenABR Performance Analysis                                          -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+
+    <div class="gn-section-header">
+      <span class="gn-section-icon">🧠</span>
+      <div>
+        <h2 class="gn-section-title">GenABR Performance Analysis</h2>
+        <p class="gn-section-sub">
+          Comparing {{ stats.genabr?.withGenabr?.count ?? 0 }} sessions with GenABR active
+          vs {{ stats.genabr?.withoutGenabr?.count ?? 0 }} baseline sessions
+          &nbsp;·&nbsp; {{ stats.genabr?.totalSessions ?? 0 }} total
+        </p>
+      </div>
+      <div class="gn-share-pill" *ngIf="stats.genabr && stats.genabr.totalSessions > 0">
+        <span class="gn-share-num">{{ genabrSharePct() }}%</span>
+        <span class="gn-share-label">sessions used GenABR</span>
       </div>
     </div>
 
-    <!-- ── S3 ───────────────────────────────────────────────────────────── -->
-    <div class="ad-card">
-      <div class="ad-card-header">
-        <span class="ad-card-icon">🗄️</span>
-        <h2>Amazon S3</h2>
-        <span class="ad-note">Free: 5 GB storage · 2K PUTs / month (always)</span>
-      </div>
+    <!-- No data notice -->
+    <div class="ad-warn gn-no-data" *ngIf="!stats.genabr || stats.genabr.totalSessions === 0">
+      No completed streaming sessions recorded yet. GenABR metrics will appear here once users start watching videos.
+    </div>
 
-      <div class="ad-warn" *ngIf="stats.errors.s3">
-        S3 error: {{ stats.errors.s3 }}
-      </div>
+    <ng-container *ngIf="stats.genabr && stats.genabr.totalSessions > 0">
 
-      <!-- Storage -->
-      <div class="ad-metric">
-        <div class="ad-metric-row">
-          <span class="ad-metric-label">Storage Used</span>
-          <span class="ad-metric-value">
-            {{ fmtGB(stats.s3.storageGB) }}
-            <span class="ad-limit">/ {{ stats.limits.s3.storageGB }} GB</span>
-          </span>
+      <!-- ── KPI Comparison Card ─────────────────────────────────────────── -->
+      <div class="gn-compare-card">
+
+        <!-- Column headers -->
+        <div class="gn-compare-header">
+          <div class="gn-col-label gn-col-metric">Metric</div>
+          <div class="gn-col-label gn-col-with">
+            <span class="gn-on-dot"></span> With GenABR
+            <span class="gn-count-badge">{{ stats.genabr.withGenabr.count }} sessions</span>
+          </div>
+          <div class="gn-col-label gn-col-without">
+            <span class="gn-off-dot"></span> Without GenABR
+            <span class="gn-count-badge">{{ stats.genabr.withoutGenabr.count }} sessions</span>
+          </div>
+          <div class="gn-col-label gn-col-delta">Δ Improvement</div>
         </div>
-        <div class="ad-bar-track">
-          <div class="ad-bar-fill {{ level(stats.s3.storageGB, stats.limits.s3.storageGB) }}"
-               [style.width.%]="pct(stats.s3.storageGB, stats.limits.s3.storageGB)">
+
+        <!-- Φ Score -->
+        <div class="gn-compare-row">
+          <div class="gn-cell gn-cell-metric">
+            <span class="gn-metric-name">Φ Score</span>
+            <span class="gn-metric-desc">QoE-to-Cost</span>
+          </div>
+          <div class="gn-cell gn-cell-val gn-val-with">
+            <span class="gn-big-val">{{ fmtN(stats.genabr.withGenabr.avgPhi) }}</span>
+            <div class="gn-mini-bar-track">
+              <div class="gn-mini-bar gn-bar-with"
+                   [style.width.%]="barPct(stats.genabr.withGenabr.avgPhi,
+                     (stats.genabr.withGenabr.avgPhi ?? 0) > (stats.genabr.withoutGenabr.avgPhi ?? 0)
+                       ? stats.genabr.withGenabr.avgPhi
+                       : stats.genabr.withoutGenabr.avgPhi)">
+              </div>
+            </div>
+          </div>
+          <div class="gn-cell gn-cell-val gn-val-without">
+            <span class="gn-big-val">{{ fmtN(stats.genabr.withoutGenabr.avgPhi) }}</span>
+            <div class="gn-mini-bar-track">
+              <div class="gn-mini-bar gn-bar-without"
+                   [style.width.%]="barPct(stats.genabr.withoutGenabr.avgPhi,
+                     (stats.genabr.withGenabr.avgPhi ?? 0) > (stats.genabr.withoutGenabr.avgPhi ?? 0)
+                       ? stats.genabr.withGenabr.avgPhi
+                       : stats.genabr.withoutGenabr.avgPhi)">
+              </div>
+            </div>
+          </div>
+          <div class="gn-cell gn-cell-delta">
+            <span class="{{ improvementClass(stats.genabr.withGenabr.avgPhi, stats.genabr.withoutGenabr.avgPhi) }} gn-delta-val">
+              {{ improvement(stats.genabr.withGenabr.avgPhi, stats.genabr.withoutGenabr.avgPhi) }}
+            </span>
           </div>
         </div>
-        <div class="ad-pct {{ level(stats.s3.storageGB, stats.limits.s3.storageGB) }}">
-          {{ pct(stats.s3.storageGB, stats.limits.s3.storageGB).toFixed(2) }}% of free tier
-        </div>
-      </div>
 
-      <!-- PUT requests -->
-      <div class="ad-metric">
-        <div class="ad-metric-row">
-          <span class="ad-metric-label">Upload Requests (PUTs)</span>
-          <span class="ad-metric-value">
-            {{ fmt(stats.s3.putRequests) }}
-            <span class="ad-limit">/ {{ fmt(stats.limits.s3.putRequests) }}</span>
-          </span>
-        </div>
-        <div class="ad-bar-track">
-          <div class="ad-bar-fill {{ level(stats.s3.putRequests, stats.limits.s3.putRequests) }}"
-               [style.width.%]="pct(stats.s3.putRequests, stats.limits.s3.putRequests)">
+        <!-- Avg VMAF -->
+        <div class="gn-compare-row">
+          <div class="gn-cell gn-cell-metric">
+            <span class="gn-metric-name">Avg VMAF</span>
+            <span class="gn-metric-desc">Video quality (0–100)</span>
+          </div>
+          <div class="gn-cell gn-cell-val gn-val-with">
+            <span class="gn-big-val">{{ fmtN(stats.genabr.withGenabr.avgVmaf) }}</span>
+            <div class="gn-mini-bar-track">
+              <div class="gn-mini-bar gn-bar-with"
+                   [style.width.%]="barPct(stats.genabr.withGenabr.avgVmaf, 100)">
+              </div>
+            </div>
+          </div>
+          <div class="gn-cell gn-cell-val gn-val-without">
+            <span class="gn-big-val">{{ fmtN(stats.genabr.withoutGenabr.avgVmaf) }}</span>
+            <div class="gn-mini-bar-track">
+              <div class="gn-mini-bar gn-bar-without"
+                   [style.width.%]="barPct(stats.genabr.withoutGenabr.avgVmaf, 100)">
+              </div>
+            </div>
+          </div>
+          <div class="gn-cell gn-cell-delta">
+            <span class="{{ improvementClass(stats.genabr.withGenabr.avgVmaf, stats.genabr.withoutGenabr.avgVmaf) }} gn-delta-val">
+              {{ improvement(stats.genabr.withGenabr.avgVmaf, stats.genabr.withoutGenabr.avgVmaf) }}
+            </span>
           </div>
         </div>
-        <div class="ad-pct {{ level(stats.s3.putRequests, stats.limits.s3.putRequests) }}">
-          {{ pct(stats.s3.putRequests, stats.limits.s3.putRequests).toFixed(1) }}% of free tier
+
+        <!-- VMAF Variance -->
+        <div class="gn-compare-row">
+          <div class="gn-cell gn-cell-metric">
+            <span class="gn-metric-name">VMAF σ</span>
+            <span class="gn-metric-desc">Quality instability (lower = better)</span>
+          </div>
+          <div class="gn-cell gn-cell-val gn-val-with">
+            <span class="gn-big-val">{{ fmtN(stats.genabr.withGenabr.avgSigmaVmaf) }}</span>
+          </div>
+          <div class="gn-cell gn-cell-val gn-val-without">
+            <span class="gn-big-val">{{ fmtN(stats.genabr.withoutGenabr.avgSigmaVmaf) }}</span>
+          </div>
+          <div class="gn-cell gn-cell-delta">
+            <span class="{{ improvementClass(stats.genabr.withGenabr.avgSigmaVmaf, stats.genabr.withoutGenabr.avgSigmaVmaf, true) }} gn-delta-val">
+              {{ improvement(stats.genabr.withGenabr.avgSigmaVmaf, stats.genabr.withoutGenabr.avgSigmaVmaf, true) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Avg Stalls / session -->
+        <div class="gn-compare-row">
+          <div class="gn-cell gn-cell-metric">
+            <span class="gn-metric-name">Stalls / session</span>
+            <span class="gn-metric-desc">Rebuffer events (lower = better)</span>
+          </div>
+          <div class="gn-cell gn-cell-val gn-val-with">
+            <span class="gn-big-val">{{ fmtN(stats.genabr.withGenabr.avgStallCount) }}</span>
+          </div>
+          <div class="gn-cell gn-cell-val gn-val-without">
+            <span class="gn-big-val">{{ fmtN(stats.genabr.withoutGenabr.avgStallCount) }}</span>
+          </div>
+          <div class="gn-cell gn-cell-delta">
+            <span class="{{ improvementClass(stats.genabr.withGenabr.avgStallCount, stats.genabr.withoutGenabr.avgStallCount, true) }} gn-delta-val">
+              {{ improvement(stats.genabr.withGenabr.avgStallCount, stats.genabr.withoutGenabr.avgStallCount, true) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Total Stall Time -->
+        <div class="gn-compare-row">
+          <div class="gn-cell gn-cell-metric">
+            <span class="gn-metric-name">Total stall time</span>
+            <span class="gn-metric-desc">Avg per session (lower = better)</span>
+          </div>
+          <div class="gn-cell gn-cell-val gn-val-with">
+            <span class="gn-big-val">{{ fmtMs(stats.genabr.withGenabr.avgTotalStallMs) }}</span>
+          </div>
+          <div class="gn-cell gn-cell-val gn-val-without">
+            <span class="gn-big-val">{{ fmtMs(stats.genabr.withoutGenabr.avgTotalStallMs) }}</span>
+          </div>
+          <div class="gn-cell gn-cell-delta">
+            <span class="{{ improvementClass(stats.genabr.withGenabr.avgTotalStallMs, stats.genabr.withoutGenabr.avgTotalStallMs, true) }} gn-delta-val">
+              {{ improvement(stats.genabr.withGenabr.avgTotalStallMs, stats.genabr.withoutGenabr.avgTotalStallMs, true) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Avg Buffer Level -->
+        <div class="gn-compare-row gn-compare-row-last">
+          <div class="gn-cell gn-cell-metric">
+            <span class="gn-metric-name">Avg buffer level</span>
+            <span class="gn-metric-desc">Seconds of lookahead (higher = better)</span>
+          </div>
+          <div class="gn-cell gn-cell-val gn-val-with">
+            <span class="gn-big-val">
+              {{ stats.genabr.withGenabr.avgBufferSec !== null ? fmtN(stats.genabr.withGenabr.avgBufferSec) + 's' : '—' }}
+            </span>
+          </div>
+          <div class="gn-cell gn-cell-val gn-val-without">
+            <span class="gn-big-val">
+              {{ stats.genabr.withoutGenabr.avgBufferSec !== null ? fmtN(stats.genabr.withoutGenabr.avgBufferSec) + 's' : '—' }}
+            </span>
+          </div>
+          <div class="gn-cell gn-cell-delta">
+            <span class="{{ improvementClass(stats.genabr.withGenabr.avgBufferSec, stats.genabr.withoutGenabr.avgBufferSec) }} gn-delta-val">
+              {{ improvement(stats.genabr.withGenabr.avgBufferSec, stats.genabr.withoutGenabr.avgBufferSec) }}
+            </span>
+          </div>
+        </div>
+
+      </div><!-- /gn-compare-card -->
+
+      <!-- ── Recent Sessions Table ──────────────────────────────────────── -->
+      <div class="gn-table-card" *ngIf="stats.genabr.recentSessions.length > 0">
+        <div class="gn-table-header">
+          <span class="gn-table-icon">📋</span>
+          <h3 class="gn-table-title">Recent Sessions</h3>
+          <span class="ad-note">Last {{ stats.genabr.recentSessions.length }} completed sessions</span>
+        </div>
+
+        <div class="gn-table-wrap">
+          <table class="gn-table">
+            <thead>
+              <tr>
+                <th>Session</th>
+                <th>Duration</th>
+                <th class="gn-th-center">GenABR</th>
+                <th class="gn-th-right">Φ Score</th>
+                <th class="gn-th-right">Avg VMAF</th>
+                <th class="gn-th-right">VMAF σ</th>
+                <th class="gn-th-right">Stalls</th>
+                <th class="gn-th-right">Stall time</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let s of stats.genabr.recentSessions; trackBy: trackBySessionId"
+                  [class.gn-row-active]="s.genabrActive">
+                <td class="gn-td-session">
+                  <span class="gn-session-id">{{ s.sessionId | slice:0:8 }}…</span>
+                  <span class="gn-session-time">{{ s.startedAt | date:'MMM d, HH:mm' }}</span>
+                </td>
+                <td class="gn-td-dur">{{ fmtDuration(s.startedAt, s.endedAt) }}</td>
+                <td class="gn-td-center">
+                  <span class="gn-badge" [class.gn-badge-on]="s.genabrActive" [class.gn-badge-off]="!s.genabrActive">
+                    {{ s.genabrActive ? 'ON' : 'OFF' }}
+                  </span>
+                </td>
+                <td class="gn-td-right gn-td-phi">{{ fmtN(s.phiScore) }}</td>
+                <td class="gn-td-right">{{ fmtN(s.avgVmaf) }}</td>
+                <td class="gn-td-right gn-td-muted">{{ fmtN(s.sigmaVmaf) }}</td>
+                <td class="gn-td-right">{{ s.stallCount }}</td>
+                <td class="gn-td-right">{{ fmtMs(s.totalStallMs) }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div class="ad-info-row" *ngIf="stats.s3.objectCount !== null">
-        <span>Total objects in bucket:</span>
-        <strong>{{ stats.s3.objectCount }}</strong>
-      </div>
+    </ng-container><!-- /genabr data -->
+
+    <!-- ── Free tier footnote ─────────────────────────────────────────────── -->
+    <div class="ad-footer">
+      <p>☁️ CloudFront free tier applies for the <strong>first 12 months</strong> of your AWS account.</p>
+      <p>🗄️ S3 storage and request free tiers are <strong>always free</strong> (within limits).</p>
+      <p>📈 CloudFront hit/miss breakdown requires <em>Additional CloudFront Metrics</em> (~$0.01/month) — not tracked here to stay fully free.</p>
+      <p>🧠 GenABR Φ score = (avg VMAF − 0.30·σ − 0.05·N<sub>stall</sub>·T<sub>stall</sub>) / session minutes.</p>
     </div>
 
-    <!-- ── Backend API ──────────────────────────────────────────────────── -->
-    <div class="ad-card">
-      <div class="ad-card-header">
-        <span class="ad-card-icon">⚡</span>
-        <h2>Backend API</h2>
-        <span class="ad-note">Tracked in Redis</span>
-      </div>
-
-      <div class="ad-stat-pair">
-        <div class="ad-stat">
-          <div class="ad-stat-value">{{ fmt(stats.backend.apiRequestsToday) }}</div>
-          <div class="ad-stat-label">Requests today</div>
-        </div>
-        <div class="ad-stat">
-          <div class="ad-stat-value">{{ fmt(stats.backend.apiRequestsMonth) }}</div>
-          <div class="ad-stat-label">Requests this month</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── App Stats ────────────────────────────────────────────────────── -->
-    <div class="ad-card">
-      <div class="ad-card-header">
-        <span class="ad-card-icon">📊</span>
-        <h2>App Stats</h2>
-        <span class="ad-note">MongoDB counts</span>
-      </div>
-
-      <div class="ad-stat-pair">
-        <div class="ad-stat">
-          <div class="ad-stat-value">{{ stats.app.videos }}</div>
-          <div class="ad-stat-label">Videos</div>
-        </div>
-        <div class="ad-stat">
-          <div class="ad-stat-value">{{ stats.app.users }}</div>
-          <div class="ad-stat-label">Users</div>
-        </div>
-        <div class="ad-stat">
-          <div class="ad-stat-value">{{ stats.app.comments }}</div>
-          <div class="ad-stat-label">Comments</div>
-        </div>
-      </div>
-    </div>
-
-  </div><!-- /ad-grid -->
-
-  <!-- Free tier footnote -->
-  <div class="ad-footer" *ngIf="stats">
-    <p>☁️ CloudFront free tier applies for the <strong>first 12 months</strong> of your AWS account.</p>
-    <p>🗄️ S3 storage and request free tiers are <strong>always free</strong> (within limits).</p>
-    <p>📈 CloudFront hit/miss breakdown requires <em>Additional CloudFront Metrics</em> (~$0.01/month) — not tracked here to stay fully free.</p>
-  </div>
+  </ng-container><!-- /stats && !loading -->
 
 </div>

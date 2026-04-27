@@ -4,7 +4,7 @@ import { redisService, CK } from '../services/redis.service';
 
 export async function hlsWebhookController(req: Request, res: Response): Promise<void> {
   const secret = req.headers['x-hls-secret'];
-  if (\!secret || secret \!== process.env.HLS_WEBHOOK_SECRET) {
+  if (!secret || secret !== process.env.HLS_WEBHOOK_SECRET) {
     res.status(401).json({ message: 'Unauthorized' });
     return;
   }
@@ -18,12 +18,12 @@ export async function hlsWebhookController(req: Request, res: Response): Promise
     aiSummary?:    string;
   };
 
-  if (\!rawS3Key || \!masterHlsUrl) {
+  if (!rawS3Key || !masterHlsUrl) {
     res.status(400).json({ message: 'rawS3Key and masterHlsUrl are required' });
     return;
   }
 
-  const cloudfrontBase   = process.env.CLOUDFRONT_URL\!.replace(/\/$/, '');
+  const cloudfrontBase   = process.env.CLOUDFRONT_URL!.replace(/\/$/, '');
   const rawCloudfrontUrl = `${cloudfrontBase}/${rawS3Key}`;
 
   const video = await Video.findOneAndUpdate(
@@ -41,7 +41,7 @@ export async function hlsWebhookController(req: Request, res: Response): Promise
     { new: true },
   );
 
-  if (\!video) {
+  if (!video) {
     res.status(404).json({ message: `No video found for S3_url: ${rawCloudfrontUrl}` });
     return;
   }

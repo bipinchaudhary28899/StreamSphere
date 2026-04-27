@@ -10,6 +10,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { VideoService } from '../../services/video.service';
 import { CommentSectionComponent } from '../comment-section/comment-section.component';
 import Hls from 'hls.js';
+import { Subscription } from 'rxjs';
+import { TelemetryService } from '../../services/telemetry.service';
+import { PredictionService } from '../../services/prediction.service';
 
 @Component({
   selector: 'app-video-player',
@@ -55,6 +58,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   private controlsTimer: any = null;
   // Blocks the synthesised click/mousemove that follows a touch tap.
   private _touchHandled = false;
+  private predictionSub: Subscription | null = null;
 
   get seekPercent(): number {
     return this.duration > 0 ? (this.currentTime / this.duration) * 100 : 0;
@@ -64,6 +68,8 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private videoService: VideoService,
     private cdr: ChangeDetectorRef,
+    private telemetry: TelemetryService,
+    private prediction: PredictionService,
   ) {}
 
 
@@ -80,6 +86,8 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroyHls();
     clearTimeout(this.controlsTimer);
+    this.predictionSub?.unsubscribe();
+    this.telemetry.stopSession();
   }
 
   @HostListener('document:click')
@@ -110,6 +118,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
           // so <video #videoElement> is in the DOM before HLS.js attaches.
           this.cdr.detectChanges();
           setTimeout(() => this.initHlsPlayer(), 0);
+          this.telemetry.startSession(videoId);
         } else {
           this.error = 'Video not found';
           this.loading = false;
@@ -165,6 +174,17 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       this.hls.on(Hls.Events.LEVEL_SWITCHED, (_evt, data) => {
         this.hlsAutoLevel = data.level;
         this.cdr.detectChanges();
+        // Report bitrate switch to telemetry
+        const lvl = this.hls?.levels[data.level];
+        if (lvl) this.telemetry.updateBitrate(Math.round(lvl.bitrate / 1000));
+      });
+
+      // Subscribe to GenABR buffer targets — apply only when recommendation changes
+      this.predictionSub?.unsubscribe();
+      this.predictionSub = this.prediction.bufferTargetChanged$.subscribe(target => {
+        if (!target || !this.hls) return;
+        this.hls.config.maxBufferLength    = target.max_buffer_length;
+        this.hls.config.maxMaxBufferLength = target.max_max_buffer_length;
       });
 
     } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
@@ -313,7 +333,13 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   onTimeUpdate(): void {
     const v = this.videoRef?.nativeElement;
-    if (v) this.currentTime = v.currentTime;
+    if (v) {
+      this.currentTime = v.currentTime;
+      if (this.hls) {
+        const buf = this.hls.mainForwardBufferInfo?.len ?? null;
+        if (buf !== null) this.telemetry.updateBufferLevel(buf);
+      }
+    }
   }
 
   onLoadedMetadata(): void {
