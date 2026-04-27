@@ -2,10 +2,10 @@ import { Request, Response } from 'express';
 import { runInference } from '../services/inferenceEngine.service';
 
 // POST /api/genabr/decision
-// Body: { lat, lng, heading?, speed_kmh?, recent_downlinks? }
+// Body: { lat, lng, heading?, speed_kmh?, recent_downlinks?, session_id? }
 // Returns: InferenceResult
 export async function genabrDecisionController(req: Request, res: Response): Promise<void> {
-  const { lat, lng, heading, speed_kmh, recent_downlinks } = req.body;
+  const { lat, lng, heading, speed_kmh, recent_downlinks, session_id } = req.body;
 
   if (lat == null || lng == null) {
     res.status(400).json({ error: 'lat and lng are required' });
@@ -21,6 +21,7 @@ export async function genabrDecisionController(req: Request, res: Response): Pro
     Number(speed_kmh ?? 0),
     Array.isArray(recent_downlinks) ? recent_downlinks.map(Number) : [],
     userId,
+    typeof session_id === 'string' ? session_id : null,
   );
 
   res.json(result);

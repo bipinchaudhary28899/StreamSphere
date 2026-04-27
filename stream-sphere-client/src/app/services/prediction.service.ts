@@ -20,6 +20,7 @@ export interface InferenceResult {
   confidence:       number;
   oracle_triggered: boolean;
   oracle_reason:    string | null;
+  oracle_reasoning: string | null;   // full LLM explanation
 }
 
 const POLL_INTERVAL_MS    = 25_000;
@@ -58,6 +59,9 @@ export class PredictionService implements OnDestroy {
   // Phase 6 — tracks whether GenABR has ever intervened this session
   genabrWasActive = false;
 
+  // Current session id — forwarded to Oracle for per-session LLM log linkage
+  private sessionId: string | null = null;
+
   constructor(
     private http: HttpClient,
     private shadowMap: ShadowMapService,
@@ -65,6 +69,10 @@ export class PredictionService implements OnDestroy {
   ) {}
 
   // ── Session lifecycle ─────────────────────────────────────────────────────
+
+  setSessionId(id: string): void {
+    this.sessionId = id;
+  }
 
   startPredicting(): void {
     this.stopPredicting();
@@ -147,6 +155,7 @@ export class PredictionService implements OnDestroy {
       heading:          this.heading,
       speed_kmh:        this.speedKmh,
       recent_downlinks: this.downlinkHistory,
+      session_id:       this.sessionId,
     }).subscribe({
       next: (result) => {
         this.targetSubject.next(result.buffer_target);

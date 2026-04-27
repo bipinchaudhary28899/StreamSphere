@@ -95,6 +95,7 @@ export class TelemetryService implements OnDestroy {
       this.startGeolocation();
       await this.initBattery();
       this.startPingLoop();
+      this.prediction.setSessionId(res.sessionId);
       this.prediction.startPredicting();
 
       if (this.lastPosition) {

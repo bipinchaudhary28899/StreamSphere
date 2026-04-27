@@ -10,6 +10,14 @@ import centralRoute from './routes/centralRoute.route';
 import { globalLimiter } from './middleware/rateLimiter.middleware';
 import { redisService } from './services/redis.service';
 
+// Import models explicitly so Mongoose registers their indexes on startup.
+// Required for the 2dsphere index on TelemetryPing.location and the TTL index
+// on TelemetryPing.timestamp — both were added after the collection was first
+// created, so syncIndexes() below ensures Atlas reflects the current schema.
+import './models/telemetryPing';
+import './models/radioMapCache';
+import './models/streamingSession';
+
 dotenv.config();
 
 const app = express();
@@ -35,8 +43,19 @@ app.use('/api', centralRoute);
 redisService.connect();
 
 mongoose.connect(process.env.MONGODB_URI!)
-  .then(() => {
+  .then(async () => {
     console.log('✅ MongoDB connected');
+
+    // Sync schema indexes with Atlas — idempotent and fast after the first run.
+    // This ensures the 2dsphere index on TelemetryPing.location and the TTL index
+    // on TelemetryPing.timestamp are created even if the collection pre-dates them.
+    try {
+      await mongoose.connection.syncIndexes();
+      console.log('✅ Indexes synced');
+    } catch (e) {
+      console.warn('⚠️  Index sync failed (non-fatal):', e);
+    }
+
     app.listen(3000, () => {
       console.log('🚀 Server running on http://localhost:3000');
     });
