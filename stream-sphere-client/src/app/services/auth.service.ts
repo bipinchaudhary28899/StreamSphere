@@ -11,7 +11,6 @@ export class AuthService {
   private loginStateSubject = new BehaviorSubject<boolean>(false);
 
   constructor(private http: HttpClient) {
-    // Initialize login state from localStorage
     this.checkInitialLoginState();
   }
 
@@ -29,12 +28,10 @@ export class AuthService {
     return sessionStorage.getItem('redirectUrl');
   }
 
-  // Observable to subscribe to login state changes
   getLoginState(): Observable<boolean> {
     return this.loginStateSubject.asObservable();
   }
 
-  // Method to update login state
   updateLoginState(isLoggedIn: boolean) {
     // Use setTimeout to defer the state change to the next change detection cycle
     setTimeout(() => {
@@ -42,12 +39,10 @@ export class AuthService {
     });
   }
 
-  // Method to get current login state
   isLoggedIn(): boolean {
     return this.loginStateSubject.value;
   }
 
-  // Centralized logout method
   logout() {
     localStorage.removeItem('user');
     localStorage.removeItem('token');

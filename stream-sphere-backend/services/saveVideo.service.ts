@@ -1,10 +1,3 @@
-// services/saveVideo.service.ts
-//
-// Saves the initial video document with status='processing'.
-// Category and aiSummary are NOT set here — the HLS Lambda pipeline runs
-// Whisper + GPT-4o-mini + HuggingFace and sends them via the webhook
-// (POST /api/internal/hls-complete) once transcoding + AI are complete.
-
 import { Video } from '../models/video';
 import { redisService, CK } from './redis.service';
 

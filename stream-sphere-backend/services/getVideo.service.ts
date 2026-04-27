@@ -5,12 +5,6 @@ import { User } from '../models/user';
 import { S3Client, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 import { redisService, CK, TTL } from './redis.service';
 
-/**
- * YouTube/Instagram pattern: profile images live in the User collection.
- * After fetching any list of videos, batch-lookup uploaders and stamp
- * user_profile_image onto each video object (overrides any stale stored value).
- * Only one small indexed query per request; result is cached with the feed.
- */
 async function populateUserImages(videos: any[]): Promise<any[]> {
   if (!videos.length) return videos;
   const userIds = [...new Set(videos.map((v: any) => v.user_id).filter(Boolean))];
@@ -125,7 +119,6 @@ export class VideoService {
     return populated;
   }
 
-  // ── Top-liked (hero carousel) ────────────────────────────────────────────────
 
   async getTopLikedVideos(): Promise<any[]> {
     const cached = await redisService.get<any[]>(CK.topLiked());
@@ -137,7 +130,6 @@ export class VideoService {
     return videos;
   }
 
-  // ── Single video ─────────────────────────────────────────────────────────────
 
   async getVideoById(id: string): Promise<any | null> {
     const cached = await redisService.get<any>(CK.singleVideo(id));
@@ -152,7 +144,6 @@ export class VideoService {
     return await Video.findOne({ S3_url }).exec();
   }
 
-  // ── User-specific lists (not cached — personalised data) ─────────────────────
 
   async getLikedVideos(userId: string) {
     return await Video.find({ likedBy: userId }).sort({ _id: -1 }).lean().exec();
@@ -166,7 +157,6 @@ export class VideoService {
     return await Video.find({ user_id: userId }).sort({ _id: -1 }).lean().exec();
   }
 
-  // ── Like / Dislike ────────────────────────────────────────────────────────────
 
   async likeVideo(videoId: string, userId: string) {
     const video = await Video.findById(videoId);
@@ -229,7 +219,6 @@ export class VideoService {
     return 'none';
   }
 
-  // ── Delete ────────────────────────────────────────────────────────────────────
 
   async deleteVideo(videoId: string, userId: string) {
     const video = await Video.findById(videoId);
@@ -279,7 +268,6 @@ export class VideoService {
     ]);
   }
 
-  // ── View counting ────────────────────────────────────────────────────────────
 
   async recordView(videoId: string, userId?: string): Promise<number> {
     const viewKey = `ss:view:${videoId}:${userId ?? 'anon'}`;

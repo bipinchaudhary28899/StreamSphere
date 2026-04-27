@@ -14,7 +14,6 @@ dotenv.config();
 
 const app = express();
 
-// ── CORS ──────────────────────────────────────────────────────────────────────
 app.use(cors({
   origin: (origin, callback) => {
     const allowed = process.env.CLIENT_URL?.split(',').map(o => o.trim()) || [];
@@ -26,16 +25,12 @@ app.use(cors({
   },
 }));
 
-// ── Body parsing ──────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10kb' })); // reject abnormally large JSON bodies
 
-// ── Global rate limiter (backstop for all routes) ─────────────────────────────
 app.use(globalLimiter);
 
-// ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api', centralRoute);
 
-// ── Database + server start ───────────────────────────────────────────────────
 // Connect Redis (non-blocking — if REDIS_URL absent, caching silently disabled)
 redisService.connect();
 

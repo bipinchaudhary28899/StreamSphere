@@ -1,14 +1,3 @@
-/**
- * cloudwatch.service.ts
- *
- * Fetches AWS usage metrics for the StreamSphere dev dashboard.
- * All data is pulled from free AWS APIs:
- *   - CloudWatch  → CloudFront request & byte counts  (always free)
- *   - S3 ListObjectsV2 → actual bucket storage size   (counts as a LIST request)
- *
- * CloudFront metrics live in us-east-1 regardless of the distribution's region.
- */
-
 import {
   CloudWatchClient,
   GetMetricStatisticsCommand,
@@ -18,7 +7,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// ── AWS Free Tier limits ──────────────────────────────────────────────────────
 export const FREE_TIER = {
   cloudfront: {
     requests:     10_000_000,   // 10 M requests / month  (first 12 months)
@@ -50,18 +38,15 @@ const s3Client = new S3Client({
   responseChecksumValidation: 'WHEN_REQUIRED',
 });
 
-/** Returns the first second of the current UTC month. */
 function startOfMonth(): Date {
   const d = new Date();
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
 }
 
-/** Sum all Datapoints.Sum values from a GetMetricStatistics response. */
 function sumDatapoints(datapoints: { Sum?: number }[]): number {
   return datapoints.reduce((acc, dp) => acc + (dp.Sum ?? 0), 0);
 }
 
-// ── CloudFront metrics ────────────────────────────────────────────────────────
 
 async function getCFMetric(
   metricName: string,
@@ -101,7 +86,6 @@ export async function getCloudFrontStats(distributionId: string) {
   };
 }
 
-// ── S3 bucket storage ─────────────────────────────────────────────────────────
 
 export async function getS3StorageStats() {
   const bucket = process.env.AWS_S3_BUCKET_NAME!;

@@ -10,12 +10,10 @@ import { adminStatsController }   from '../controllers/admin.controller';
 import { hlsWebhookController }   from '../controllers/hlsWebhook.controller';
 import { Video }                  from '../models/video';
 
-// ── Middleware ────────────────────────────────────────────────────────────────
 import { validate }        from '../middleware/validate.middleware';
 import { authLimiter, uploadLimiter, writeLimiter } from '../middleware/rateLimiter.middleware';
 import { statsMiddleware } from '../middleware/stats.middleware';
 
-// ── Schemas ───────────────────────────────────────────────────────────────────
 import {
   googleLoginSchema,
   uploadUrlSchema,
@@ -27,7 +25,6 @@ import {
   watchHistorySchema,
 } from '../validators/schemas';
 
-// ── Setup ─────────────────────────────────────────────────────────────────────
 const router: Router          = express.Router();
 const commentController       = new CommentController();
 const watchHistoryController  = new WatchHistoryController();
@@ -35,7 +32,6 @@ const watchHistoryController  = new WatchHistoryController();
 // Count every API request for the dev dashboard
 router.use(statsMiddleware);
 
-// ── Admin guard (email-based) ─────────────────────────────────────────────────
 const ADMIN_EMAIL = 'bkumar28899@gmail.com';
 function requireAdmin(req: any, res: Response, next: any): void {
   if (req.user?.email !== ADMIN_EMAIL) {
@@ -54,7 +50,6 @@ const wrap = (fn: H) => async (req: Request, res: Response): Promise<void> => {
   await fn(req, res);
 };
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
 router.post(
   '/google-login',
   authLimiter,
@@ -62,7 +57,6 @@ router.post(
   googleLogin,
 );
 
-// ── Upload ────────────────────────────────────────────────────────────────────
 router.post(
   '/upload-url',
   authenticateJWT,
@@ -79,7 +73,6 @@ router.post(
   saveVideoController,
 );
 
-// ── Feed — cursor-paginated + Redis cached ─────────────────────────────────────
 // GET /api/feed?cursor=<id>&category=<cat>&limit=<n>
 router.get('/feed',        wrap(VideoController.getFeed.bind(VideoController)));
 // GET /api/feed/search?q=<term>
@@ -88,7 +81,6 @@ router.get('/feed/search', wrap(VideoController.searchFeed.bind(VideoController)
 // Legacy /home — redirects to /feed for backward compatibility
 router.get('/home', wrap(VideoController.getFeed.bind(VideoController)));
 
-// ── Video reads — SPECIFIC routes MUST come before /:videoId ─────────────────
 router.get('/videos/top-liked', wrap(VideoController.getTopLikedVideos.bind(VideoController)));
 
 router.get('/videos/liked',
@@ -116,7 +108,6 @@ router.get('/videos/:videoId/reaction',
 
 router.get('/videos/:videoId', wrap(VideoController.getVideoById.bind(VideoController)));
 
-// ── Video writes ──────────────────────────────────────────────────────────────
 router.post('/videos/:videoId/like',
   authenticateJWT,
   writeLimiter,
@@ -137,7 +128,6 @@ router.delete('/videos/:videoId',
   wrap(VideoController.deleteVideo.bind(VideoController)),
 );
 
-// ── Comments ──────────────────────────────────────────────────────────────────
 // Get replies route MUST come before the catch-all /:commentId routes
 router.get('/comments/:commentId/replies',
   wrap((req, res) => commentController.getReplies(req, res)),
@@ -176,7 +166,6 @@ router.get('/user/comments',
   wrap((req, res) => commentController.getCommentsByUserId(req, res)),
 );
 
-// ── Watch history ─────────────────────────────────────────────────────────────
 router.post('/history/:videoId',
   authenticateJWT,
   writeLimiter,
@@ -189,7 +178,6 @@ router.get('/history',
   wrap((req, res) => watchHistoryController.getWatchHistory(req, res)),
 );
 
-// ── Internal Lambda endpoints (authenticated by x-hls-secret, no JWT) ────────
 
 // POST /api/internal/hls-complete — called by Lambda after transcoding + AI
 router.post('/internal/hls-complete', wrap(hlsWebhookController));
@@ -219,7 +207,6 @@ router.get('/internal/video-meta', async (req: Request, res: Response): Promise<
   res.json({ title: video.title || '', description: video.description || '' });
 });
 
-// ── Admin ─────────────────────────────────────────────────────────────────────
 router.get('/admin/stats',
   authenticateJWT,
   requireAdmin,

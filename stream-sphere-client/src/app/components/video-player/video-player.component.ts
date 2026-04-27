@@ -28,7 +28,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   @ViewChild('videoElement',   { static: false }) videoRef!: ElementRef<HTMLVideoElement>;
   @ViewChild('playerContainer',{ static: false }) playerContainerRef!: ElementRef<HTMLDivElement>;
 
-  // ── Video data ────────────────────────────────────────────────────────────
   video: any = null;
   loading = true;
   error: string | null = null;
@@ -41,14 +40,12 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   isLiking = false;
   isDisliking = false;
 
-  // ── HLS quality switcher ──────────────────────────────────────────────────
   private hls: Hls | null = null;
   hlsLevels: Array<{ name: string; index: number }> = [];
   hlsCurrentLevel = -1;
   hlsAutoLevel = -1;
   showSettingsMenu = false;
 
-  // ── Custom controls state ─────────────────────────────────────────────────
   isPlaying = false;
   isMuted = false;
   currentTime = 0;
@@ -56,11 +53,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   controlsVisible = true;
   isFullscreen = false;
   private controlsTimer: any = null;
-  // Set to true by onTouchZone() so the immediately-following synthesised
-  // click event (fired by mobile browsers after every touch) is ignored.
-  // Without this, the synthesised mousemove makes controls visible and the
-  // synthesised click sees them as visible and hides them again — net result:
-  // a single tap on mobile never shows the controls.
+  // Blocks the synthesised click/mousemove that follows a touch tap.
   private _touchHandled = false;
 
   get seekPercent(): number {
@@ -73,7 +66,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
   ) {}
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
     const videoId = this.route.snapshot.paramMap.get('id');
@@ -90,20 +82,17 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     clearTimeout(this.controlsTimer);
   }
 
-  // ── Close settings menu when clicking outside the player ─────────────────
   @HostListener('document:click')
   onDocumentClick(): void {
     if (this.showSettingsMenu) this.showSettingsMenu = false;
   }
 
-  // ── Track browser fullscreen changes ──────────────────────────────────────
   @HostListener('document:fullscreenchange')
   onFullscreenChange(): void {
     this.isFullscreen = !!document.fullscreenElement;
     this.cdr.detectChanges();
   }
 
-  // ── Data loading ──────────────────────────────────────────────────────────
 
   loadVideo(videoId: string): void {
     this.loading = true;
@@ -134,7 +123,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ── HLS player ────────────────────────────────────────────────────────────
 
   private initHlsPlayer(): void {
     const videoEl = this.videoRef?.nativeElement;
@@ -209,7 +197,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.hlsLevels = [];
   }
 
-  // ── Custom player controls ────────────────────────────────────────────────
 
   togglePlay(): void {
     const v = this.videoRef?.nativeElement;
@@ -217,15 +204,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     v.paused ? v.play() : v.pause();
   }
 
-  /**
-   * Mobile touch handler — fires on touchstart, before the browser synthesises
-   * mousemove / click events.  Manages the controls toggle directly and sets
-   * _touchHandled so onClickZone() (which fires ~300ms later as a synthesised
-   * click) knows to skip the toggle and not undo what we just did.
-   *
-   * Touches on interactive controls (.vp-controls, .vp-center-btn) are ignored
-   * here so those elements' own click handlers remain in charge.
-   */
   onTouchZone(event: TouchEvent): void {
     const target = event.target as HTMLElement;
     if (target.closest('.vp-controls, .vp-center-btn')) return;
@@ -250,12 +228,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     setTimeout(() => { this._touchHandled = false; }, 400);
   }
 
-  /**
-   * Desktop click handler for the transparent video area:
-   *  - If controls are hidden  → reveal them (auto-hide again if playing)
-   *  - If controls are visible → hide them immediately
-   * On mobile this is skipped because onTouchZone() already handled it.
-   */
   onClickZone(): void {
     if (this._touchHandled) return; // touch already toggled visibility
     clearTimeout(this.controlsTimer);
@@ -317,7 +289,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   }
 
 
-  // ── Video element event handlers ──────────────────────────────────────────
 
   onVideoPlay(): void {
     this.isPlaying = true;
@@ -355,7 +326,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     if (v) this.isMuted = v.muted;
   }
 
-  // ── Auth / view helpers ───────────────────────────────────────────────────
 
   private recordWatchHistory(videoId: string): void {
     const userData = localStorage.getItem('user');
@@ -441,7 +411,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ── Formatters ────────────────────────────────────────────────────────────
 
   formatDate(dateString: string): string {
     return new Date(dateString).toLocaleDateString('en-US', {

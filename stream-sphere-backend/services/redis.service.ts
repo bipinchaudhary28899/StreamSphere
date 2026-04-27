@@ -1,22 +1,8 @@
-/**
- * redis.service.ts
- *
- * Thin singleton wrapper around ioredis.
- *
- * Design decisions:
- *  - All cache errors are swallowed (logged but never thrown) so a Redis
- *    outage degrades gracefully to full MongoDB reads — never crashes the API.
- *  - The client is created lazily via connect() called once from index.ts.
- *  - If REDIS_URL is absent, every method is a no-op so local dev works
- *    without a Redis instance.
- */
-
 import Redis from 'ioredis';
 
 class RedisService {
   private client: Redis | null = null;
 
-  // ── Lifecycle ────────────────────────────────────────────────────────────────
 
   connect(): void {
     const REDIS_URL = process.env.REDIS_URL;
@@ -53,12 +39,10 @@ class RedisService {
     return this.client !== null && this.client.status === 'ready';
   }
 
-  /** Public — lets callers decide whether to use Redis-dependent features */
   isAvailable(): boolean {
     return this.alive();
   }
 
-  // ── Core helpers ─────────────────────────────────────────────────────────────
 
   async get<T>(key: string): Promise<T | null> {
     if (!this.alive()) return null;
@@ -80,11 +64,6 @@ class RedisService {
     }
   }
 
-  /**
-   * Atomically increment a counter key by 1.
-   * The key is created if it doesn't exist (starts at 0 then becomes 1).
-   * TTL is set only on first creation so monthly keys naturally expire.
-   */
   async incr(key: string, ttlSeconds?: number): Promise<void> {
     if (!this.alive()) return;
     try {
@@ -97,7 +76,6 @@ class RedisService {
     }
   }
 
-  /** Read a raw integer counter (returns 0 if missing or Redis is down). */
   async getCounter(key: string): Promise<number> {
     if (!this.alive()) return 0;
     try {
@@ -118,11 +96,6 @@ class RedisService {
     }
   }
 
-  /**
-   * Delete all keys matching a glob pattern.
-   * Uses SCAN so it never blocks the Redis event loop.
-   * Example pattern: "ss:feed:all:*"
-   */
   async delPattern(pattern: string): Promise<void> {
     if (!this.alive()) return;
     try {
@@ -141,7 +114,6 @@ class RedisService {
 // Export singleton
 export const redisService = new RedisService();
 
-// ── Cache key factory (keeps naming consistent everywhere) ────────────────────
 export const CK = {
   feedAll:      (cursor: string) => `ss:feed:all:${cursor}`,
   feedCat:      (cat: string, cursor: string) => `ss:feed:cat:${encodeURIComponent(cat)}:${cursor}`,
@@ -150,7 +122,6 @@ export const CK = {
   singleVideo:  (id: string) => `ss:video:${id}`,
 } as const;
 
-// ── TTLs (seconds) ─────────────────────────────────────────────────────────────
 export const TTL = {
   feed:    120,   // 2 min  — home/category pages
   search:   60,   // 1 min  — search results

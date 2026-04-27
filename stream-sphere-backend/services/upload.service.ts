@@ -16,19 +16,6 @@ const s3 = new S3Client({
   responseChecksumValidation: "WHEN_REQUIRED",
 });
 
-/**
- * Generate a collision-proof S3 presigned PUT URL.
- *
- * Key format: Videos/raw/<uuid>/<sanitised-original-name>
- *
- * Using a UUID prefix (v4, 122 bits of randomness) instead of Date.now()
- * makes it impossible for two simultaneous uploads — even with the same
- * filename — to collide on the same S3 key.
- *
- * The `raw/` sub-prefix is the trigger prefix for the HLS Lambda function.
- * Lambda is configured to fire on s3:ObjectCreated events under Videos/raw/.
- * Transcoded HLS files are written to Videos/hls/<uuid>/ by the Lambda.
- */
 export const generateSignedUrl = async (
   filename: string,
   filetype: string,
