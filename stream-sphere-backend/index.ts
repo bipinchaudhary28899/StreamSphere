@@ -1,66 +1,51 @@
-import express from 'express';
+import express, { Application } from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
 
-// Force IPv4 to avoid ENETUNREACH errors with Google APIs
+dotenv.config();
+
 process.env.NODE_OPTIONS = '--dns-result-order=ipv4first';
 
 import centralRoute from './routes/centralRoute.route';
 import { globalLimiter } from './middleware/rateLimiter.middleware';
 import { redisService } from './services/redis.service';
-
-// Import models explicitly so Mongoose registers their indexes on startup.
-// Required for the 2dsphere index on TelemetryPing.location and the TTL index
-// on TelemetryPing.timestamp — both were added after the collection was first
-// created, so syncIndexes() below ensures Atlas reflects the current schema.
 import './models/telemetryPing';
 import './models/radioMapCache';
 import './models/streamingSession';
+import './models/oracleDecision';
 
-dotenv.config();
+const app: Application = express();
 
-const app = express();
-
-app.use(cors({
-  origin: (origin, callback) => {
-    const allowed = process.env.CLIENT_URL?.split(',').map(o => o.trim()) || [];
-    if (!origin || allowed.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (e: Error | null, ok?: boolean) => void) => {
+    const allowed = (process.env.CLIENT_URL ?? '').split(',').map(o => o.trim()).filter(Boolean);
+    if (!origin || allowed.includes(origin)) callback(null, true);
+    else callback(new Error('Not allowed by CORS'));
   },
-}));
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+  allowedHeaders: 'Content-Type,Authorization',
+  optionsSuccessStatus: 200,
+};
 
-app.use(express.json({ limit: '10kb' })); // reject abnormally large JSON bodies
+// Handle OPTIONS preflight before anything else
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 
+app.use(express.json({ limit: '10kb' }));
 app.use(globalLimiter);
-
 app.use('/api', centralRoute);
 
-// Connect Redis (non-blocking — if REDIS_URL absent, caching silently disabled)
 redisService.connect();
 
+// MongoDB — connect once; works for both local and Vercel serverless
 mongoose.connect(process.env.MONGODB_URI!)
-  .then(async () => {
-    console.log('✅ MongoDB connected');
+  .then(() => console.log('✅ MongoDB connected'))
+  .catch((err) => console.error('❌ MongoDB connection error:', err));
 
-    // Sync schema indexes with Atlas — idempotent and fast after the first run.
-    // This ensures the 2dsphere index on TelemetryPing.location and the TTL index
-    // on TelemetryPing.timestamp are created even if the collection pre-dates them.
-    try {
-      await mongoose.connection.syncIndexes();
-      console.log('✅ Indexes synced');
-    } catch (e) {
-      console.warn('⚠️  Index sync failed (non-fatal):', e);
-    }
+// Local dev server
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(3000, () => console.log('🚀 Server running on http://localhost:3000'));
+}
 
-    app.listen(3000, () => {
-      console.log('🚀 Server running on http://localhost:3000');
-    });
-  })
-  .catch((err: any) => {
-    console.error('❌ MongoDB connection error:', err);
-    process.exit(1);
-  });
+export default app;
