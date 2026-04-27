@@ -370,3 +370,78 @@ export async function runInference(
     oracle_reasoning: decision.reasoning,
   };
 }
+
+// ── Force Oracle for testing ──────────────────────────────────────────────────
+// Bypasses Student confidence gate — calls LLM directly with a mock risk score
+// placed on a boundary (default 0.22) to simulate an ambiguous scenario.
+
+export async function forceOracleTest(
+  lat:             number,
+  lng:             number,
+  speedKmh:        number,
+  recentDownlinks: number[],
+  mockRisk:        number,
+): Promise<InferenceResult & { test_mode: true; mock_risk: number }> {
+
+  const coneResult  = await computeBufferTarget(lat, lng, 0, speedKmh);
+  // Override the real risk with the mock value so Oracle always fires
+  const mockCone    = { ...coneResult, risk_score: mockRisk };
+  const confidence  = studentConfidence(mockRisk);
+
+  const heuristic    = heuristicAdjust(mockRisk, speedKmh, recentDownlinks);
+  const heuristicRec = riskToBuffer(heuristic.adjustedRisk).recommendation;
+  const tile         = await getTileContext(lat, lng);
+  const prompt       = buildPrompt(mockRisk, confidence, coneResult.branches, tile, speedKmh, recentDownlinks);
+
+  let llmFailed      = false;
+  let fallbackReason: string | null = null;
+  let decision: LLMDecision;
+  let promptTokens = 0, completionTokens = 0;
+
+  try {
+    const result     = await callLLMOracle(prompt);
+    decision         = result.decision;
+    promptTokens     = result.promptTokens;
+    completionTokens = result.completionTokens;
+  } catch (err: any) {
+    llmFailed      = true;
+    fallbackReason = err?.message ?? 'unknown_error';
+    const heuristicBuffer = riskToBuffer(heuristic.adjustedRisk);
+    decision = {
+      adjusted_risk: heuristic.adjustedRisk,
+      recommendation: heuristicBuffer.recommendation,
+      max_buffer_length: heuristicBuffer.max_buffer_length,
+      max_max_buffer_length: heuristicBuffer.max_max_buffer_length,
+      confidence: 0.5,
+      reasoning: `LLM unavailable; heuristic fallback: ${heuristic.reason}`,
+    };
+  }
+
+  // Log to oracle_decisions with test flag in reasoning
+  OracleDecision.create({
+    session_id: null, timestamp: new Date(),
+    lat, lng, speed_kmh: speedKmh,
+    student_risk: mockRisk, student_conf: confidence,
+    tile_id: tile.tile_id, tile_sample_count: tile.sample_count,
+    tile_avg_downlink: tile.avg_downlink, tile_signal_variance: tile.signal_variance,
+    model_used: llmFailed ? 'heuristic_fallback' : 'gpt-4o-mini',
+    prompt_tokens: promptTokens || null, completion_tokens: completionTokens || null,
+    oracle_risk: decision.adjusted_risk, recommendation: decision.recommendation,
+    reasoning: `[TEST] ${decision.reasoning}`,
+    oracle_confidence: decision.confidence,
+    heuristic_recommendation: heuristicRec,
+    diverged: decision.recommendation !== heuristicRec,
+    llm_failed: llmFailed, fallback_reason: fallbackReason,
+  }).catch(() => {});
+
+  return {
+    test_mode:        true,
+    mock_risk:        mockRisk,
+    buffer_target:    { ...mockCone, risk_score: decision.adjusted_risk, ...riskToBuffer(decision.adjusted_risk) },
+    tier_used:        'oracle',
+    confidence:       decision.confidence,
+    oracle_triggered: true,
+    oracle_reason:    llmFailed ? `llm_failed:${fallbackReason}` : heuristic.reason,
+    oracle_reasoning: decision.reasoning,
+  };
+}

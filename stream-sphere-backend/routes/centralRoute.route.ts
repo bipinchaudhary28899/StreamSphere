@@ -21,7 +21,7 @@ import {
   ingestDeadZoneController,
 } from '../controllers/shadowMap.controller';
 import { bufferTargetController } from '../controllers/predictionCone.controller';
-import { genabrDecisionController } from '../controllers/genabr.controller';
+import { genabrDecisionController, testOracleController } from '../controllers/genabr.controller';
 import { Video }                  from '../models/video';
 
 import { validate }        from '../middleware/validate.middleware';
@@ -244,6 +244,8 @@ router.post('/shadow-map/dead-zone', wrap(ingestDeadZoneController));
 router.post('/prediction/buffer-target', wrap(bufferTargetController));
 
 // GenABR unified decision — Phase 5 Tiered Inference Engine
-router.post('/genabr/decision', wrap(genabrDecisionController));
+router.post('/genabr/decision',     wrap(genabrDecisionController));
+// Force Oracle call for testing LLM connectivity (admin only)
+router.post('/genabr/test-oracle',  authenticateJWT, requireAdmin, wrap(testOracleController));
 
 export default router;
