@@ -17,8 +17,8 @@ import './models/oracleDecision';
 
 const app: Application = express();
 
-const corsOptions = {
-  origin: (origin: string | undefined, callback: (e: Error | null, ok?: boolean) => void) => {
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
     const allowed = (process.env.CLIENT_URL ?? '').split(',').map(o => o.trim()).filter(Boolean);
     if (!origin || allowed.includes(origin)) callback(null, true);
     else callback(new Error('Not allowed by CORS'));
@@ -28,8 +28,8 @@ const corsOptions = {
   optionsSuccessStatus: 200,
 };
 
-// Handle OPTIONS preflight before anything else
-app.options('*', cors(corsOptions));
+// cors() middleware automatically handles OPTIONS preflight when used with app.use()
+// Do NOT use app.options('*', ...) — bare '*' crashes Express 5 (path-to-regexp v8)
 app.use(cors(corsOptions));
 
 app.use(express.json({ limit: '10kb' }));
@@ -38,14 +38,13 @@ app.use('/api', centralRoute);
 
 redisService.connect();
 
-// MongoDB — connect once; works for both local and Vercel serverless
 mongoose.connect(process.env.MONGODB_URI!)
   .then(() => console.log('✅ MongoDB connected'))
   .catch((err) => console.error('❌ MongoDB connection error:', err));
 
-// Local dev server
 if (process.env.NODE_ENV !== 'production') {
   app.listen(3000, () => console.log('🚀 Server running on http://localhost:3000'));
 }
 
-export default app;
+// Required for @vercel/node — must be CommonJS export, not ES module export
+module.exports = app;

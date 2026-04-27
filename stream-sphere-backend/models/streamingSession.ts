@@ -110,7 +110,7 @@ const streamingSessionSchema = new Schema<IStreamingSession>(
   { timestamps: true },
 );
 
-streamingSessionSchema.index({ session_id: 1 }, { unique: true });
+// session_id unique index is already created by { unique: true } on the field above
 streamingSessionSchema.index({ user_id: 1, started_at: -1 });
 streamingSessionSchema.index({ video_id: 1 });
 

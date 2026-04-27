@@ -84,7 +84,7 @@ const radioMapCacheSchema = new Schema<IRadioMapCache>(
   { timestamps: true },
 );
 
-radioMapCacheSchema.index({ tile_id: 1 }, { unique: true });
+// tile_id unique index is already created by { unique: true } on the field above
 radioMapCacheSchema.index({ center: '2dsphere' });
 // TTL — MongoDB auto-deletes documents whose expires_at has passed.
 // Tiles with real observed data get a 30-day expiry (set in writeCache);

@@ -1,4 +1,3 @@
-import OpenAI from 'openai';
 import { computeBufferTarget, BufferTarget, BranchResult } from './predictionCone.service';
 import { RadioMapCache } from '../models/radioMapCache';
 import { OracleDecision } from '../models/oracleDecision';
@@ -15,11 +14,16 @@ export interface InferenceResult {
   oracle_reasoning: string | null;   // full LLM explanation (research use)
 }
 
-// ── OpenAI client (lazy init — only instantiated when Oracle is needed) ───────
+// ── OpenAI client (dynamic require — avoids ESM/CJS issues at module load time) ─
 
-let _openai: OpenAI | null = null;
-function getOpenAI(): OpenAI {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _openai: any = null;
+function getOpenAI(): any {
   if (!_openai) {
+    // Dynamic require so the openai package is only loaded when Oracle fires,
+    // not at server startup — prevents ESM/CJS conflicts on Vercel cold starts.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const OpenAI = require('openai').default ?? require('openai');
     _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
   return _openai;
