@@ -69,28 +69,9 @@ export async function finaliseSession(
 
   const s = session as any;
 
-  // ── VMAF timeline from bitrate switches ───────────────────────────────────
-  const vmafValues: number[] = (s.bitrate_switches as any[]).map((sw: any) =>
-    estimateVmaf(sw.to_kbps),
-  );
-
-  if (vmafValues.length === 0) {
-    const lastBitratePing = await TelemetryPing.findOne(
-      { session_id: sessionId, bitrate_kbps: { $ne: null } },
-      { bitrate_kbps: 1 },
-    ).sort({ timestamp: -1 }).lean();
-
-    if (lastBitratePing?.bitrate_kbps) {
-      vmafValues.push(estimateVmaf((lastBitratePing as any).bitrate_kbps));
-    }
-  }
-
-  const avgVmaf   = vmafValues.length > 0
-    ? vmafValues.reduce((a, b) => a + b, 0) / vmafValues.length
-    : 70;
-  const sigmaVmaf = stdDev(vmafValues);
-
   // ── Ping aggregation (one query, compute everything in one pass) ──────────
+  // Run this BEFORE VMAF computation so bitrate distribution is available as
+  // a fallback for sigma_vmaf when bitrate_switches is sparse.
   const pingAgg = await TelemetryPing.aggregate([
     { $match: { session_id: sessionId } },
     {
@@ -124,6 +105,42 @@ export async function finaliseSession(
   const bitrateVariance = (agg?.avgBitrateSq != null && agg?.avgBitrate != null)
     ? Math.max(0, agg.avgBitrateSq - agg.avgBitrate ** 2)
     : null;
+  const bitrateStdDev = bitrateVariance != null ? Math.sqrt(bitrateVariance) : 0;
+
+  // ── VMAF timeline ─────────────────────────────────────────────────────────
+  // Primary source: bitrate_switches (each switch → one VMAF sample).
+  // Fallback: when switches are absent or too few, use the ping-level bitrate
+  // distribution (mean ± 1 σ) to produce a realistic sigma_vmaf rather than
+  // locking it at zero for stable-quality sessions.
+  const vmafValues: number[] = (s.bitrate_switches as any[]).map((sw: any) =>
+    estimateVmaf(sw.to_kbps),
+  );
+
+  if (vmafValues.length <= 1) {
+    // Use ping mean bitrate as the anchor
+    const meanKbps = agg?.avgBitrate ?? null;
+    if (meanKbps && meanKbps > 0) {
+      const baseVmaf = estimateVmaf(Math.round(meanKbps));
+
+      if (vmafValues.length === 0) {
+        vmafValues.push(baseVmaf);   // at least one point for avgVmaf
+      }
+
+      // Add sigma spread from ping bitrate distribution so stdDev > 0.
+      // If bitrate varied across pings (e.g. micro-fluctuations from the
+      // network or a GenABR step-down), this produces a non-zero sigma.
+      if (bitrateStdDev > 50) {   // threshold: >50 kbps spread is meaningful
+        const lowKbps  = Math.max(200, Math.round(meanKbps - bitrateStdDev));
+        const highKbps = Math.round(meanKbps + bitrateStdDev);
+        vmafValues.push(estimateVmaf(lowKbps), estimateVmaf(highKbps));
+      }
+    }
+  }
+
+  const avgVmaf   = vmafValues.length > 0
+    ? vmafValues.reduce((a, b) => a + b, 0) / vmafValues.length
+    : 70;
+  const sigmaVmaf = stdDev(vmafValues);
 
   // Movement type from median speed
   let movementType: 'stationary' | 'walking' | 'driving' | null = null;

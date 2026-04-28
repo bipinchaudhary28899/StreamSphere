@@ -1,11 +1,40 @@
 import { Request, Response } from 'express';
 import { runInference, forceOracleTest } from '../services/inferenceEngine.service';
+import { redisService, CK } from '../services/redis.service';
 
 // POST /api/genabr/decision
 // Body: { lat, lng, heading?, speed_kmh?, recent_downlinks?, session_id? }
-// Returns: InferenceResult
+// Returns: InferenceResult  (or { enabled: false } when globally disabled)
 export async function genabrDecisionController(req: Request, res: Response): Promise<void> {
-  const { lat, lng, heading, speed_kmh, recent_downlinks, session_id } = req.body;
+  // ── Global on/off gate ────────────────────────────────────────────────────
+  const genabrFlag = await redisService.get<boolean>(CK.genabrEnabled());
+  if (genabrFlag === false) {
+    // GenABR is admin-disabled — tell client to fall back to plain HLS.js ABR.
+    // We still return a valid-shaped payload so the client needs no special cases.
+    res.json({
+      enabled:         false,
+      tier:            'disabled',
+      recommendation:  'normal',
+      bufferTarget: {
+        max_buffer_length:     10,
+        max_max_buffer_length: 30,
+        risk_score:            0,
+        recommendation:        'normal',
+        horizon_seconds:       0,
+      },
+      confidence:      1.0,
+      oracle_triggered: false,
+      oracle_pending:   false,
+      oracle_reason:    null,
+      oracle_reasoning: null,
+    });
+    return;
+  }
+
+  const {
+    lat, lng, heading, speed_kmh, recent_downlinks, session_id,
+    bitrate_kbps, bandwidth_mbps,
+  } = req.body;
 
   if (lat == null || lng == null) {
     res.status(400).json({ error: 'lat and lng are required' });
@@ -17,11 +46,13 @@ export async function genabrDecisionController(req: Request, res: Response): Pro
   const result = await runInference(
     Number(lat),
     Number(lng),
-    Number(heading   ?? 0),
-    Number(speed_kmh ?? 0),
+    Number(heading      ?? 0),
+    Number(speed_kmh    ?? 0),
     Array.isArray(recent_downlinks) ? recent_downlinks.map(Number) : [],
     userId,
     typeof session_id === 'string' ? session_id : null,
+    Number(bitrate_kbps  ?? 1500),
+    Number(bandwidth_mbps ?? 0),
   );
 
   res.json(result);

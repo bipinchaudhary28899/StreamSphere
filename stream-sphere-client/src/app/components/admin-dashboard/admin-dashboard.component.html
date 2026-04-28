@@ -16,6 +16,48 @@
     </button>
   </div>
 
+  <!-- ── GenABR Master Control Panel ──────────────────────────────────────── -->
+  <div class="gm-panel" [class.gm-panel--on]="genabrEnabled" [class.gm-panel--off]="!genabrEnabled">
+
+    <!-- Left: live status indicator -->
+    <div class="gm-status">
+      <div class="gm-dot" [class.gm-dot--on]="genabrEnabled" [class.gm-dot--off]="!genabrEnabled"></div>
+      <div class="gm-status-text">
+        <span class="gm-status-label">GenABR Engine</span>
+        <span class="gm-status-sub" *ngIf=" genabrEnabled">Active · All streams use predictive ABR</span>
+        <span class="gm-status-sub" *ngIf="!genabrEnabled">Disabled · Streams use standard HLS.js ABR &mdash; collecting baseline data</span>
+      </div>
+    </div>
+
+    <!-- Right: mode label + big toggle -->
+    <div class="gm-controls">
+      <span class="gm-mode-label gm-mode-label--on"  *ngIf=" genabrEnabled">🤖 Predictive mode</span>
+      <span class="gm-mode-label gm-mode-label--off" *ngIf="!genabrEnabled">📊 Baseline collection mode</span>
+
+      <button
+        class="gm-toggle-btn"
+        [class.gm-toggle-btn--on]="genabrEnabled"
+        [class.gm-toggle-btn--off]="!genabrEnabled"
+        [disabled]="toggleLoading"
+        (click)="toggleGenabr()">
+        <span class="gm-toggle-track">
+          <span class="gm-toggle-thumb" [class.gm-toggle-thumb--on]="genabrEnabled"></span>
+        </span>
+        <span class="gm-toggle-text">{{ toggleLoading ? '…' : (genabrEnabled ? 'ENABLED' : 'DISABLED') }}</span>
+      </button>
+    </div>
+
+    <!-- Inline errors -->
+    <div class="gm-error" *ngIf="toggleError">⚠️ {{ toggleError }}</div>
+
+    <!-- Research hint (only visible when OFF) -->
+    <div class="gm-hint" *ngIf="!genabrEnabled">
+      ℹ️ &nbsp;GenABR is <strong>off</strong>. Sessions completed now will be stored with
+      <code>genabr_active = false</code> and appear as real <em>Without&nbsp;GenABR</em> rows
+      in the comparison table below, replacing the estimated baseline.
+    </div>
+  </div>
+
   <!-- Error -->
   <div class="ad-error" *ngIf="error">⚠️ {{ error }}</div>
 
@@ -191,8 +233,9 @@
       <div>
         <h2 class="gn-section-title">GenABR Performance Analysis</h2>
         <p class="gn-section-sub">
-          Comparing {{ stats.genabr?.withGenabr?.count ?? 0 }} sessions with GenABR active
-          vs {{ stats.genabr?.withoutGenabr?.count ?? 0 }} baseline sessions
+          {{ stats.genabr?.withGenabr?.count ?? 0 }} sessions with GenABR
+          &nbsp;·&nbsp;
+          {{ stats.genabr?.baselineIsReal ? (stats.genabr?.withoutGenabr?.count ?? 0) + ' without' : 'no baseline sessions yet — use the toggle above to collect them' }}
           &nbsp;·&nbsp; {{ stats.genabr?.totalSessions ?? 0 }} total
         </p>
       </div>
@@ -221,7 +264,8 @@
           </div>
           <div class="gn-col-label gn-col-without">
             <span class="gn-off-dot"></span> Without GenABR
-            <span class="gn-count-badge">{{ stats.genabr.withoutGenabr.count }} sessions</span>
+            <span class="gn-count-badge" *ngIf="stats.genabr.baselineIsReal">{{ stats.genabr.withoutGenabr.count }} sessions</span>
+            <span class="gn-count-badge" *ngIf="!stats.genabr.baselineIsReal" title="Turn GenABR OFF above to collect real baseline data">no data yet</span>
           </div>
           <div class="gn-col-label gn-col-delta">Δ Improvement</div>
         </div>
@@ -420,12 +464,349 @@
 
     </ng-container><!-- /genabr data -->
 
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- Oracle Engine Intelligence (research-grade metrics)                    -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+
+    <div class="gn-section-header" style="margin-top:40px">
+      <span class="gn-section-icon">🔮</span>
+      <div>
+        <h2 class="gn-section-title">Oracle Engine Intelligence</h2>
+        <p class="gn-section-sub">
+          GenAI (GPT-4o-mini) decision log · last 30 days
+          <span *ngIf="stats?.oracle?.last30dSummary?.totalCalls">
+            · {{ stats!.oracle!.last30dSummary.totalCalls }} oracle calls
+          </span>
+        </p>
+      </div>
+    </div>
+
+    <div class="ad-warn gn-no-data"
+         *ngIf="!stats?.oracle || stats!.oracle!.last30dSummary.totalCalls === 0">
+      No Oracle decisions recorded yet. Oracle fires when Student confidence &lt; 60% (risk near a boundary).
+      Generate sessions while moving to populate this panel.
+    </div>
+
+    <ng-container *ngIf="stats?.oracle && stats!.oracle!.last30dSummary.totalCalls > 0">
+
+      <!-- ── 1. Oracle Health KPIs ────────────────────────────────────────── -->
+      <div class="or-kpi-grid">
+
+        <div class="or-kpi-card">
+          <div class="or-kpi-icon">🤖</div>
+          <div class="or-kpi-val">{{ stats!.oracle!.last30dSummary.totalCalls }}</div>
+          <div class="or-kpi-label">Total Oracle calls</div>
+          <div class="or-kpi-sub">last 30 days</div>
+        </div>
+
+        <div class="or-kpi-card">
+          <div class="or-kpi-icon">✅</div>
+          <div class="or-kpi-val or-val-green">
+            {{ fmtPct(stats!.oracle!.last30dSummary.llmSuccessRate) }}
+          </div>
+          <div class="or-kpi-label">LLM success rate</div>
+          <div class="or-kpi-sub">GPT-4o-mini answered</div>
+        </div>
+
+        <div class="or-kpi-card">
+          <div class="or-kpi-icon">⚡</div>
+          <div class="or-kpi-val"
+               [class.or-val-amber]="(stats!.oracle!.last30dSummary.divergenceRate ?? 0) > 30"
+               [class.or-val-green]="(stats!.oracle!.last30dSummary.divergenceRate ?? 0) <= 30">
+            {{ fmtPct(stats!.oracle!.last30dSummary.divergenceRate) }}
+          </div>
+          <div class="or-kpi-label">LLM divergence rate</div>
+          <div class="or-kpi-sub">disagreed with heuristic</div>
+        </div>
+
+        <div class="or-kpi-card">
+          <div class="or-kpi-icon">🎯</div>
+          <div class="or-kpi-val">
+            {{ fmtN(stats!.oracle!.last30dSummary.avgStudentConf !== null
+                ? stats!.oracle!.last30dSummary.avgStudentConf! * 100 : null, 0) }}%
+          </div>
+          <div class="or-kpi-label">Avg Student confidence</div>
+          <div class="or-kpi-sub">at Oracle trigger point</div>
+        </div>
+
+        <div class="or-kpi-card">
+          <div class="or-kpi-icon">📊</div>
+          <div class="or-kpi-val"
+               [class.or-val-amber]="(stats!.oracle!.last30dSummary.avgRiskShift ?? 0) > 0.05"
+               [class.or-val-green]="(stats!.oracle!.last30dSummary.avgRiskShift ?? 0) <= 0">
+            {{ stats!.oracle!.last30dSummary.avgRiskShift !== null
+                ? ((stats!.oracle!.last30dSummary.avgRiskShift! >= 0 ? '+' : '') +
+                   fmtN(stats!.oracle!.last30dSummary.avgRiskShift, 3))
+                : '—' }}
+          </div>
+          <div class="or-kpi-label">Avg risk adjustment</div>
+          <div class="or-kpi-sub">oracle_risk − student_risk</div>
+        </div>
+
+        <div class="or-kpi-card">
+          <div class="or-kpi-icon">💬</div>
+          <div class="or-kpi-val or-kpi-val-sm">
+            {{ fmtTokens(stats!.oracle!.last30dSummary.totalPromptTokens +
+                          stats!.oracle!.last30dSummary.totalCompletionTokens) }}
+          </div>
+          <div class="or-kpi-label">Total tokens used</div>
+          <div class="or-kpi-sub">
+            {{ fmtTokens(stats!.oracle!.last30dSummary.totalPromptTokens) }} prompt
+            + {{ fmtTokens(stats!.oracle!.last30dSummary.totalCompletionTokens) }} completion
+          </div>
+        </div>
+
+      </div><!-- /or-kpi-grid -->
+
+      <!-- ── 2. Trigger Analysis (3-column layout) ────────────────────────── -->
+      <div class="or-trigger-grid">
+
+        <!-- Recommendation distribution -->
+        <div class="or-panel">
+          <div class="or-panel-header">
+            <span class="or-panel-icon">📋</span>
+            <h3 class="or-panel-title">Recommendation output</h3>
+          </div>
+          <div class="or-bar-list">
+            <div class="or-bar-row" *ngFor="let item of stats!.oracle!.byRecommendation">
+              <div class="or-bar-label">
+                <span class="or-rec-badge {{ recClass(item.label) }}">
+                  {{ recLabel(item.label) }}
+                </span>
+              </div>
+              <div class="or-bar-track-wrap">
+                <div class="or-bar-track">
+                  <div class="or-bar-fill {{ recClass(item.label) }}-fill"
+                       [style.width.%]="item.pct"></div>
+                </div>
+                <span class="or-bar-pct">{{ item.pct }}%</span>
+                <span class="or-bar-count">({{ item.count }})</span>
+              </div>
+            </div>
+            <div class="or-empty" *ngIf="stats!.oracle!.byRecommendation.length === 0">No data</div>
+          </div>
+        </div>
+
+        <!-- Speed category at trigger -->
+        <div class="or-panel">
+          <div class="or-panel-header">
+            <span class="or-panel-icon">🚗</span>
+            <h3 class="or-panel-title">Speed at Oracle trigger</h3>
+            <span class="ad-note">What user was doing when Oracle fired</span>
+          </div>
+          <div class="or-bar-list">
+            <div class="or-bar-row" *ngFor="let item of stats!.oracle!.bySpeedCategory">
+              <div class="or-bar-label">
+                <span class="or-speed-icon">{{ speedIcon(item.label) }}</span>
+                {{ speedLabel(item.label) }}
+              </div>
+              <div class="or-bar-track-wrap">
+                <div class="or-bar-track">
+                  <div class="or-bar-fill or-fill-blue"
+                       [style.width.%]="barPct(item.count, maxCount(stats!.oracle!.bySpeedCategory))"></div>
+                </div>
+                <span class="or-bar-pct">{{ item.pct }}%</span>
+                <span class="or-bar-count">({{ item.count }})</span>
+              </div>
+            </div>
+            <div class="or-empty" *ngIf="stats!.oracle!.bySpeedCategory.length === 0">No data</div>
+          </div>
+        </div>
+
+        <!-- Trigger reason tags -->
+        <div class="or-panel">
+          <div class="or-panel-header">
+            <span class="or-panel-icon">🔍</span>
+            <h3 class="or-panel-title">Why Oracle triggered</h3>
+            <span class="ad-note">Heuristic context signals</span>
+          </div>
+          <div class="or-tag-cloud">
+            <ng-container *ngFor="let item of stats!.oracle!.byTriggerReason">
+              <span class="or-tag {{ reasonClass(item.label) }}">
+                {{ reasonLabel(item.label) }}
+                <span class="or-tag-cnt">{{ item.count }}</span>
+              </span>
+            </ng-container>
+            <div class="or-empty" *ngIf="stats!.oracle!.byTriggerReason.length === 0">
+              No trigger reason data yet
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /or-trigger-grid -->
+
+      <!-- ── 3. Corridor Scanner Stats ────────────────────────────────────── -->
+      <div class="or-corridor-card"
+           *ngIf="stats!.oracle!.corridorStats.scannedCount > 0">
+        <div class="or-panel-header" style="padding:16px 20px; border-bottom:1px solid var(--border)">
+          <span class="or-panel-icon">🛣️</span>
+          <h3 class="or-panel-title">Corridor Scanner — Dead Zone Detection</h3>
+          <span class="ad-note">
+            {{ stats!.oracle!.corridorStats.scannedCount }} scans with corridor data
+          </span>
+        </div>
+        <div class="or-corridor-stats">
+
+          <div class="or-corr-stat">
+            <div class="or-corr-val">{{ stats!.oracle!.corridorStats.deadZoneCount }}</div>
+            <div class="or-corr-label">Dead zones detected</div>
+            <div class="or-corr-sub">
+              {{ fmtPct(stats!.oracle!.corridorStats.deadZoneRate) }} of corridor scans
+            </div>
+          </div>
+
+          <div class="or-corr-divider"></div>
+
+          <div class="or-corr-stat">
+            <div class="or-corr-val"
+                 [class.or-val-green]="(stats!.oracle!.corridorStats.feasibilityRate ?? 0) >= 70"
+                 [class.or-val-amber]="(stats!.oracle!.corridorStats.feasibilityRate ?? 0) < 70">
+              {{ fmtPct(stats!.oracle!.corridorStats.feasibilityRate) }}
+            </div>
+            <div class="or-corr-label">Prebuffer feasibility</div>
+            <div class="or-corr-sub">
+              could download enough before dead zone
+            </div>
+          </div>
+
+          <div class="or-corr-divider"></div>
+
+          <div class="or-corr-stat">
+            <div class="or-corr-val">
+              {{ fmtSec(stats!.oracle!.corridorStats.avgEntrySeconds) }}
+            </div>
+            <div class="or-corr-label">Avg entry time</div>
+            <div class="or-corr-sub">seconds of warning before dead zone</div>
+          </div>
+
+          <div class="or-corr-divider"></div>
+
+          <div class="or-corr-stat">
+            <div class="or-corr-val">
+              {{ fmtSec(stats!.oracle!.corridorStats.avgDurationSeconds) }}
+            </div>
+            <div class="or-corr-label">Avg dead zone duration</div>
+            <div class="or-corr-sub">seconds of weak signal ahead</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── 4. Recent Oracle Decisions (research log) ─────────────────────── -->
+      <div class="gn-table-card" *ngIf="stats!.oracle!.recentDecisions.length > 0">
+        <div class="gn-table-header">
+          <span class="gn-table-icon">🧾</span>
+          <h3 class="gn-table-title">Recent Oracle Decisions — Research Log</h3>
+          <span class="ad-note">Last {{ stats!.oracle!.recentDecisions.length }} LLM calls</span>
+        </div>
+
+        <div class="gn-table-wrap">
+          <table class="gn-table or-decisions-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Speed</th>
+                <th class="gn-th-center">Dead zone</th>
+                <th class="gn-th-right">Student risk</th>
+                <th class="gn-th-right">Oracle risk</th>
+                <th class="gn-th-center">Recommendation</th>
+                <th class="gn-th-center">Diverged</th>
+                <th>LLM Reasoning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let d of stats!.oracle!.recentDecisions; trackBy: trackByTimestamp"
+                  [class.or-row-diverged]="d.diverged"
+                  [class.or-row-failed]="d.llmFailed">
+                <!-- Time + session -->
+                <td class="gn-td-session">
+                  <span class="gn-session-time">{{ d.timestamp | date:'MMM d, HH:mm:ss' }}</span>
+                  <span class="gn-session-id" *ngIf="d.sessionId">{{ d.sessionId | slice:0:6 }}…</span>
+                </td>
+                <!-- Speed + category -->
+                <td class="or-td-speed">
+                  <span class="or-speed-icon">{{ speedIcon(d.speedCategory) }}</span>
+                  {{ d.speedKmh.toFixed(0) }} km/h
+                  <br><span class="or-speed-cat">{{ speedLabel(d.speedCategory) }}</span>
+                </td>
+                <!-- Dead zone -->
+                <td class="gn-td-center">
+                  <ng-container *ngIf="d.hasDeadZone === true">
+                    <span class="or-dz-badge or-dz-yes">
+                      {{ fmtSec(d.deadZoneEntrySec) }} away
+                    </span>
+                    <br>
+                    <span class="or-dz-dur">lasts {{ fmtSec(d.deadZoneDurationSec) }}</span>
+                    <br>
+                    <span class="or-dz-feasible"
+                          [class.or-val-green]="d.corridorFeasible"
+                          [class.or-val-red]="d.corridorFeasible === false">
+                      {{ d.corridorFeasible ? '✓ feasible' : '✗ not feasible' }}
+                    </span>
+                  </ng-container>
+                  <ng-container *ngIf="d.hasDeadZone === false">
+                    <span class="or-dz-badge or-dz-no">Clear</span>
+                  </ng-container>
+                  <ng-container *ngIf="d.hasDeadZone === null">
+                    <span class="gn-td-muted">—</span>
+                  </ng-container>
+                </td>
+                <!-- Risks -->
+                <td class="gn-td-right">
+                  <span class="or-risk {{ riskClass(d.studentRisk) }}">
+                    {{ fmtRisk(d.studentRisk) }}
+                  </span>
+                </td>
+                <td class="gn-td-right">
+                  <span class="or-risk {{ riskClass(d.oracleRisk) }}">
+                    {{ fmtRisk(d.oracleRisk) }}
+                  </span>
+                  <span class="or-risk-delta"
+                        *ngIf="d.oracleRisk !== d.studentRisk"
+                        [class.or-delta-up]="d.oracleRisk > d.studentRisk"
+                        [class.or-delta-down]="d.oracleRisk < d.studentRisk">
+                    {{ d.oracleRisk > d.studentRisk ? '▲' : '▼' }}
+                  </span>
+                </td>
+                <!-- Recommendation -->
+                <td class="gn-td-center">
+                  <span class="or-rec-badge {{ recClass(d.recommendation) }}">
+                    {{ recLabel(d.recommendation) }}
+                  </span>
+                </td>
+                <!-- Diverged -->
+                <td class="gn-td-center">
+                  <span *ngIf="d.diverged"  class="or-diverge-yes">✓ Yes</span>
+                  <span *ngIf="!d.diverged" class="or-diverge-no">No</span>
+                </td>
+                <!-- LLM Reasoning -->
+                <td class="or-td-reasoning">
+                  <span *ngIf="d.llmFailed" class="or-fallback-label">⚠ heuristic fallback</span>
+                  <span *ngIf="!d.llmFailed" class="or-reasoning-text">
+                    {{ shortReasoning(d.reasoning) }}
+                  </span>
+                  <span *ngIf="d.oracleReason && d.oracleReason !== 'no_adjustment'" class="or-reason-tags">
+                    <ng-container *ngFor="let tag of d.oracleReason!.split('+')">
+                      <span class="or-tag-inline {{ reasonClass(tag) }}">{{ reasonLabel(tag) }}</span>
+                    </ng-container>
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </ng-container><!-- /oracle data -->
+
     <!-- ── Free tier footnote ─────────────────────────────────────────────── -->
     <div class="ad-footer">
       <p>☁️ CloudFront free tier applies for the <strong>first 12 months</strong> of your AWS account.</p>
       <p>🗄️ S3 storage and request free tiers are <strong>always free</strong> (within limits).</p>
       <p>📈 CloudFront hit/miss breakdown requires <em>Additional CloudFront Metrics</em> (~$0.01/month) — not tracked here to stay fully free.</p>
       <p>🧠 GenABR Φ score = (avg VMAF − 0.30·σ − 0.05·N<sub>stall</sub>·T<sub>stall</sub>) / session minutes.</p>
+      <p>🔮 Oracle fires when Student confidence &lt; 60% (risk within ±0.125 of a decision boundary at 0.20 or 0.45).</p>
+      <p>🛣️ Corridor scanner projects 200 m steps up to 5 km ahead; feasibility = (entry_s × bandwidth_Mbps) / bitrate_Mbps ≥ required_buffer.</p>
     </div>
 
   </ng-container><!-- /stats && !loading -->

@@ -133,9 +133,12 @@ export class TelemetryService implements OnDestroy {
     this.bufferLevel = sec;
   }
 
-  updateBitrate(kbps: number): void {
+  updateBitrate(
+    kbps:   number,
+    reason: 'abr_auto' | 'genabr_override' | 'user_manual' = 'abr_auto',
+  ): void {
     if (this.lastBitrateKbps !== null && this.lastBitrateKbps !== kbps) {
-      this.reportBitrateSwitch(this.lastBitrateKbps, kbps, 'abr_auto');
+      this.reportBitrateSwitch(this.lastBitrateKbps, kbps, reason);
     }
     this.lastBitrateKbps = kbps;
     this.bitrateKbps     = kbps;
@@ -176,7 +179,7 @@ export class TelemetryService implements OnDestroy {
     const pos  = this.lastPosition;
 
     // Keep PredictionService context fresh on every tick (pure local, zero cost)
-    this.prediction.updateNetworkContext(conn.type, conn.downlink, this.bufferLevel);
+    this.prediction.updateNetworkContext(conn.type, conn.downlink, this.bufferLevel, this.bitrateKbps);
 
     const ping: PingData = {
       timestamp:        new Date().toISOString(),

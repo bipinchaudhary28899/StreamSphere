@@ -19,6 +19,7 @@ export interface InferenceResult {
   tier_used:        'guard' | 'student' | 'oracle';
   confidence:       number;
   oracle_triggered: boolean;
+  oracle_pending:   boolean;   // true = Oracle computing in background; result arrives next cycle
   oracle_reason:    string | null;
   oracle_reasoning: string | null;   // full LLM explanation
 }
@@ -26,6 +27,7 @@ export interface InferenceResult {
 const POLL_INTERVAL_MS    = 25_000;
 const DOWNLINK_HISTORY_N  = 5;   // keep last 5 downlink readings for Oracle
 const STALL_WINDOW_MS     = 60_000;
+const NORMAL_LINGER_MS    = 4_000; // keep badge visible 4s after recommendation returns to normal
 
 function recommendationKey(t: BufferTarget): string { return t.recommendation; }
 
@@ -33,8 +35,12 @@ function recommendationKey(t: BufferTarget): string { return t.recommendation; }
 export class PredictionService implements OnDestroy {
   private apiUrl = environment.apiUrl;
 
-  private targetSubject = new BehaviorSubject<BufferTarget | null>(null);
-  bufferTarget$: Observable<BufferTarget | null> = this.targetSubject.asObservable();
+  private targetSubject    = new BehaviorSubject<BufferTarget | null>(null);
+  private inferenceSubject = new BehaviorSubject<InferenceResult | null>(null);
+
+  bufferTarget$:   Observable<BufferTarget | null>   = this.targetSubject.asObservable();
+  /** Full inference result — used by the player to show the GenABR activity badge. */
+  inference$:      Observable<InferenceResult | null> = this.inferenceSubject.asObservable();
 
   bufferTargetChanged$: Observable<BufferTarget> = this.bufferTarget$.pipe(
     filter((t): t is BufferTarget => t !== null),
@@ -51,10 +57,11 @@ export class PredictionService implements OnDestroy {
   private speedKmh: number = 0;
 
   // Context for Guard + Oracle tiers
-  private connectionType:   string | null = null;
-  private bufferLevelSec:   number | null = null;
-  private downlinkHistory:  number[] = [];
-  private recentStallTimes: number[] = [];  // timestamps of stalls
+  private connectionType:    string | null = null;
+  private bufferLevelSec:    number | null = null;
+  private downlinkHistory:   number[] = [];
+  private recentStallTimes:  number[] = [];  // timestamps of stalls
+  private currentBitrateKbps: number | null = null;  // current video stream bitrate
 
   // Phase 6 — tracks whether GenABR has ever intervened this session
   genabrWasActive = false;
@@ -93,6 +100,8 @@ export class PredictionService implements OnDestroy {
     if (this.pollTimer)  { clearInterval(this.pollTimer); this.pollTimer = null; }
     if (this.coverageSub) { this.coverageSub.unsubscribe(); this.coverageSub = null; }
     this.targetSubject.next(null);
+    this.inferenceSubject.next(null);
+    this.currentBitrateKbps = null;
   }
 
   ngOnDestroy(): void { this.stopPredicting(); }
@@ -100,17 +109,29 @@ export class PredictionService implements OnDestroy {
   // ── External updates from TelemetryService / Player ──────────────────────
 
   updatePosition(lat: number, lng: number, heading: number, speedKmh: number): void {
+    const isFirstFix = this.lat === null;
     this.lat = lat; this.lng = lng;
     this.heading = heading; this.speedKmh = speedKmh;
+
+    // Prewarm: fire an immediate fetch the first time we get a GPS fix while predicting.
+    // This warms the Redis cache so the 25s cycle returns Oracle (not Student) results sooner.
+    if (isFirstFix && this.pollTimer !== null) {
+      this.fetchTarget();
+    }
   }
 
   updateNetworkContext(
-    connectionType: string | null,
-    downlinkMbps:   number | null,
-    bufferLevelSec: number | null,
+    connectionType:  string | null,
+    downlinkMbps:    number | null,
+    bufferLevelSec:  number | null,
+    bitrateKbps:     number | null = null,
   ): void {
     this.connectionType = connectionType;
     this.bufferLevelSec = bufferLevelSec;
+
+    if (bitrateKbps !== null) {
+      this.currentBitrateKbps = bitrateKbps;
+    }
 
     if (downlinkMbps !== null) {
       this.downlinkHistory.push(downlinkMbps);
@@ -148,17 +169,31 @@ export class PredictionService implements OnDestroy {
       return;
     }
 
+    // Current bandwidth = latest downlink reading
+    const bandwidthMbps = this.downlinkHistory.length > 0
+      ? this.downlinkHistory[this.downlinkHistory.length - 1]
+      : 0;
+
     // Student / Oracle — call backend
-    this.http.post<InferenceResult>(`${this.apiUrl}/genabr/decision`, {
+    this.http.post<InferenceResult & { enabled?: boolean }>(`${this.apiUrl}/genabr/decision`, {
       lat:              this.lat,
       lng:              this.lng,
       heading:          this.heading,
       speed_kmh:        this.speedKmh,
       recent_downlinks: this.downlinkHistory,
       session_id:       this.sessionId,
+      bitrate_kbps:     this.currentBitrateKbps ?? 1500,
+      bandwidth_mbps:   bandwidthMbps,
     }).subscribe({
       next: (result) => {
+        // Admin has globally disabled GenABR — stop the polling loop and
+        // clear the badge so HLS.js takes over with its own ABR algorithm.
+        if (result.enabled === false) {
+          this.stopPredicting();
+          return;
+        }
         this.targetSubject.next(result.buffer_target);
+        this.inferenceSubject.next(result);
         // Mark genabr as active if we actually changed the buffer target
         if (result.buffer_target.recommendation !== 'normal') {
           this.genabrWasActive = true;

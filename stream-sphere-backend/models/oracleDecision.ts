@@ -11,10 +11,12 @@ export interface IOracleDecision extends Document {
   lat:              number;
   lng:              number;
   speed_kmh:        number;
+  speed_category:   string;          // 'stationary' | 'urban' | 'suburban' | 'highway'
 
   // Student context
   student_risk:     number;          // raw risk score from prediction cone
   student_conf:     number;          // Student confidence (reason Oracle was called)
+  oracle_reason:    string | null;   // heuristic adjustments that fired: e.g. "highway_speed+signal_degrading"
 
   // Tile context passed to the LLM
   tile_id:          string;
@@ -37,6 +39,12 @@ export interface IOracleDecision extends Document {
   heuristic_recommendation: string;  // what the old heuristic would have returned
   diverged:         boolean;
 
+  // Corridor scanner results at the time of this Oracle call
+  has_dead_zone:          boolean | null;
+  dead_zone_entry_sec:    number | null;   // seconds until dead zone entry
+  dead_zone_duration_sec: number | null;   // seconds the dead zone lasts
+  corridor_feasible:      boolean | null;  // can we prefetch enough before entering?
+
   // Error fallback
   llm_failed:       boolean;         // true if OpenAI call threw / timed out
   fallback_reason:  string | null;
@@ -49,9 +57,11 @@ const oracleDecisionSchema = new Schema<IOracleDecision>(
     lat:                   { type: Number, required: true },
     lng:                   { type: Number, required: true },
     speed_kmh:             { type: Number, default: 0 },
+    speed_category:        { type: String, default: 'stationary' },
 
     student_risk:          { type: Number, required: true },
     student_conf:          { type: Number, required: true },
+    oracle_reason:         { type: String, default: null },
 
     tile_id:               { type: String, required: true },
     tile_sample_count:     { type: Number, default: null },
@@ -70,6 +80,11 @@ const oracleDecisionSchema = new Schema<IOracleDecision>(
     heuristic_recommendation: { type: String, required: true },
     diverged:              { type: Boolean, required: true },
 
+    has_dead_zone:          { type: Boolean, default: null },
+    dead_zone_entry_sec:    { type: Number,  default: null },
+    dead_zone_duration_sec: { type: Number,  default: null },
+    corridor_feasible:      { type: Boolean, default: null },
+
     llm_failed:            { type: Boolean, default: false },
     fallback_reason:       { type: String,  default: null },
   },
@@ -80,6 +95,8 @@ const oracleDecisionSchema = new Schema<IOracleDecision>(
 oracleDecisionSchema.index({ timestamp: -1 });
 oracleDecisionSchema.index({ session_id: 1, timestamp: 1 });
 oracleDecisionSchema.index({ diverged: 1, timestamp: -1 });
+oracleDecisionSchema.index({ speed_category: 1, timestamp: -1 });
+oracleDecisionSchema.index({ recommendation: 1, timestamp: -1 });
 
 // TTL — Oracle logs are research data; keep for 90 days
 oracleDecisionSchema.index({ timestamp: 1 }, { expireAfterSeconds: 86_400 * 90 });

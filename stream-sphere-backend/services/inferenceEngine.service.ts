@@ -1,7 +1,17 @@
-import { computeBufferTarget, BufferTarget, BranchResult } from './predictionCone.service';
+import { computeBufferTarget, BufferTarget, BranchResult, CorridorResult } from './predictionCone.service';
 import { RadioMapCache } from '../models/radioMapCache';
 import { OracleDecision } from '../models/oracleDecision';
+import { redisService, CK, TTL } from './redis.service';
 import { tileId } from '../utils/geo';
+
+// ── Speed category ─────────────────────────────────────────────────────────────
+
+function speedCategory(kmh: number): string {
+  if (kmh < 5)  return 'stationary';
+  if (kmh < 40) return 'urban';
+  if (kmh < 80) return 'suburban';
+  return 'highway';
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -10,8 +20,20 @@ export interface InferenceResult {
   tier_used:        'guard' | 'student' | 'oracle';
   confidence:       number;
   oracle_triggered: boolean;
+  oracle_pending:   boolean;   // true = Oracle computing in background; result arrives next cycle
   oracle_reason:    string | null;
   oracle_reasoning: string | null;   // full LLM explanation (research use)
+}
+
+// Shape stored in Redis between prediction cycles
+interface CachedOracleResult {
+  adjusted_risk:         number;
+  recommendation:        'normal' | 'prebuffer_moderate' | 'prebuffer_aggressive';
+  max_buffer_length:     number;
+  max_max_buffer_length: number;
+  confidence:            number;
+  reasoning:             string;
+  oracle_reason:         string;
 }
 
 // ── OpenAI client (dynamic require — avoids ESM/CJS issues at module load time) ─
@@ -253,6 +275,106 @@ async function callLLMOracle(prompt: string): Promise<{
   };
 }
 
+// ── Async Oracle background worker ────────────────────────────────────────────
+// Fires LLM call without blocking the HTTP response.
+// Result is stored in Redis; the next prediction cycle (~25s later) reads it.
+
+function fireOracleAsync(
+  lat:             number,
+  lng:             number,
+  speedKmh:        number,
+  recentDownlinks: number[],
+  riskScore:       number,
+  confidence:      number,
+  branches:        BranchResult[],
+  userId:          string,
+  sessionId:       string | null,
+  cacheKey:        string,
+  corridor:        CorridorResult | null,
+): void {
+  // Deliberately NOT awaited — runs in background while HTTP response is already sent
+  (async () => {
+    try {
+      const heuristic    = heuristicAdjust(riskScore, speedKmh, recentDownlinks);
+      const heuristicRec = riskToBuffer(heuristic.adjustedRisk).recommendation;
+      const tile         = await getTileContext(lat, lng);
+      const prompt       = buildPrompt(riskScore, confidence, branches, tile, speedKmh, recentDownlinks);
+
+      let llmFailed        = false;
+      let fallbackReason: string | null = null;
+      let decision: LLMDecision;
+      let promptTokens = 0, completionTokens = 0;
+
+      try {
+        const result     = await callLLMOracle(prompt);
+        decision         = result.decision;
+        promptTokens     = result.promptTokens;
+        completionTokens = result.completionTokens;
+      } catch (err: any) {
+        llmFailed      = true;
+        fallbackReason = err?.message ?? 'unknown_error';
+        const heuristicBuffer = riskToBuffer(heuristic.adjustedRisk);
+        decision = {
+          adjusted_risk:         heuristic.adjustedRisk,
+          recommendation:        heuristicBuffer.recommendation,
+          max_buffer_length:     heuristicBuffer.max_buffer_length,
+          max_max_buffer_length: heuristicBuffer.max_max_buffer_length,
+          confidence:            0.5,
+          reasoning:             `LLM unavailable; heuristic fallback: ${heuristic.reason}`,
+        };
+      }
+
+      // Store in Redis for the next prediction cycle to pick up (~25s from now)
+      const toCache: CachedOracleResult = {
+        adjusted_risk:         decision.adjusted_risk,
+        recommendation:        decision.recommendation,
+        max_buffer_length:     decision.max_buffer_length,
+        max_max_buffer_length: decision.max_max_buffer_length,
+        confidence:            decision.confidence,
+        reasoning:             decision.reasoning,
+        oracle_reason:         llmFailed ? `llm_failed:${fallbackReason}` : heuristic.reason,
+      };
+      await redisService.set(cacheKey, toCache, TTL.oracleResult);
+
+      const oracleReason = llmFailed ? (fallbackReason ?? null) : heuristic.reason;
+
+      // Log to MongoDB (fire-and-forget)
+      OracleDecision.create({
+        session_id:            sessionId,
+        timestamp:             new Date(),
+        lat, lng, speed_kmh:   speedKmh,
+        speed_category:        speedCategory(speedKmh),
+        student_risk:          riskScore,
+        student_conf:          confidence,
+        oracle_reason:         oracleReason,
+        tile_id:               tile.tile_id,
+        tile_sample_count:     tile.sample_count,
+        tile_avg_downlink:     tile.avg_downlink,
+        tile_signal_variance:  tile.signal_variance,
+        model_used:            llmFailed ? 'heuristic_fallback' : 'gpt-4o-mini',
+        prompt_tokens:         promptTokens    || null,
+        completion_tokens:     completionTokens || null,
+        oracle_risk:           decision.adjusted_risk,
+        recommendation:        decision.recommendation,
+        reasoning:             decision.reasoning,
+        oracle_confidence:     decision.confidence,
+        heuristic_recommendation: heuristicRec,
+        diverged:              decision.recommendation !== heuristicRec,
+        // Corridor scanner results for this Oracle call
+        has_dead_zone:          corridor?.has_dead_zone          ?? null,
+        dead_zone_entry_sec:    corridor?.entry_seconds          ?? null,
+        dead_zone_duration_sec: corridor?.duration_seconds       ?? null,
+        corridor_feasible:      corridor ? corridor.feasible     : null,
+        llm_failed:            llmFailed,
+        fallback_reason:       fallbackReason,
+      }).catch(() => {});
+
+    } catch {
+      // Background task — swallow all errors, never affect the HTTP response
+    }
+  })();
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export async function runInference(
@@ -263,117 +385,92 @@ export async function runInference(
   recentDownlinks: number[] = [],
   userId           = 'anon',
   sessionId:       string | null = null,
+  bitrateKbps      = 1500,
+  bandwidthMbps    = 0,
 ): Promise<InferenceResult> {
 
-  // Phase 4: prediction cone → raw risk
-  const coneResult = await computeBufferTarget(lat, lng, heading, speedKmh);
+  // Phase 4: prediction cone → raw risk (with corridor scanner)
+  const coneResult = await computeBufferTarget(lat, lng, heading, speedKmh, bitrateKbps, bandwidthMbps);
   const riskScore  = coneResult.risk_score;
 
   // Student confidence
   const confidence = studentConfidence(riskScore);
 
+  // ── Student is confident — return immediately, no Oracle needed ──────────
   if (confidence >= 0.60) {
     return {
       buffer_target:    coneResult,
       tier_used:        'student',
       confidence,
       oracle_triggered: false,
+      oracle_pending:   false,
       oracle_reason:    null,
       oracle_reasoning: null,
     };
   }
 
-  // Rate limit check
+  // Rate limit check — if over limit, Student answers
   if (!oracleAllowed(userId)) {
     return {
       buffer_target:    coneResult,
       tier_used:        'student',
       confidence,
       oracle_triggered: false,
+      oracle_pending:   false,
       oracle_reason:    'rate_limited',
       oracle_reasoning: null,
     };
   }
 
-  // Heuristic baseline (always computed so we can compare with LLM)
-  const heuristic = heuristicAdjust(riskScore, speedKmh, recentDownlinks);
-  const heuristicRec = riskToBuffer(heuristic.adjustedRisk).recommendation;
+  // ── Check Redis for cached Oracle result from previous background call ───
+  const currentTileId = tileId(lat, lng);
+  const cacheKey      = CK.oracleResult(userId, currentTileId);
+  const cached        = await redisService.get<CachedOracleResult>(cacheKey);
 
-  // Fetch tile context for the LLM
-  const tile   = await getTileContext(lat, lng);
-  const prompt = buildPrompt(riskScore, confidence, coneResult.branches, tile, speedKmh, recentDownlinks);
-
-  let llmFailed = false;
-  let fallbackReason: string | null = null;
-  let decision: LLMDecision;
-  let promptTokens    = 0;
-  let completionTokens = 0;
-
-  try {
-    const result     = await callLLMOracle(prompt);
-    decision         = result.decision;
-    promptTokens     = result.promptTokens;
-    completionTokens = result.completionTokens;
-  } catch (err: any) {
-    // LLM failed → fall back to heuristic silently
-    llmFailed      = true;
-    fallbackReason = err?.message ?? 'unknown_error';
-    const heuristicBuffer = riskToBuffer(heuristic.adjustedRisk);
-    decision = {
-      adjusted_risk:         heuristic.adjustedRisk,
-      recommendation:        heuristicBuffer.recommendation,
-      max_buffer_length:     heuristicBuffer.max_buffer_length,
-      max_max_buffer_length: heuristicBuffer.max_max_buffer_length,
-      confidence:            0.5,
-      reasoning:             `LLM unavailable; heuristic fallback: ${heuristic.reason}`,
+  if (cached) {
+    // Oracle already ran in background last cycle — return its answer instantly
+    const oracleTarget: BufferTarget = {
+      ...coneResult,
+      risk_score:            cached.adjusted_risk,
+      max_buffer_length:     cached.max_buffer_length,
+      max_max_buffer_length: cached.max_max_buffer_length,
+      recommendation:        cached.recommendation,
+    };
+    return {
+      buffer_target:    oracleTarget,
+      tier_used:        'oracle',
+      confidence:       cached.confidence,
+      oracle_triggered: true,
+      oracle_pending:   false,
+      oracle_reason:    cached.oracle_reason,
+      oracle_reasoning: cached.reasoning,
     };
   }
 
-  // Log to MongoDB (fire-and-forget — never block the response)
-  OracleDecision.create({
-    session_id:            sessionId,
-    timestamp:             new Date(),
-    lat, lng, speed_kmh:   speedKmh,
-    student_risk:          riskScore,
-    student_conf:          confidence,
-    tile_id:               tile.tile_id,
-    tile_sample_count:     tile.sample_count,
-    tile_avg_downlink:     tile.avg_downlink,
-    tile_signal_variance:  tile.signal_variance,
-    model_used:            llmFailed ? 'heuristic_fallback' : 'gpt-4o-mini',
-    prompt_tokens:         promptTokens    || null,
-    completion_tokens:     completionTokens || null,
-    oracle_risk:           decision.adjusted_risk,
-    recommendation:        decision.recommendation,
-    reasoning:             decision.reasoning,
-    oracle_confidence:     decision.confidence,
-    heuristic_recommendation: heuristicRec,
-    diverged:              decision.recommendation !== heuristicRec,
-    llm_failed:            llmFailed,
-    fallback_reason:       fallbackReason,
-  }).catch(() => {});   // log failure must never break inference
-
-  const oracleTarget: BufferTarget = {
-    ...coneResult,
-    risk_score:            decision.adjusted_risk,
-    max_buffer_length:     decision.max_buffer_length,
-    max_max_buffer_length: decision.max_max_buffer_length,
-    recommendation:        decision.recommendation,
-  };
+  // ── No cached result — return Student NOW, fire Oracle async ─────────────
+  // The Oracle will store its result in Redis within a few seconds.
+  // The next 25s prediction cycle will read it and upgrade to 'oracle' tier.
+  fireOracleAsync(
+    lat, lng, speedKmh, recentDownlinks,
+    riskScore, confidence, coneResult.branches,
+    userId, sessionId, cacheKey,
+    coneResult.corridor,
+  );
 
   return {
-    buffer_target:    oracleTarget,
-    tier_used:        'oracle',
-    confidence:       decision.confidence,
-    oracle_triggered: true,
-    oracle_reason:    llmFailed ? `llm_failed:${fallbackReason}` : heuristic.reason,
-    oracle_reasoning: decision.reasoning,
+    buffer_target:    coneResult,
+    tier_used:        'student',
+    confidence,
+    oracle_triggered: false,
+    oracle_pending:   true,    // signals Oracle is computing in background
+    oracle_reason:    'oracle_computing',
+    oracle_reasoning: null,
   };
 }
 
 // ── Force Oracle for testing ──────────────────────────────────────────────────
-// Bypasses Student confidence gate — calls LLM directly with a mock risk score
-// placed on a boundary (default 0.22) to simulate an ambiguous scenario.
+// Bypasses Student confidence gate and cache — calls LLM directly with a mock
+// risk score placed on a boundary (default 0.22) to simulate an ambiguous scenario.
 
 export async function forceOracleTest(
   lat:             number,
@@ -441,6 +538,7 @@ export async function forceOracleTest(
     tier_used:        'oracle',
     confidence:       decision.confidence,
     oracle_triggered: true,
+    oracle_pending:   false,
     oracle_reason:    llmFailed ? `llm_failed:${fallbackReason}` : heuristic.reason,
     oracle_reasoning: decision.reasoning,
   };

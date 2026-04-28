@@ -59,6 +59,16 @@
           <mat-icon>{{ isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
         </div>
 
+        <!-- ── GenABR activity badge (top-right, non-intrusive) ──────── -->
+        <div class="vp-genabr-badge"
+             *ngIf="genabrBadgeVisible"
+             [class.vp-genabr-badge--aggressive]="genabrBadgeLevel === 'aggressive'"
+             [class.vp-genabr-badge--oracle]="genabrBadgeOracle">
+          <span class="vp-genabr-dot"></span>
+          <span class="vp-genabr-label">{{ genabrBadgeLabel }}</span>
+          <span class="vp-genabr-sub">{{ genabrBadgeSublabel }}</span>
+        </div>
+
         <!-- ── Custom controls overlay ──────────────────────────────── -->
         <div class="vp-controls" [class.vp-controls--hidden]="!controlsVisible">
 

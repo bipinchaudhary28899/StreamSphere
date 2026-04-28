@@ -652,3 +652,111 @@
   .vp-ctrl-btn { width: 38px; height: 38px; }
   .vp-time { font-size: 0.75rem; padding: 0 4px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GenABR Activity Badge  (vp-genabr-*)
+   Appears top-right inside the player only when GenABR is actively
+   intervening (recommendation \!= 'normal'). Hides automatically 4s after
+   returning to normal.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.vp-genabr-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 20;                        /* above video, below controls overlay */
+
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  padding: 6px 11px 6px 9px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+
+  /* Slide in from top-right */
+  animation: genabr-slide-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  /* Moderate level = amber left border */
+  border-left: 3px solid #f59e0b;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.35), 0 0 0 0 rgba(245,158,11,0);
+}
+
+/* Aggressive level — red/accent */
+.vp-genabr-badge--aggressive {
+  border-left-color: var(--accent, #ef4444);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.35), 0 0 14px rgba(239,68,68,0.15);
+}
+
+/* Oracle tier — blue tint */
+.vp-genabr-badge--oracle:not(.vp-genabr-badge--aggressive) {
+  border-left-color: #818cf8;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.35), 0 0 14px rgba(129,140,248,0.18);
+}
+.vp-genabr-badge--oracle.vp-genabr-badge--aggressive {
+  border-left-color: #a78bfa;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.35), 0 0 14px rgba(167,139,250,0.2);
+}
+
+/* Pulsing live dot */
+.vp-genabr-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+  flex-shrink: 0;
+  animation: genabr-pulse 1.8s ease-in-out infinite;
+}
+.vp-genabr-badge--aggressive .vp-genabr-dot    { background: var(--accent, #ef4444); }
+.vp-genabr-badge--oracle .vp-genabr-dot         { background: #818cf8; }
+.vp-genabr-badge--oracle.vp-genabr-badge--aggressive .vp-genabr-dot { background: #a78bfa; }
+
+/* Text */
+.vp-genabr-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.vp-genabr-sub {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.65);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+/* Slide-in keyframes */
+@keyframes genabr-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
+}
+
+/* Pulse keyframes for the live dot */
+@keyframes genabr-pulse {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.75); }
+}
+
+/* On mobile: shift badge slightly so it clears the fullscreen button */
+@media (max-width: 480px) {
+  .vp-genabr-badge {
+    top: 10px;
+    right: 10px;
+    padding: 5px 9px 5px 8px;
+  }
+  .vp-genabr-label { font-size: 0.68rem; }
+  .vp-genabr-sub   { font-size: 0.62rem; }
+}

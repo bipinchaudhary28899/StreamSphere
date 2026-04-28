@@ -6,7 +6,11 @@ import { VideoController }        from '../controllers/getVideo.controller';
 import { CommentController }      from '../controllers/comment.controller';
 import { authenticateJWT }        from '../services/auth.service';
 import { WatchHistoryController } from '../controllers/watchHistory.controller';
-import { adminStatsController }   from '../controllers/admin.controller';
+import {
+  adminStatsController,
+  getGenabrStatusController,
+  toggleGenabrController,
+}                                  from '../controllers/admin.controller';
 import { hlsWebhookController }   from '../controllers/hlsWebhook.controller';
 import {
   startSessionController,
@@ -48,8 +52,10 @@ router.use(statsMiddleware);
 
 const ADMIN_EMAIL = 'bkumar28899@gmail.com';
 function requireAdmin(req: any, res: Response, next: any): void {
-  if (req.user?.email !== ADMIN_EMAIL) {
-    res.status(403).json({ message: 'Forbidden' });
+  const userEmail = req.user?.email ?? '(no email in token)';
+  if (userEmail !== ADMIN_EMAIL) {
+    console.warn(`[requireAdmin] Rejected: token email="${userEmail}" expected="${ADMIN_EMAIL}"`);
+    res.status(403).json({ message: `Admin only. Token email: ${userEmail}` });
     return;
   }
   next();
@@ -225,6 +231,19 @@ router.get('/admin/stats',
   authenticateJWT,
   requireAdmin,
   wrap(adminStatsController),
+);
+
+// GET /api/admin/genabr-status  — authenticated (any user); returns { enabled: boolean }
+router.get('/admin/genabr-status',
+  authenticateJWT,
+  wrap(getGenabrStatusController),
+);
+
+// POST /api/admin/genabr-toggle  — admin only; body: { enabled: boolean }
+router.post('/admin/genabr-toggle',
+  authenticateJWT,
+  requireAdmin,
+  wrap(toggleGenabrController),
 );
 
 
