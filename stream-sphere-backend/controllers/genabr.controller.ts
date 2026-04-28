@@ -33,7 +33,7 @@ export async function genabrDecisionController(req: Request, res: Response): Pro
 
   const {
     lat, lng, heading, speed_kmh, recent_downlinks, session_id,
-    bitrate_kbps, bandwidth_mbps,
+    bitrate_kbps, bandwidth_mbps, recent_rtts, connection_type,
   } = req.body;
 
   if (lat == null || lng == null) {
@@ -53,6 +53,8 @@ export async function genabrDecisionController(req: Request, res: Response): Pro
     typeof session_id === 'string' ? session_id : null,
     Number(bitrate_kbps  ?? 1500),
     Number(bandwidth_mbps ?? 0),
+    Array.isArray(recent_rtts) ? recent_rtts.map(Number) : [],
+    typeof connection_type === 'string' ? connection_type : '',
   );
 
   res.json(result);

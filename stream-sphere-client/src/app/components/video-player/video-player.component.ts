@@ -52,6 +52,9 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   /** Set to true just before we force a level change via GenABR so the
    *  LEVEL_SWITCHED handler can tag the switch as 'genabr_override'. */
   private _genabrForcedLevel = false;
+  /** Set to true just before the user manually picks a quality level so the
+   *  LEVEL_SWITCHED handler can tag the switch as 'user_manual'. */
+  private _userManualLevel = false;
   /** Track how many consecutive 'normal' cycles before releasing the
    *  manual level lock and handing control back to ABR auto. */
   private _normalCycleCount = 0;
@@ -191,10 +194,12 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       this.hls.on(Hls.Events.LEVEL_SWITCHED, (_evt, data) => {
         this.hlsAutoLevel = data.level;
         this.cdr.detectChanges();
-        // Stamp the switch reason before clearing the flag
-        const reason: 'abr_auto' | 'genabr_override' =
-          this._genabrForcedLevel ? 'genabr_override' : 'abr_auto';
+        // Stamp the switch reason — priority: genabr_override > user_manual > abr_auto
+        const reason: 'abr_auto' | 'genabr_override' | 'user_manual' =
+          this._genabrForcedLevel ? 'genabr_override' :
+          this._userManualLevel   ? 'user_manual'     : 'abr_auto';
         this._genabrForcedLevel = false;
+        this._userManualLevel   = false;
         const lvl = this.hls?.levels[data.level];
         if (lvl) this.telemetry.updateBitrate(Math.round(lvl.bitrate / 1000), reason);
       });
@@ -253,7 +258,9 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   setQuality(levelIndex: number): void {
     if (!this.hls) return;
-    this.hlsCurrentLevel = levelIndex;
+    // Flag the upcoming LEVEL_SWITCHED event as user-initiated before changing level
+    this._userManualLevel = true;
+    this.hlsCurrentLevel  = levelIndex;
     this.hls.currentLevel = levelIndex;  // -1 = ABR auto
   }
 

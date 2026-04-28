@@ -179,7 +179,8 @@ export class TelemetryService implements OnDestroy {
     const pos  = this.lastPosition;
 
     // Keep PredictionService context fresh on every tick (pure local, zero cost)
-    this.prediction.updateNetworkContext(conn.type, conn.downlink, this.bufferLevel, this.bitrateKbps);
+    // Pass conn.rtt so the RTT history flows into the inference engine's network overlay
+    this.prediction.updateNetworkContext(conn.type, conn.downlink, this.bufferLevel, this.bitrateKbps, conn.rtt);
 
     const ping: PingData = {
       timestamp:        new Date().toISOString(),

@@ -26,6 +26,7 @@ export interface InferenceResult {
 
 const POLL_INTERVAL_MS    = 25_000;
 const DOWNLINK_HISTORY_N  = 5;   // keep last 5 downlink readings for Oracle
+const RTT_HISTORY_N       = 5;   // keep last 5 RTT readings for Oracle
 const STALL_WINDOW_MS     = 60_000;
 const NORMAL_LINGER_MS    = 4_000; // keep badge visible 4s after recommendation returns to normal
 
@@ -60,6 +61,7 @@ export class PredictionService implements OnDestroy {
   private connectionType:    string | null = null;
   private bufferLevelSec:    number | null = null;
   private downlinkHistory:   number[] = [];
+  private rttHistory:        number[] = [];
   private recentStallTimes:  number[] = [];  // timestamps of stalls
   private currentBitrateKbps: number | null = null;  // current video stream bitrate
 
@@ -125,6 +127,7 @@ export class PredictionService implements OnDestroy {
     downlinkMbps:    number | null,
     bufferLevelSec:  number | null,
     bitrateKbps:     number | null = null,
+    rttMs:           number | null = null,
   ): void {
     this.connectionType = connectionType;
     this.bufferLevelSec = bufferLevelSec;
@@ -137,6 +140,13 @@ export class PredictionService implements OnDestroy {
       this.downlinkHistory.push(downlinkMbps);
       if (this.downlinkHistory.length > DOWNLINK_HISTORY_N) {
         this.downlinkHistory.shift();
+      }
+    }
+
+    if (rttMs !== null) {
+      this.rttHistory.push(rttMs);
+      if (this.rttHistory.length > RTT_HISTORY_N) {
+        this.rttHistory.shift();
       }
     }
   }
@@ -181,6 +191,8 @@ export class PredictionService implements OnDestroy {
       heading:          this.heading,
       speed_kmh:        this.speedKmh,
       recent_downlinks: this.downlinkHistory,
+      recent_rtts:      this.rttHistory,
+      connection_type:  this.connectionType ?? '',
       session_id:       this.sessionId,
       bitrate_kbps:     this.currentBitrateKbps ?? 1500,
       bandwidth_mbps:   bandwidthMbps,

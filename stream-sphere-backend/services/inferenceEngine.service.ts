@@ -13,6 +13,108 @@ function speedCategory(kmh: number): string {
   return 'highway';
 }
 
+// ── Network trend analysis (OLS linear regression) ────────────────────────────
+// Uses Ordinary Least Squares slope instead of simple last−first delta.
+// This correctly classifies [1.3,1.3,1.3,0.35,0.35] as degrading and
+// [0.35,0.35,0.35,0.35,1.3] as improving, which the old delta approach misses.
+
+interface NetworkTrend {
+  slope:      number;                             // Mbps/sample (positive = rising)
+  volatility: number;                             // std dev across the window
+  direction:  'degrading' | 'stable' | 'improving';
+}
+
+function computeNetworkTrend(values: number[]): NetworkTrend {
+  if (values.length < 2) return { slope: 0, volatility: 0, direction: 'stable' };
+
+  const n     = values.length;
+  const mean  = values.reduce((a, b) => a + b, 0) / n;
+  const meanI = (n - 1) / 2;
+
+  // OLS numerator / denominator
+  const num = values.reduce((s, v, i) => s + (i - meanI) * (v - mean), 0);
+  const den = values.reduce((s, _, i) => s + (i - meanI) ** 2, 0);
+  const slope = den > 0 ? num / den : 0;
+
+  const variance   = values.reduce((s, v) => s + (v - mean) ** 2, 0) / n;
+  const volatility = Math.sqrt(variance);
+
+  const direction: NetworkTrend['direction'] =
+    slope < -0.15 ? 'degrading' :
+    slope >  0.15 ? 'improving' : 'stable';
+
+  return { slope, volatility, direction };
+}
+
+// ── Network risk delta ────────────────────────────────────────────────────────
+// Computes a signed risk adjustment based on live network signals.
+// Applied on top of the spatial risk from the Prediction Cone so that
+// stationary users (whose spatial risk stays constant) still get a meaningful
+// dynamic risk score when their network degrades.
+
+interface NetworkDelta {
+  delta:   number;       // risk adjustment, clamped to [-0.20, +0.50]
+  factors: string[];     // human-readable list of contributing factors
+}
+
+function computeNetworkDelta(
+  recentDownlinks: number[],
+  recentRtts:      number[],
+  connectionType:  string,
+): NetworkDelta {
+  let delta = 0;
+  const factors: string[] = [];
+
+  // ── Downlink trend ──────────────────────────────────────────────────────
+  if (recentDownlinks.length >= 2) {
+    const dlTrend = computeNetworkTrend(recentDownlinks);
+
+    if (dlTrend.direction === 'degrading') {
+      // Scale boost with slope magnitude: mild = +0.10, steep = up to +0.20
+      const magnitude = Math.min(Math.abs(dlTrend.slope) / 1.5, 1.0);
+      const boost     = 0.10 + 0.10 * magnitude;
+      delta += boost;
+      factors.push(`dl_degrading(slope=${dlTrend.slope.toFixed(2)})`);
+    } else if (dlTrend.direction === 'improving') {
+      delta -= 0.08;
+      factors.push('dl_improving');
+    }
+
+    // ── Signal volatility ──────────────────────────────────────────────
+    if (dlTrend.volatility > 1.5) {
+      delta += 0.08;
+      factors.push(`dl_volatile(σ=${dlTrend.volatility.toFixed(2)})`);
+    }
+  }
+
+  // ── RTT level + trend ───────────────────────────────────────────────────
+  if (recentRtts.length > 0) {
+    const latestRtt = recentRtts[recentRtts.length - 1];
+
+    if      (latestRtt > 1000) { delta += 0.25; factors.push('rtt_critical(>1000ms)'); }
+    else if (latestRtt >  500) { delta += 0.12; factors.push('rtt_high(>500ms)');      }
+    else if (latestRtt >  200) { delta += 0.05; factors.push('rtt_elevated(>200ms)');  }
+
+    if (recentRtts.length >= 2) {
+      const rttTrend = computeNetworkTrend(recentRtts);
+      if      (rttTrend.slope > 100) { delta += 0.10; factors.push('rtt_rising_fast'); }
+      else if (rttTrend.slope >  30) { delta += 0.05; factors.push('rtt_rising');      }
+    }
+  }
+
+  // ── Connection type penalty ─────────────────────────────────────────────
+  if (connectionType === '2g' || connectionType === 'slow-2g') {
+    delta += 0.30; factors.push('conn_2g');
+  } else if (connectionType === '3g') {
+    delta += 0.10; factors.push('conn_3g');
+  }
+
+  return {
+    delta:   Math.min(Math.max(delta, -0.20), 0.50),
+    factors,
+  };
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface InferenceResult {
@@ -92,10 +194,11 @@ function heuristicAdjust(
   else if (speedKmh > 40)  { risk += 0.04; reasons.push('urban_speed'); }
 
   if (recentDownlinks.length >= 3) {
-    const recent = recentDownlinks.slice(-3);
-    const trend  = recent[recent.length - 1] - recent[0];
-    if (trend < -2)  { risk += 0.12; reasons.push('signal_degrading'); }
-    else if (trend > 2) { risk = Math.max(0, risk - 0.05); reasons.push('signal_recovering'); }
+    // OLS slope correctly classifies plateau-then-drop patterns that simple
+    // last−first delta misses (e.g. [1.3,1.3,1.3,0.35,0.35] slope ≈ -0.33)
+    const trend = computeNetworkTrend(recentDownlinks.slice(-5));
+    if      (trend.direction === 'degrading')  { risk += 0.12; reasons.push('signal_degrading'); }
+    else if (trend.direction === 'improving')  { risk  = Math.max(0, risk - 0.05); reasons.push('signal_recovering'); }
   }
 
   const h = new Date().getUTCHours();
@@ -159,19 +262,33 @@ function buildPrompt(
   tile:            TileContext,
   speedKmh:        number,
   recentDownlinks: number[],
+  recentRtts:      number[] = [],
+  connectionType:  string   = '',
 ): string {
   const h = new Date().getUTCHours();
   const isPeak = (h >= 7 && h <= 9) || (h >= 17 && h <= 20);
 
-  // Describe downlink trend
+  // Describe downlink trend using OLS slope
   let trend = 'stable';
   if (recentDownlinks.length >= 2) {
-    const delta = recentDownlinks[recentDownlinks.length - 1] - recentDownlinks[0];
-    if (delta < -2)      trend = 'degrading fast';
-    else if (delta < -0.5) trend = 'degrading slowly';
-    else if (delta > 2)  trend = 'recovering fast';
-    else if (delta > 0.5)  trend = 'recovering slowly';
+    const dlTrend = computeNetworkTrend(recentDownlinks);
+    if      (dlTrend.direction === 'degrading' && Math.abs(dlTrend.slope) > 0.5) trend = 'degrading fast';
+    else if (dlTrend.direction === 'degrading')                                   trend = 'degrading slowly';
+    else if (dlTrend.direction === 'improving' && dlTrend.slope > 0.5)           trend = 'recovering fast';
+    else if (dlTrend.direction === 'improving')                                   trend = 'recovering slowly';
   }
+
+  // Describe RTT state
+  const latestRtt  = recentRtts.length > 0 ? recentRtts[recentRtts.length - 1] : null;
+  const rttSummary = latestRtt !== null
+    ? `${latestRtt.toFixed(0)} ms (latest) — ${latestRtt > 1000 ? '⚠ CRITICAL' : latestRtt > 500 ? '⚠ HIGH' : latestRtt > 200 ? 'elevated' : 'normal'}`
+    : 'no data';
+
+  // Compute network delta for Oracle context
+  const netDelta = computeNetworkDelta(recentDownlinks, recentRtts, connectionType);
+  const netDeltaStr = netDelta.factors.length > 0
+    ? `${netDelta.delta >= 0 ? '+' : ''}${netDelta.delta.toFixed(3)} (factors: ${netDelta.factors.join(', ')})`
+    : 'none (0.000)';
 
   // Summarise prediction cone branches
   const branchSummary = branches.map(b => {
@@ -204,6 +321,9 @@ Fused score  : ${tile.fused_score !== null ? tile.fused_score.toFixed(3) : 'no d
 
 ══ LIVE NETWORK READINGS ══
 Recent downlinks: [${recentDownlinks.map(d => d.toFixed(1)).join(', ')} Mbps] — trend: ${trend}
+Recent RTTs     : [${recentRtts.length > 0 ? recentRtts.map(r => r.toFixed(0)).join(', ') + ' ms' : 'no data'}] — ${rttSummary}
+Connection type : ${connectionType || 'unknown'}
+Network delta   : ${netDeltaStr}
 
 ══ YOUR TASK ══
 The Student tier is uncertain (risk ${riskScore.toFixed(3)} is near a decision boundary).
@@ -291,6 +411,8 @@ function fireOracleAsync(
   sessionId:       string | null,
   cacheKey:        string,
   corridor:        CorridorResult | null,
+  recentRtts:      number[] = [],
+  connectionType:  string   = '',
 ): void {
   // Deliberately NOT awaited — runs in background while HTTP response is already sent
   (async () => {
@@ -298,7 +420,7 @@ function fireOracleAsync(
       const heuristic    = heuristicAdjust(riskScore, speedKmh, recentDownlinks);
       const heuristicRec = riskToBuffer(heuristic.adjustedRisk).recommendation;
       const tile         = await getTileContext(lat, lng);
-      const prompt       = buildPrompt(riskScore, confidence, branches, tile, speedKmh, recentDownlinks);
+      const prompt       = buildPrompt(riskScore, confidence, branches, tile, speedKmh, recentDownlinks, recentRtts, connectionType);
 
       let llmFailed        = false;
       let fallbackReason: string | null = null;
@@ -387,24 +509,40 @@ export async function runInference(
   sessionId:       string | null = null,
   bitrateKbps      = 1500,
   bandwidthMbps    = 0,
+  // New params added at end to preserve backward compatibility with existing callers
+  recentRtts:      number[] = [],
+  connectionType:  string   = '',
 ): Promise<InferenceResult> {
 
-  // Phase 4: prediction cone → raw risk (with corridor scanner)
-  const coneResult = await computeBufferTarget(lat, lng, heading, speedKmh, bitrateKbps, bandwidthMbps);
-  const riskScore  = coneResult.risk_score;
+  // Phase 4: prediction cone → spatial risk (with corridor scanner)
+  const coneResult  = await computeBufferTarget(lat, lng, heading, speedKmh, bitrateKbps, bandwidthMbps);
 
-  // Student confidence
+  // ── Network overlay ────────────────────────────────────────────────────────
+  // Adds RTT spikes, connection-type penalty, and signal trend to the spatial
+  // risk score.  This gives stationary users a dynamic risk score even when
+  // the Prediction Cone returns the same value every cycle.
+  const networkSignal   = computeNetworkDelta(recentDownlinks, recentRtts, connectionType);
+  const adjustedRisk    = Math.min(Math.max(coneResult.risk_score + networkSignal.delta, 0), 1);
+  const networkAdjusted = adjustedRisk !== coneResult.risk_score;
+  const effectiveCone   = networkAdjusted
+    ? { ...coneResult, risk_score: adjustedRisk, ...riskToBuffer(adjustedRisk) }
+    : coneResult;
+
+  const riskScore  = effectiveCone.risk_score;
+
+  // Student confidence (evaluated on the network-adjusted score)
   const confidence = studentConfidence(riskScore);
 
   // ── Student is confident — return immediately, no Oracle needed ──────────
   if (confidence >= 0.60) {
     return {
-      buffer_target:    coneResult,
+      buffer_target:    effectiveCone,
       tier_used:        'student',
       confidence,
       oracle_triggered: false,
       oracle_pending:   false,
-      oracle_reason:    null,
+      oracle_reason:    networkAdjusted
+        ? `network_overlay(${networkSignal.factors.join(',')})` : null,
       oracle_reasoning: null,
     };
   }
@@ -412,7 +550,7 @@ export async function runInference(
   // Rate limit check — if over limit, Student answers
   if (!oracleAllowed(userId)) {
     return {
-      buffer_target:    coneResult,
+      buffer_target:    effectiveCone,
       tier_used:        'student',
       confidence,
       oracle_triggered: false,
@@ -430,7 +568,7 @@ export async function runInference(
   if (cached) {
     // Oracle already ran in background last cycle — return its answer instantly
     const oracleTarget: BufferTarget = {
-      ...coneResult,
+      ...effectiveCone,
       risk_score:            cached.adjusted_risk,
       max_buffer_length:     cached.max_buffer_length,
       max_max_buffer_length: cached.max_max_buffer_length,
@@ -452,13 +590,14 @@ export async function runInference(
   // The next 25s prediction cycle will read it and upgrade to 'oracle' tier.
   fireOracleAsync(
     lat, lng, speedKmh, recentDownlinks,
-    riskScore, confidence, coneResult.branches,
+    riskScore, confidence, effectiveCone.branches,
     userId, sessionId, cacheKey,
-    coneResult.corridor,
+    effectiveCone.corridor,
+    recentRtts, connectionType,
   );
 
   return {
-    buffer_target:    coneResult,
+    buffer_target:    effectiveCone,
     tier_used:        'student',
     confidence,
     oracle_triggered: false,
