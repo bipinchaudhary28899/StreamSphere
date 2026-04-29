@@ -40,8 +40,8 @@
  *   lambda:InvokeFunction on the two worker function ARNs
  */
 
-const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
-const { S3Client, PutObjectCommand }  = require('@aws-sdk/client-s3');
+const { LambdaClient, InvokeCommand }                     = require('@aws-sdk/client-lambda');
+const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const axios = require('axios');
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -205,6 +205,18 @@ exports.handler = async (event) => {
       timeout: 15000,
     },
   );
+
+  // ── Delete raw source file — storage cleanup ──────────────────────────────
+  // The raw upload is only needed during transcoding. Once master.m3u8 is live
+  // and the backend has been notified, the raw file is never read again.
+  // Deleting it reclaims 100–400 MB per video on S3.
+  // Non-fatal: a delete failure must never prevent the video from being published.
+  try {
+    await s3Client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: rawKey }));
+    console.log(`[ORCH] Deleted raw source: ${rawKey}`);
+  } catch (err) {
+    console.warn(`[ORCH] Raw file delete failed (non-fatal): ${err.message}`);
+  }
 
   console.log('[ORCH] Done ✓');
   return { statusCode: 200, body: 'OK' };

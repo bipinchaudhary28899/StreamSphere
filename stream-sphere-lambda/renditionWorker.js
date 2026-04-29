@@ -58,15 +58,27 @@ exports.handler = async (event) => {
     console.log(`${tag} Transcoding…`);
     const playlistPath = path.join(tmpDir, `${rendition.name}.m3u8`);
 
+    // ── CRF + maxrate encoding ────────────────────────────────────────────────
+    // CRF 23: quality-based encoding — simple scenes use less data, complex
+    // scenes get more, up to the maxrate cap.  Saves 30–50% vs fixed bitrate
+    // at no perceptible quality loss for typical content.
+    // bufsize = 2× maxrate: gives the encoder a 2-second rate-control buffer,
+    // which is the standard recommendation for streaming (HLS segments are 6s).
+    const bitrateKbps = parseInt(rendition.videoBitrate, 10); // e.g. '2800k' → 2800
+    const bufsize     = `${bitrateKbps * 2}k`;
+
     await new Promise((resolve, reject) => {
       ffmpeg(rawLocalPath)
         .videoCodec('libx264')
         .audioCodec('aac')
         .size(`${rendition.width}x${rendition.height}`)
-        .videoBitrate(rendition.videoBitrate)
+        // No fixed .videoBitrate() — CRF drives quality; maxrate is the ceiling
         .audioBitrate(rendition.audioBitrate)
         .outputOptions([
           '-profile:v baseline', '-level 3.0',
+          '-crf 23',                                   // quality target (0=lossless, 51=worst)
+          `-maxrate ${rendition.videoBitrate}`,        // never exceed original budget
+          `-bufsize ${bufsize}`,                       // rate-control buffer = 2× maxrate
           '-start_number 0',
           '-hls_time 6',
           '-hls_list_size 0',
