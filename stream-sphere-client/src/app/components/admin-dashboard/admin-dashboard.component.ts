@@ -163,6 +163,46 @@ export class AdminDashboardComponent implements OnInit {
 
   trackBySessionId(_i: number, s: RecentSession): string { return s.sessionId; }
 
+  // ── Tier helpers ──────────────────────────────────────────────────────────
+
+  /** Returns the tier that answered the most prediction cycles in this session. */
+  dominantTier(s: RecentSession): 'guard' | 'student' | 'oracle' | 'none' {
+    const c = s.tierCounts;
+    if (!c) return 'none';
+    const total = c.guard + c.student + c.oracle;
+    if (total === 0) return 'none';
+    if (c.oracle  >= c.student && c.oracle  >= c.guard) return 'oracle';
+    if (c.student >= c.guard)                           return 'student';
+    return 'guard';
+  }
+
+  /** Human-readable label for a tier. */
+  tierLabel(tier: string): string {
+    const map: Record<string, string> = {
+      guard: 'Guard', student: 'Student', oracle: 'Oracle', none: '—',
+    };
+    return map[tier] ?? tier;
+  }
+
+  /** CSS class for the tier badge. */
+  tierClass(tier: string): string {
+    const map: Record<string, string> = {
+      guard: 'tier-guard', student: 'tier-student', oracle: 'tier-oracle',
+    };
+    return map[tier] ?? '';
+  }
+
+  /** Short breakdown string, e.g. "G2 S8 O3" — shown below the badge. */
+  tierBreakdown(s: RecentSession): string {
+    const c = s.tierCounts;
+    if (!c || (c.guard + c.student + c.oracle) === 0) return '';
+    const parts: string[] = [];
+    if (c.guard   > 0) parts.push(`G${c.guard}`);
+    if (c.student > 0) parts.push(`S${c.student}`);
+    if (c.oracle  > 0) parts.push(`O${c.oracle}`);
+    return parts.join(' ');
+  }
+
   // ── Oracle insights helpers ───────────────────────────────────────────────
 
   /** Max count value in an OracleTriggerItem array — used to scale bars. */

@@ -431,6 +431,7 @@
                 <th>Session</th>
                 <th>Duration</th>
                 <th class="gn-th-center">GenABR</th>
+                <th class="gn-th-center">Tier</th>
                 <th class="gn-th-right">Φ Score</th>
                 <th class="gn-th-right">Avg VMAF</th>
                 <th class="gn-th-right">VMAF σ</th>
@@ -450,6 +451,19 @@
                   <span class="gn-badge" [class.gn-badge-on]="s.genabrActive" [class.gn-badge-off]="!s.genabrActive">
                     {{ s.genabrActive ? 'ON' : 'OFF' }}
                   </span>
+                </td>
+                <td class="gn-td-center">
+                  <ng-container *ngIf="s.genabrActive && dominantTier(s) !== 'none'; else noTier">
+                    <span class="tier-badge" [ngClass]="tierClass(dominantTier(s))">
+                      {{ tierLabel(dominantTier(s)) }}
+                    </span>
+                    <span class="tier-breakdown" *ngIf="tierBreakdown(s)">
+                      {{ tierBreakdown(s) }}
+                    </span>
+                  </ng-container>
+                  <ng-template #noTier>
+                    <span class="gn-td-muted">—</span>
+                  </ng-template>
                 </td>
                 <td class="gn-td-right gn-td-phi">{{ fmtN(s.phiScore) }}</td>
                 <td class="gn-td-right">{{ fmtN(s.avgVmaf) }}</td>

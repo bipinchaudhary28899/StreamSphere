@@ -52,6 +52,17 @@ export interface IStreamingSession extends Document {
   // Derived from median speed_kmh across pings.
   // stationary < 2 km/h | walking 2–10 km/h | driving > 10 km/h
   movement_type:    'stationary' | 'walking' | 'driving' | null;
+
+  // ── GenABR tier usage counters ──────────────────────────────────────────
+  // Incremented on every POST /genabr/decision for this session.
+  // guard   = Guard tier fast-passed (network clearly fine, no backend call)
+  // student = Student tier answered (statistical model, confidence ≥ 60%)
+  // oracle  = Oracle tier answered (LLM result — from cache or fresh call)
+  tier_counts: {
+    guard:   number;
+    student: number;
+    oracle:  number;
+  };
 }
 
 // ── Sub-schemas ───────────────────────────────────────────────────────────────
@@ -105,6 +116,11 @@ const streamingSessionSchema = new Schema<IStreamingSession>(
       type:    String,
       enum:    ['stationary', 'walking', 'driving'],
       default: null,
+    },
+    tier_counts: {
+      guard:   { type: Number, default: 0 },
+      student: { type: Number, default: 0 },
+      oracle:  { type: Number, default: 0 },
     },
   },
   { timestamps: true },

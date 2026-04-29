@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { runInference, forceOracleTest } from '../services/inferenceEngine.service';
 import { redisService, CK } from '../services/redis.service';
+import { StreamingSession } from '../models/streamingSession';
 
 // POST /api/genabr/decision
 // Body: { lat, lng, heading?, speed_kmh?, recent_downlinks?, session_id? }
@@ -56,6 +57,16 @@ export async function genabrDecisionController(req: Request, res: Response): Pro
     Array.isArray(recent_rtts) ? recent_rtts.map(Number) : [],
     typeof connection_type === 'string' ? connection_type : '',
   );
+
+  // ── Increment tier counter on the session (fire-and-forget) ─────────────
+  // Non-fatal: a failed $inc must never affect the HTTP response.
+  // Guard passes are tracked here too so the dashboard shows the full picture.
+  if (typeof session_id === 'string' && session_id) {
+    StreamingSession.updateOne(
+      { session_id },
+      { $inc: { [`tier_counts.${result.tier_used}`]: 1 } },
+    ).catch(() => {});
+  }
 
   res.json(result);
 }

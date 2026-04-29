@@ -24,6 +24,7 @@ export interface RecentSession {
   sigmaVmaf:    number | null;
   totalStallMs: number;
   stallCount:   number;
+  tierCounts:   { guard: number; student: number; oracle: number };
 }
 
 // ── Oracle Insights ───────────────────────────────────────────────────────────

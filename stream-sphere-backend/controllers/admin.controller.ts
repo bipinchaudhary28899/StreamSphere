@@ -85,6 +85,7 @@ async function getGenabrStats(): Promise<{
         sigma_vmaf:      1,
         total_stall_ms:  1,
         stall_events:    1,
+        tier_counts:     1,
       },
     )
       .sort({ started_at: -1 })
@@ -128,6 +129,11 @@ async function getGenabrStats(): Promise<{
       sigmaVmaf:    s.sigma_vmaf,
       totalStallMs: s.total_stall_ms,
       stallCount:   (s.stall_events ?? []).length,
+      tierCounts: {
+        guard:   s.tier_counts?.guard   ?? 0,
+        student: s.tier_counts?.student ?? 0,
+        oracle:  s.tier_counts?.oracle  ?? 0,
+      },
     })),
   };
 }
