@@ -1,8 +1,8 @@
 import { Component, OnInit, HostBinding } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
-  AdminService, AdminStats, SessionGroupStats, RecentSession,
-  OracleTriggerItem, OracleRecentDecision,
+  AdminService, AdminStats, RecentSession,
+  OracleTriggerItem, OracleRecentDecision, StudentNetworkItem,
 } from '../../services/admin.service';
 
 @Component({
@@ -148,19 +148,6 @@ export class AdminDashboardComponent implements OnInit {
     return Math.min(100, (val / max) * 100);
   }
 
-  genabrSharePct(): number {
-    const g = this.stats?.genabr;
-    if (!g || g.totalSessions === 0) return 0;
-    return Math.round((g.withGenabr.count / g.totalSessions) * 100);
-  }
-
-  phiDelta(): string {
-    return this.improvement(
-      this.stats?.genabr?.withGenabr.avgPhi ?? null,
-      this.stats?.genabr?.withoutGenabr.avgPhi ?? null,
-    );
-  }
-
   trackBySessionId(_i: number, s: RecentSession): string { return s.sessionId; }
 
   // ── Tier helpers ──────────────────────────────────────────────────────────
@@ -299,4 +286,62 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   trackByTimestamp(_i: number, d: OracleRecentDecision): string { return d.timestamp; }
+
+  // ── Student network event helpers ─────────────────────────────────────────
+
+  /** Max count across a StudentNetworkItem[] — used to scale bar widths. */
+  studentMaxCount(items: StudentNetworkItem[] | undefined): number {
+    if (!items || items.length === 0) return 1;
+    return Math.max(...items.map(i => i.count), 1);
+  }
+
+  /** Human-readable label for network_factor codes emitted by computeNetworkDelta. */
+  networkFactorLabel(tag: string): string {
+    const map: Record<string, string> = {
+      'conn_2g':              '2G/Slow-2G',
+      'conn_3g':              '3G',
+      'rtt_critical(>1000ms)':'RTT Critical (>1s)',
+      'rtt_high(>500ms)':     'RTT High (>500ms)',
+      'rtt_elevated(>200ms)': 'RTT Elevated (>200ms)',
+      'rtt_rising_fast':      'RTT Rising Fast',
+      'rtt_rising':           'RTT Rising',
+      'dl_degrading_severe':  'Downlink: Severe Drop',
+      'dl_degrading':         'Downlink: Degrading',
+      'dl_volatile':          'Downlink: Volatile',
+      'dl_improving':         'Downlink: Improving',
+      'healthy_network':      'Healthy Network',
+    };
+    return map[tag] ?? tag.replace(/_/g, ' ');
+  }
+
+  /** CSS class for colour-coding a network factor tag. */
+  networkFactorClass(tag: string): string {
+    if (tag.startsWith('rtt_critical') || tag === 'conn_2g' || tag === 'dl_degrading_severe')
+      return 'nf-tag-danger';
+    if (tag.startsWith('rtt_high') || tag === 'conn_3g' || tag === 'dl_degrading' || tag === 'dl_volatile' || tag === 'rtt_rising_fast')
+      return 'nf-tag-warn';
+    if (tag === 'healthy_network' || tag === 'dl_improving')
+      return 'nf-tag-ok';
+    return 'nf-tag-neutral';
+  }
+
+  /** Human-readable connection type label. */
+  connTypeLabel(ct: string): string {
+    const map: Record<string, string> = {
+      '4g':       '4G LTE',
+      '3g':       '3G',
+      '2g':       '2G',
+      'wifi':     'Wi-Fi',
+      'ethernet': 'Ethernet',
+      'unknown':  'Unknown',
+    };
+    return map[ct.toLowerCase()] ?? ct.toUpperCase();
+  }
+
+  /** Oracle-pending rate for the Student summary (0–100%). */
+  studentOraclePendingPct(): number {
+    const s = this.stats?.student?.last30dSummary;
+    if (!s || s.totalDecisions === 0) return 0;
+    return Math.round((s.oraclePendingCount / s.totalDecisions) * 100);
+  }
 }

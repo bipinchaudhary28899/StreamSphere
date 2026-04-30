@@ -14,6 +14,26 @@ const OBSERVED_CACHE_TTL_MS    = 30  * 24 * 60 * 60 * 1000; // 30 days for tiles
 // After this many days, old samples are down-weighted so fresh data has more impact
 const FRESHNESS_DECAY_DAYS     = 14;
 
+// ── Dead zone auto-promotion from RadioMapCache ───────────────────────────────
+// When a tile's merged downlink average falls below this threshold after a
+// session is ingested, we auto-create a DeadZone entry for it.
+// 1.0 Mbps covers 2G and worst-case 3G — anything below this is genuinely
+// problematic for video streaming (360p needs ~0.4 Mbps minimum).
+const DEAD_ZONE_DOWNLINK_THRESHOLD_MBPS = 1.0;
+// Require at least this many total samples before promoting to a dead zone,
+// to avoid marking a tile as bad from a single brief visit.
+const MIN_SAMPLES_FOR_DEAD_ZONE         = 5;
+
+/** Derive a signal_score (0–1) from observed average downlink.
+ *  Lower score = worse signal. Used for DeadZone documents so that
+ *  near-zero throughput tiles score worse than marginal ones. */
+function downlinkToSignalScore(avgMbps: number): number {
+  if (avgMbps < 0.20) return 0.02;   // GPRS / near-dead
+  if (avgMbps < 0.50) return 0.08;   // slow 2G
+  if (avgMbps < 1.00) return 0.18;   // 2G / marginal 3G
+  return 1.00;                        // should not be called for good tiles
+}
+
 // ── Coverage result type ──────────────────────────────────────────────────────
 
 export interface CoverageResult {
@@ -405,6 +425,26 @@ export async function updateRadioMapFromSession(sessionId: string): Promise<void
       },
       { upsert: true },
     );
+
+    // ── Auto-promote to DeadZone if tile is consistently poor ─────────────────
+    // This bridges the gap between RadioMapCache (signal quality averages) and
+    // the DeadZone collection (which the corridor scanner queries for dead zone
+    // risk). Without this, a tile can show 0.63 Mbps in RadioMapCache but return
+    // dead_zone_risk = 0 in the prediction cone because no DeadZone document
+    // exists — exactly what happened in your 2G walking session.
+    //
+    // We use the merged total sample count so this tightens with each new session:
+    // first session (5+ pings) creates the entry, subsequent sessions update it.
+    const totalSamples = oldCount + newCount;
+    if (
+      mergedAvgDown < DEAD_ZONE_DOWNLINK_THRESHOLD_MBPS &&
+      totalSamples  >= MIN_SAMPLES_FOR_DEAD_ZONE
+    ) {
+      const tileCenterLat = tile_lat + TILE_SIZE_DEGREES / 2;
+      const tileCenterLng = tile_lng + TILE_SIZE_DEGREES / 2;
+      const signalScore   = downlinkToSignalScore(mergedAvgDown);
+      ingestDeadZone(tileCenterLat, tileCenterLng, signalScore, 'inferred').catch(() => {});
+    }
   }
 }
 

@@ -65,8 +65,8 @@ export class UploadVideoComponent {
 
     this.checkVideoDuration(file)
       .then(duration => {
-        if (duration > 180) {
-          this.errorMessage = 'Video duration exceeds 3 minutes. Please select a shorter video.';
+        if (duration > 420) {
+          this.errorMessage = 'Video duration exceeds 7 minutes. Please select a shorter video.';
           input.value = '';
           this.selectedFile = null;
           return;

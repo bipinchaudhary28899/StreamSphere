@@ -1,6 +1,7 @@
 import { computeBufferTarget, BufferTarget, BranchResult, CorridorResult } from './predictionCone.service';
 import { RadioMapCache } from '../models/radioMapCache';
 import { OracleDecision } from '../models/oracleDecision';
+import { StudentDecision } from '../models/studentDecision';
 import { redisService, CK, TTL } from './redis.service';
 import { tileId } from '../utils/geo';
 
@@ -107,6 +108,31 @@ function computeNetworkDelta(
     delta += 0.30; factors.push('conn_2g');
   } else if (connectionType === '3g') {
     delta += 0.10; factors.push('conn_3g');
+  }
+
+  // ── Healthy network reward ───────────────────────────────────────────────
+  // When all signals are clearly good, apply a small negative delta so the
+  // effective risk drops just below the Student confidence threshold.
+  // Without this, the stationary default risk (~0.412) sits 0.038 below the
+  // 0.45 boundary → Student confidence = 30% → Oracle always fires even when
+  // the network is completely healthy, wasting LLM calls.
+  // Conditions: 4G/wifi + RTT < 100ms + downlink > 2 Mbps + stable trend.
+  if (
+    (connectionType === '4g' || connectionType === 'wifi') &&
+    delta === 0  // only apply if no other penalties were added
+  ) {
+    const latestRtt = recentRtts.length > 0 ? recentRtts[recentRtts.length - 1] : null;
+    const latestDl  = recentDownlinks.length > 0 ? recentDownlinks[recentDownlinks.length - 1] : null;
+    const dlTrend   = recentDownlinks.length >= 2 ? computeNetworkTrend(recentDownlinks) : null;
+
+    if (
+      latestRtt !== null && latestRtt < 100 &&
+      latestDl  !== null && latestDl  > 2   &&
+      (dlTrend === null || dlTrend.direction === 'stable')
+    ) {
+      delta -= 0.05;
+      factors.push('healthy_network');
+    }
   }
 
   return {
@@ -417,6 +443,18 @@ function fireOracleAsync(
   // Deliberately NOT awaited — runs in background while HTTP response is already sent
   (async () => {
     try {
+      // ── In-flight lock — prevent duplicate LLM calls ─────────────────────
+      // Two prediction cycles can both miss the Redis cache within the LLM
+      // response window (~2–4s), causing two identical Oracle calls.
+      // The lock key expires in 30s (well beyond any LLM timeout).
+      const inflightKey = CK.oracleInflight(userId, cacheKey.split(':').slice(-1)[0]);
+      const alreadyFiring = await redisService.get<boolean>(inflightKey);
+      if (alreadyFiring) {
+        console.log('[Oracle] in-flight lock hit — skipping duplicate call');
+        return;
+      }
+      await redisService.set(inflightKey, true, TTL.oracleInflight);
+
       const heuristic    = heuristicAdjust(riskScore, speedKmh, recentDownlinks);
       const heuristicRec = riskToBuffer(heuristic.adjustedRisk).recommendation;
       const tile         = await getTileContext(lat, lng);
@@ -533,8 +571,34 @@ export async function runInference(
   // Student confidence (evaluated on the network-adjusted score)
   const confidence = studentConfidence(riskScore);
 
+  // ── Helper: log this Student decision asynchronously ─────────────────────
+  const latestDl  = recentDownlinks.length > 0 ? recentDownlinks[recentDownlinks.length - 1] : null;
+  const latestRtt = recentRtts.length      > 0 ? recentRtts[recentRtts.length - 1]           : null;
+  const spCat     = speedCategory(speedKmh);
+
+  function logStudentDecision(oraclePending: boolean): void {
+    StudentDecision.create({
+      session_id:      sessionId,
+      timestamp:       new Date(),
+      lat, lng,
+      speed_kmh:       speedKmh,
+      speed_category:  spCat,
+      spatial_risk:    coneResult.risk_score,
+      network_delta:   networkSignal.delta,
+      network_factors: networkSignal.factors,
+      effective_risk:  riskScore,
+      recommendation:  effectiveCone.recommendation,
+      confidence,
+      connection_type: connectionType || null,
+      latest_downlink: latestDl,
+      latest_rtt:      latestRtt,
+      oracle_pending:  oraclePending,
+    }).catch(() => {}); // fire-and-forget — never affect HTTP response
+  }
+
   // ── Student is confident — return immediately, no Oracle needed ──────────
   if (confidence >= 0.60) {
+    logStudentDecision(false);
     return {
       buffer_target:    effectiveCone,
       tier_used:        'student',
@@ -549,6 +613,7 @@ export async function runInference(
 
   // Rate limit check — if over limit, Student answers
   if (!oracleAllowed(userId)) {
+    logStudentDecision(false);
     return {
       buffer_target:    effectiveCone,
       tier_used:        'student',
@@ -588,6 +653,7 @@ export async function runInference(
   // ── No cached result — return Student NOW, fire Oracle async ─────────────
   // The Oracle will store its result in Redis within a few seconds.
   // The next 25s prediction cycle will read it and upgrade to 'oracle' tier.
+  logStudentDecision(true);
   fireOracleAsync(
     lat, lng, speedKmh, recentDownlinks,
     riskScore, confidence, effectiveCone.branches,

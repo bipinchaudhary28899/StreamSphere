@@ -21,9 +21,10 @@ Incoming prediction request (every 25 seconds)
         ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  TIER 1 — GUARD  (local, zero cost, ~1ms)                   │
-│  Checks: connection type, buffer level, recent stalls        │
-│  If network is clearly fine → return "normal" immediately    │
-│  If uncertain → pass to Student                              │
+│  If speedKmh ≥ 3 → always fail (moving users must reach     │
+│    Student so corridor scanner can look ahead)               │
+│  If stationary: checks connection type, buffer, downlink,    │
+│    recent stalls. All clear → skip backend call              │
 └──────────────────────────────┬──────────────────────────────┘
                                │ (only if uncertain)
                                ▼
@@ -108,10 +109,13 @@ Accumulates risk adjustments from multiple signal factors:
 | RTT rising | RTT OLS slope > 30 | +0.05 |
 | Connection 2G/slow-2G | effectiveType ∈ {2g, slow-2g} | +0.30 |
 | Connection 3G | effectiveType = 3g | +0.10 |
+| **Healthy network reward** | **4G/Wi-Fi + no prior penalties + RTT < 100ms + downlink > 2 Mbps + stable trend** | **−0.05** |
 
 **Final risk** = `clamp(spatialRisk + networkDelta, 0, 1)`
 
 This breaks the static-score problem: a stationary user on a degrading 3G connection will now receive `prebuffer_moderate` instead of the previous constant `normal` (which resulted from a fixed spatial score when no shadow map data exists for their tile).
+
+**Healthy network reward** solves the inverse problem: a stationary user on a clean 4G/Wi-Fi connection used to receive the default spatial risk of ~0.412, which sits inside the ±0.075 uncertainty band around the 0.45 decision boundary. This caused Oracle to fire on every cycle for clearly-fine sessions, burning API tokens with no benefit. The −0.05 reward pushes the effective risk to ~0.362, giving Student a confidence of ~70% → Student handles it confidently and Oracle never fires.
 
 ---
 
@@ -154,6 +158,8 @@ The Oracle can **diverge** from the Student (adjust the recommendation up or dow
 **Rate limiting**: Each user is limited to 10 Oracle calls per minute to control OpenAI API costs.
 
 **Cache**: Oracle results are cached in Redis per `userId + tileId` for 5 minutes. When a mobile user moves into a new tile, the cache key changes → fresh Oracle call. When stationary, the same cache key persists → Oracle re-fires every 5 minutes rather than every 25 seconds.
+
+**In-flight lock**: When Oracle fires, a Redis key `genabr:oracle:inflight:{userId}:{tileId}` is set with a 30-second TTL. If a second prediction cycle arrives while the LLM call is in flight (typical response: 2–4 seconds), it detects the lock and skips firing a duplicate Oracle call. Without this lock, two cycles that both see a cache miss in the ~4-second response window would fire two identical LLM calls, doubling token spend with the second result silently overwriting the first. The 30-second TTL is a safety backstop for the worst-case LLM timeout; in practice the lock is cleared by the first call's Redis write before the TTL expires.
 
 ---
 
@@ -241,6 +247,8 @@ The dev dashboard (admin-only) shows:
 - **GenABR ON/OFF master toggle** — switches the entire system globally. When OFF, sessions run with standard HLS.js and are recorded as `genabr_active: false`, accumulating real baseline data for comparison
 - **Oracle Engine Intelligence** — 30-day LLM call log: success rate, divergence rate, token usage, recommendation breakdown, trigger reason tag cloud, recent decision log with full LLM reasoning text
 - **Corridor Scanner stats** — dead zone detection rate, feasibility rate, avg entry/duration seconds
+- **Tier counters** — each session in the Recent Sessions table now shows which tier handled the majority of its cycles (Guard/Student/Oracle badge) and a compact cycle breakdown (e.g. "S8 O3")
+- **Student Network Events** — 30-day aggregation of every `StudentDecision` record: total Student-tier decisions, oracle-pending rate (% that also fired Oracle), avg confidence, avg effective risk, top-10 network risk factors (with bar chart), and connection type distribution. This captures network degradation events (2G, critical RTT, severe downlink drop) that Student handled confidently and Oracle never saw — previously invisible in the dashboard
 - **Infrastructure monitoring** — AWS CloudFront requests/data, S3 storage, API request counts
 
 ---
@@ -278,13 +286,17 @@ TelemetryService.collectPing()
 ```
 PredictionService.fetchTarget()
   │
-  ├─► GuardTierService.evaluate({ connectionType, downlinkMbps, bufferLevelSec, recentStallCount })
-  │     Checks three fast-pass rules (all must pass to block Oracle):
+  ├─► GuardTierService.evaluate({ connectionType, downlinkMbps, bufferLevelSec, recentStallCount, speedKmh })
+  │     First check — movement:
+  │       • speedKmh ≥ 3 km/h → pass: false, reason: 'moving'
+  │         (moving users always reach Student so corridor scanner
+  │          can look ahead, even if current signal is perfect)
+  │     Stationary checks (speedKmh < 3 only):
   │       • connection is 4g/wifi
-  │       • downlink > threshold
-  │       • buffer > threshold
+  │       • downlink > 5 Mbps
+  │       • buffer > 15s
   │       • no recent stalls
-  │     Returns: { pass: boolean }
+  │     Returns: { pass: boolean, reason: string }
   │     If pass → return (no backend call, keep current target)
   │
   └─► (if guard fails) HTTP POST /api/genabr/decision
@@ -340,14 +352,25 @@ runInference(lat, lng, heading, speedKmh, recentDownlinks, userId,
   │     Measures distance from decision boundaries (0.20, 0.45)
   │     Returns confidence in [0, 1]
   │
-  ├─► If confidence ≥ 0.60 → return Student result immediately
+  ├─► If confidence ≥ 0.60 → logStudentDecision(oracle_pending=false)  ← NEW
+  │     → return Student result immediately
   │     (oracle_reason: "network_overlay(...)" if delta was non-zero)
   │
   ├─► oracleAllowed(userId) — rate limit check (10 calls/min per user)
-  │     If over limit → return Student result with oracle_reason: 'rate_limited'
+  │     If over limit → logStudentDecision(oracle_pending=false)  ← NEW
+  │                     return Student result with oracle_reason: 'rate_limited'
   │
   ├─► redisService.get(CK.oracleResult(userId, tileId))
   │     If cached → return Oracle result immediately (tier_used: 'oracle')
+  │
+  ├─► logStudentDecision(oracle_pending=true)  ← NEW (before async Oracle fires)
+  │     StudentDecision.create({ session_id, timestamp, lat, lng, speed_kmh,
+  │       speed_category, spatial_risk, network_delta, network_factors,
+  │       effective_risk, recommendation, confidence, connection_type,
+  │       latest_downlink, latest_rtt, oracle_pending: true })
+  │     TTL: 30 days. Captures network events (conn_2g, rtt_critical) that
+  │     Student handled and Oracle never saw — visible in Student Network Events
+  │     dashboard card.
   │
   └─► fireOracleAsync(lat, lng, speedKmh, recentDownlinks, adjustedRisk,
                       confidence, branches, userId, sessionId, cacheKey,
@@ -406,6 +429,12 @@ fireOracleAsync(lat, lng, speedKmh, recentDownlinks, riskScore, confidence,
                 branches, userId, sessionId, cacheKey, corridor,
                 recentRtts, connectionType)   ← NEW
   │  (runs in background — HTTP response already sent before this completes)
+  │
+  ├─► redisService.get(CK.oracleInflight(userId, tileId))  ← NEW in-flight lock
+  │     If already set → log "in-flight lock hit — skipping duplicate call" → return
+  │     Else → redisService.set(CK.oracleInflight(...), true, TTL=30s)
+  │     Prevents duplicate LLM calls when two 25s cycles both miss Redis cache
+  │     during the ~2–4s LLM response window.
   │
   ├─► heuristicAdjust(riskScore, speedKmh, recentDownlinks)
   │     Speed penalty: highway +0.08, urban +0.04
@@ -486,6 +515,8 @@ TelemetryService.stopSession()
 ### 1. GPS Dependency for Spatial Features
 The corridor scanner, dead zone prediction, and speed categorisation all require GPS. On laptops and desktops, `navigator.geolocation` either returns null or provides a rough IP-based location that doesn't move. The **Network Overlay** (RTT + connection type + signal trend) now provides meaningful risk adjustments for stationary users even without spatial prediction, but the corridor scanner and branch cone require real movement to be useful.
 
+**Guard tier and movement**: Guard now forces all moving users (≥ 3 km/h) through to Student regardless of current signal quality. This is the critical fix for the "good Wi-Fi at home → walk into dead zone" scenario: previously, Guard would clear every cycle at home because current conditions were fine, so Student's corridor scanner never ran and no pre-buffering started until the user was already on 2G. Now, as soon as movement is detected, Guard steps aside and Student looks ahead along the user's trajectory on every cycle.
+
 ### 2. VMAF is Estimated, Not Measured
 VMAF is computed from bitrate using a static lookup table, not from actual video frame analysis. Real VMAF requires decoding video frames and running a perceptual model (e.g. Netflix's VMAF library), which is expensive on the client and impractical for mobile. The estimation is a reasonable proxy but won't match ground-truth VMAF for content-specific quality differences (e.g. a still documentary vs a fast-action sport clip at the same bitrate).
 
@@ -547,7 +578,10 @@ The previous trend detector computed `last − first` across the downlink histor
 
 The system never crashes the player. Every failure mode has a defined fallback.
 
-### 10. Demonstrates a Novel Research Claim
+### 10. Full Visibility Into Student-Handled Network Events
+Prior to `StudentDecision` logging, the dashboard only showed network degradation events when Oracle fired — meaning any session where Student was confident (e.g. mobile user moving through a 2G zone at high speed) left no network event trace at all. `StudentDecision` records every Student-tier cycle with its full network context (spatial_risk, network_delta, network_factors[], effective_risk, connection_type, latest_downlink, latest_rtt, oracle_pending). The **Student Network Events** dashboard card aggregates these records to show exactly which network risk factors are most frequent, what the connection type distribution is, and how often Student's answer also triggered an Oracle background call — providing complete observability of the inference pipeline regardless of which tier gave the final answer.
+
+### 11. Demonstrates a Novel Research Claim
 The combination of spatial dead zone prediction + LLM reasoning + proactive buffer management + live network signal overlay is not present in any existing open ABR implementation (BOLA, Pensieve, RobustMPC, etc.). GenABR specifically addresses the "last-mile mobility problem" — the quality degradation that occurs when mobile users move through areas of variable cellular coverage — which existing systems don't model.
 
 ---
@@ -629,6 +663,12 @@ User watches video on mobile
 | April 2026 | Threaded `recent_rtts[]` and `connection_type` through telemetry → prediction service → POST body → controller → `runInference()` → Oracle prompt. |
 | April 2026 | Fixed `user_manual` bitrate switches being misclassified as `abr_auto`. Added `_userManualLevel` flag to `VideoPlayerComponent`. |
 | April 2026 | Oracle prompt expanded with RTT history, connection type, and network delta factors section. |
+| April 2026 | Added Oracle **in-flight lock** (`genabr:oracle:inflight:{userId}:{tileId}`, TTL 30s). Prevents duplicate LLM calls when two 25-second cycles both miss the Redis result cache during the ~2–4s response window. |
+| April 2026 | Added **healthy network reward** (−0.05 delta) in `computeNetworkDelta`. Stationary users on 4G/Wi-Fi with RTT < 100ms and stable downlink > 2 Mbps no longer sit at the 0.45 decision boundary — effective risk drops to ~0.362, Student answers at 70% confidence, Oracle stops firing unnecessarily. |
+| April 2026 | Added **`StudentDecision` model** and `logStudentDecision()` logging in `runInference()`. Every Student-tier cycle now records spatial_risk, network_delta, network_factors[], effective_risk, confidence, connection_type, latest_downlink, latest_rtt, oracle_pending. TTL 30 days. |
+| April 2026 | Added **Student Network Events** dashboard card. Aggregates StudentDecision.network_factors[], connection_type distribution, oracle_pending rate, avg confidence and effective risk for the last 30 days. |
+| April 2026 | Added **tier counters** (`tier_counts: { guard, student, oracle }`) to `StreamingSession`. Incremented on every `/genabr/decision` response. Recent Sessions table now shows dominant tier badge + cycle breakdown. |
+| April 2026 | **Guard tier speed gate**: Guard now immediately fails (reason: `'moving'`) for any session where `speedKmh ≥ 3`. Moving users always reach Student so the corridor scanner runs and prebuffering can begin while the connection is still good. Previously, a user walking away from home Wi-Fi into a 2G dead zone would have Guard passing every cycle until they were already on 2G — the prediction cone was never consulted. |
 
 ---
 

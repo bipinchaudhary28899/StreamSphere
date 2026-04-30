@@ -172,6 +172,7 @@ export class PredictionService implements OnDestroy {
         : null,
       bufferLevelSec:   this.bufferLevelSec,
       recentStallCount: this.recentStallTimes.length,
+      speedKmh:         this.speedKmh,
     });
 
     if (guardDecision.pass) {

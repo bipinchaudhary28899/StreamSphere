@@ -225,203 +225,249 @@
     </div><!-- /ad-grid -->
 
     <!-- ════════════════════════════════════════════════════════════════════ -->
-    <!-- GenABR Performance Analysis                                          -->
+    <!-- GenABR Research Comparison — 3-Segment Analysis                      -->
     <!-- ════════════════════════════════════════════════════════════════════ -->
 
     <div class="gn-section-header">
-      <span class="gn-section-icon">🧠</span>
+      <span class="gn-section-icon">📊</span>
       <div>
-        <h2 class="gn-section-title">GenABR Performance Analysis</h2>
+        <h2 class="gn-section-title">GenABR Research Comparison</h2>
         <p class="gn-section-sub">
-          {{ stats.genabr?.withGenabr?.count ?? 0 }} sessions with GenABR
-          &nbsp;·&nbsp;
-          {{ stats.genabr?.baselineIsReal ? (stats.genabr?.withoutGenabr?.count ?? 0) + ' without' : 'no baseline sessions yet — use the toggle above to collect them' }}
-          &nbsp;·&nbsp; {{ stats.genabr?.totalSessions ?? 0 }} total
+          Segmented analysis across three usage scenarios &mdash; GenABR vs standard HLS.js ABR
         </p>
       </div>
-      <div class="gn-share-pill" *ngIf="stats.genabr && stats.genabr.totalSessions > 0">
-        <span class="gn-share-num">{{ genabrSharePct() }}%</span>
-        <span class="gn-share-label">sessions used GenABR</span>
+    </div>
+
+    <div class="ad-warn" *ngIf="!stats.comparison">
+      No completed streaming sessions recorded yet. GenABR comparison metrics will appear here once users start watching videos.
+    </div>
+
+    <ng-container *ngIf="stats.comparison">
+
+      <!-- Research hint when GenABR is OFF -->
+      <div class="gm-hint" *ngIf="!genabrEnabled">
+        ℹ️ &nbsp;GenABR is <strong>off</strong>. Sessions completed now will be stored with
+        <code>genabr_active = false</code> and appear as real <em>Without&nbsp;GenABR</em> baseline rows in each segment below.
       </div>
-    </div>
 
-    <!-- No data notice -->
-    <div class="ad-warn gn-no-data" *ngIf="!stats.genabr || stats.genabr.totalSessions === 0">
-      No completed streaming sessions recorded yet. GenABR metrics will appear here once users start watching videos.
-    </div>
-
-    <ng-container *ngIf="stats.genabr && stats.genabr.totalSessions > 0">
-
-      <!-- ── KPI Comparison Card ─────────────────────────────────────────── -->
-      <div class="gn-compare-card">
-
-        <!-- Column headers -->
-        <div class="gn-compare-header">
-          <div class="gn-col-label gn-col-metric">Metric</div>
-          <div class="gn-col-label gn-col-with">
-            <span class="gn-on-dot"></span> With GenABR
-            <span class="gn-count-badge">{{ stats.genabr.withGenabr.count }} sessions</span>
+      <!-- ── Segment 1: Mobile ─────────────────────────────────────────────── -->
+      <div class="sc-segment">
+        <div class="sc-seg-header sc-seg-mobile">
+          <span class="sc-seg-icon">🚶</span>
+          <div class="sc-seg-text">
+            <h3 class="sc-seg-title">Mobile Sessions</h3>
+            <p class="sc-seg-desc">User was moving (speed &gt; 5 km/h) during the session. GenABR's corridor scanner projects ahead to find dead zones before the user enters them.</p>
           </div>
-          <div class="gn-col-label gn-col-without">
-            <span class="gn-off-dot"></span> Without GenABR
-            <span class="gn-count-badge" *ngIf="stats.genabr.baselineIsReal">{{ stats.genabr.withoutGenabr.count }} sessions</span>
-            <span class="gn-count-badge" *ngIf="!stats.genabr.baselineIsReal" title="Turn GenABR OFF above to collect real baseline data">no data yet</span>
-          </div>
-          <div class="gn-col-label gn-col-delta">Δ Improvement</div>
-        </div>
-
-        <!-- Φ Score -->
-        <div class="gn-compare-row">
-          <div class="gn-cell gn-cell-metric">
-            <span class="gn-metric-name">Φ Score</span>
-            <span class="gn-metric-desc">QoE-to-Cost</span>
-          </div>
-          <div class="gn-cell gn-cell-val gn-val-with">
-            <span class="gn-big-val">{{ fmtN(stats.genabr.withGenabr.avgPhi) }}</span>
-            <div class="gn-mini-bar-track">
-              <div class="gn-mini-bar gn-bar-with"
-                   [style.width.%]="barPct(stats.genabr.withGenabr.avgPhi,
-                     (stats.genabr.withGenabr.avgPhi ?? 0) > (stats.genabr.withoutGenabr.avgPhi ?? 0)
-                       ? stats.genabr.withGenabr.avgPhi
-                       : stats.genabr.withoutGenabr.avgPhi)">
-              </div>
-            </div>
-          </div>
-          <div class="gn-cell gn-cell-val gn-val-without">
-            <span class="gn-big-val">{{ fmtN(stats.genabr.withoutGenabr.avgPhi) }}</span>
-            <div class="gn-mini-bar-track">
-              <div class="gn-mini-bar gn-bar-without"
-                   [style.width.%]="barPct(stats.genabr.withoutGenabr.avgPhi,
-                     (stats.genabr.withGenabr.avgPhi ?? 0) > (stats.genabr.withoutGenabr.avgPhi ?? 0)
-                       ? stats.genabr.withGenabr.avgPhi
-                       : stats.genabr.withoutGenabr.avgPhi)">
-              </div>
-            </div>
-          </div>
-          <div class="gn-cell gn-cell-delta">
-            <span class="{{ improvementClass(stats.genabr.withGenabr.avgPhi, stats.genabr.withoutGenabr.avgPhi) }} gn-delta-val">
-              {{ improvement(stats.genabr.withGenabr.avgPhi, stats.genabr.withoutGenabr.avgPhi) }}
-            </span>
+          <div class="sc-count-chips">
+            <span class="sc-chip sc-chip-on">{{ stats.comparison.mobile.withGenabr.count }} with GenABR</span>
+            <span class="sc-chip sc-chip-off" *ngIf="stats.comparison.mobile.baselineAvailable">{{ stats.comparison.mobile.withoutGenabr.count }} baseline</span>
+            <span class="sc-chip sc-chip-none" *ngIf="!stats.comparison.mobile.baselineAvailable">no baseline yet</span>
           </div>
         </div>
 
-        <!-- Avg VMAF -->
-        <div class="gn-compare-row">
-          <div class="gn-cell gn-cell-metric">
-            <span class="gn-metric-name">Avg VMAF</span>
-            <span class="gn-metric-desc">Video quality (0–100)</span>
+        <div class="sc-no-data" *ngIf="stats.comparison.mobile.withGenabr.count === 0">
+          No mobile sessions recorded yet. Walk or drive while streaming to populate this segment.
+        </div>
+
+        <table class="sc-table" *ngIf="stats.comparison.mobile.withGenabr.count > 0">
+          <thead>
+            <tr>
+              <th class="sc-th-metric">Metric</th>
+              <th class="sc-th-on"><span class="sc-dot sc-dot-on"></span> With GenABR</th>
+              <th class="sc-th-off"><span class="sc-dot sc-dot-off"></span> Baseline (no GenABR)</th>
+              <th class="sc-th-delta">Δ Improvement</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">Φ Score</span><span class="sc-metric-desc">QoE composite (higher = better)</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtN(stats.comparison.mobile.withGenabr.avgPhi) }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtN(stats.comparison.mobile.withoutGenabr.avgPhi) }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.mobile.withGenabr.avgPhi, stats.comparison.mobile.withoutGenabr.avgPhi) }} sc-delta">{{ improvement(stats.comparison.mobile.withGenabr.avgPhi, stats.comparison.mobile.withoutGenabr.avgPhi) }}</span></td>
+            </tr>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">Avg VMAF</span><span class="sc-metric-desc">Estimated video quality (higher = better)</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtN(stats.comparison.mobile.withGenabr.avgVmaf) }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtN(stats.comparison.mobile.withoutGenabr.avgVmaf) }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.mobile.withGenabr.avgVmaf, stats.comparison.mobile.withoutGenabr.avgVmaf) }} sc-delta">{{ improvement(stats.comparison.mobile.withGenabr.avgVmaf, stats.comparison.mobile.withoutGenabr.avgVmaf) }}</span></td>
+            </tr>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">VMAF σ</span><span class="sc-metric-desc">Quality instability (lower = better)</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtN(stats.comparison.mobile.withGenabr.avgSigmaVmaf) }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtN(stats.comparison.mobile.withoutGenabr.avgSigmaVmaf) }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.mobile.withGenabr.avgSigmaVmaf, stats.comparison.mobile.withoutGenabr.avgSigmaVmaf, true) }} sc-delta">{{ improvement(stats.comparison.mobile.withGenabr.avgSigmaVmaf, stats.comparison.mobile.withoutGenabr.avgSigmaVmaf, true) }}</span></td>
+            </tr>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">Stalls / session</span><span class="sc-metric-desc">Rebuffer events (lower = better)</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtN(stats.comparison.mobile.withGenabr.avgStallCount) }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtN(stats.comparison.mobile.withoutGenabr.avgStallCount) }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.mobile.withGenabr.avgStallCount, stats.comparison.mobile.withoutGenabr.avgStallCount, true) }} sc-delta">{{ improvement(stats.comparison.mobile.withGenabr.avgStallCount, stats.comparison.mobile.withoutGenabr.avgStallCount, true) }}</span></td>
+            </tr>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">Total stall time</span><span class="sc-metric-desc">Avg per session (lower = better)</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtMs(stats.comparison.mobile.withGenabr.avgTotalStallMs) }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtMs(stats.comparison.mobile.withoutGenabr.avgTotalStallMs) }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.mobile.withGenabr.avgTotalStallMs, stats.comparison.mobile.withoutGenabr.avgTotalStallMs, true) }} sc-delta">{{ improvement(stats.comparison.mobile.withGenabr.avgTotalStallMs, stats.comparison.mobile.withoutGenabr.avgTotalStallMs, true) }}</span></td>
+            </tr>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">Avg buffer level</span><span class="sc-metric-desc">Lookahead buffer depth (higher = better)</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ stats.comparison.mobile.withGenabr.avgBufferSec !== null ? fmtN(stats.comparison.mobile.withGenabr.avgBufferSec) + 's' : '—' }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ stats.comparison.mobile.withoutGenabr.avgBufferSec !== null ? fmtN(stats.comparison.mobile.withoutGenabr.avgBufferSec) + 's' : '—' }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.mobile.withGenabr.avgBufferSec, stats.comparison.mobile.withoutGenabr.avgBufferSec) }} sc-delta">{{ improvement(stats.comparison.mobile.withGenabr.avgBufferSec, stats.comparison.mobile.withoutGenabr.avgBufferSec) }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ── Segment 2: Mobile + Poor Signal ──────────────────────────────── -->
+      <div class="sc-segment">
+        <div class="sc-seg-header sc-seg-poor">
+          <span class="sc-seg-icon">📶</span>
+          <div class="sc-seg-text">
+            <h3 class="sc-seg-title">Mobile + Poor Signal</h3>
+            <p class="sc-seg-desc">User was moving AND experienced poor network (avg downlink &lt; 1.5 Mbps or min downlink &lt; 0.5 Mbps). This is where GenABR's predictive prebuffering matters most.</p>
           </div>
-          <div class="gn-cell gn-cell-val gn-val-with">
-            <span class="gn-big-val">{{ fmtN(stats.genabr.withGenabr.avgVmaf) }}</span>
-            <div class="gn-mini-bar-track">
-              <div class="gn-mini-bar gn-bar-with"
-                   [style.width.%]="barPct(stats.genabr.withGenabr.avgVmaf, 100)">
-              </div>
-            </div>
-          </div>
-          <div class="gn-cell gn-cell-val gn-val-without">
-            <span class="gn-big-val">{{ fmtN(stats.genabr.withoutGenabr.avgVmaf) }}</span>
-            <div class="gn-mini-bar-track">
-              <div class="gn-mini-bar gn-bar-without"
-                   [style.width.%]="barPct(stats.genabr.withoutGenabr.avgVmaf, 100)">
-              </div>
-            </div>
-          </div>
-          <div class="gn-cell gn-cell-delta">
-            <span class="{{ improvementClass(stats.genabr.withGenabr.avgVmaf, stats.genabr.withoutGenabr.avgVmaf) }} gn-delta-val">
-              {{ improvement(stats.genabr.withGenabr.avgVmaf, stats.genabr.withoutGenabr.avgVmaf) }}
-            </span>
+          <div class="sc-count-chips">
+            <span class="sc-chip sc-chip-on">{{ stats.comparison.mobilePoorSignal.withGenabr.count }} with GenABR</span>
+            <span class="sc-chip sc-chip-off" *ngIf="stats.comparison.mobilePoorSignal.baselineAvailable">{{ stats.comparison.mobilePoorSignal.withoutGenabr.count }} baseline</span>
+            <span class="sc-chip sc-chip-none" *ngIf="!stats.comparison.mobilePoorSignal.baselineAvailable">no baseline yet</span>
           </div>
         </div>
 
-        <!-- VMAF Variance -->
-        <div class="gn-compare-row">
-          <div class="gn-cell gn-cell-metric">
-            <span class="gn-metric-name">VMAF σ</span>
-            <span class="gn-metric-desc">Quality instability (lower = better)</span>
+        <div class="sc-no-data" *ngIf="stats.comparison.mobilePoorSignal.withGenabr.count === 0">
+          No mobile poor-signal sessions recorded yet. Walk through a low-coverage area while streaming to populate this segment.
+        </div>
+
+        <table class="sc-table" *ngIf="stats.comparison.mobilePoorSignal.withGenabr.count > 0">
+          <thead>
+            <tr>
+              <th class="sc-th-metric">Metric</th>
+              <th class="sc-th-on"><span class="sc-dot sc-dot-on"></span> With GenABR</th>
+              <th class="sc-th-off"><span class="sc-dot sc-dot-off"></span> Baseline (no GenABR)</th>
+              <th class="sc-th-delta">Δ Improvement</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">Φ Score</span><span class="sc-metric-desc">QoE composite (higher = better)</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtN(stats.comparison.mobilePoorSignal.withGenabr.avgPhi) }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtN(stats.comparison.mobilePoorSignal.withoutGenabr.avgPhi) }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.mobilePoorSignal.withGenabr.avgPhi, stats.comparison.mobilePoorSignal.withoutGenabr.avgPhi) }} sc-delta">{{ improvement(stats.comparison.mobilePoorSignal.withGenabr.avgPhi, stats.comparison.mobilePoorSignal.withoutGenabr.avgPhi) }}</span></td>
+            </tr>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">Avg VMAF</span><span class="sc-metric-desc">Estimated video quality (higher = better)</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtN(stats.comparison.mobilePoorSignal.withGenabr.avgVmaf) }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtN(stats.comparison.mobilePoorSignal.withoutGenabr.avgVmaf) }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.mobilePoorSignal.withGenabr.avgVmaf, stats.comparison.mobilePoorSignal.withoutGenabr.avgVmaf) }} sc-delta">{{ improvement(stats.comparison.mobilePoorSignal.withGenabr.avgVmaf, stats.comparison.mobilePoorSignal.withoutGenabr.avgVmaf) }}</span></td>
+            </tr>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">VMAF σ</span><span class="sc-metric-desc">Quality instability (lower = better)</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtN(stats.comparison.mobilePoorSignal.withGenabr.avgSigmaVmaf) }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtN(stats.comparison.mobilePoorSignal.withoutGenabr.avgSigmaVmaf) }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.mobilePoorSignal.withGenabr.avgSigmaVmaf, stats.comparison.mobilePoorSignal.withoutGenabr.avgSigmaVmaf, true) }} sc-delta">{{ improvement(stats.comparison.mobilePoorSignal.withGenabr.avgSigmaVmaf, stats.comparison.mobilePoorSignal.withoutGenabr.avgSigmaVmaf, true) }}</span></td>
+            </tr>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">Stalls / session</span><span class="sc-metric-desc">Rebuffer events (lower = better)</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtN(stats.comparison.mobilePoorSignal.withGenabr.avgStallCount) }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtN(stats.comparison.mobilePoorSignal.withoutGenabr.avgStallCount) }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.mobilePoorSignal.withGenabr.avgStallCount, stats.comparison.mobilePoorSignal.withoutGenabr.avgStallCount, true) }} sc-delta">{{ improvement(stats.comparison.mobilePoorSignal.withGenabr.avgStallCount, stats.comparison.mobilePoorSignal.withoutGenabr.avgStallCount, true) }}</span></td>
+            </tr>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">Total stall time</span><span class="sc-metric-desc">Avg per session (lower = better)</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtMs(stats.comparison.mobilePoorSignal.withGenabr.avgTotalStallMs) }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtMs(stats.comparison.mobilePoorSignal.withoutGenabr.avgTotalStallMs) }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.mobilePoorSignal.withGenabr.avgTotalStallMs, stats.comparison.mobilePoorSignal.withoutGenabr.avgTotalStallMs, true) }} sc-delta">{{ improvement(stats.comparison.mobilePoorSignal.withGenabr.avgTotalStallMs, stats.comparison.mobilePoorSignal.withoutGenabr.avgTotalStallMs, true) }}</span></td>
+            </tr>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">Avg buffer level</span><span class="sc-metric-desc">Lookahead buffer depth (higher = better)</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ stats.comparison.mobilePoorSignal.withGenabr.avgBufferSec !== null ? fmtN(stats.comparison.mobilePoorSignal.withGenabr.avgBufferSec) + 's' : '—' }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ stats.comparison.mobilePoorSignal.withoutGenabr.avgBufferSec !== null ? fmtN(stats.comparison.mobilePoorSignal.withoutGenabr.avgBufferSec) + 's' : '—' }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.mobilePoorSignal.withGenabr.avgBufferSec, stats.comparison.mobilePoorSignal.withoutGenabr.avgBufferSec) }} sc-delta">{{ improvement(stats.comparison.mobilePoorSignal.withGenabr.avgBufferSec, stats.comparison.mobilePoorSignal.withoutGenabr.avgBufferSec) }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ── Segment 3: Stationary + Good Signal ───────────────────────────── -->
+      <div class="sc-segment sc-segment-control">
+        <div class="sc-seg-header sc-seg-stationary">
+          <span class="sc-seg-icon">🏠</span>
+          <div class="sc-seg-text">
+            <h3 class="sc-seg-title">Stationary + Good Signal</h3>
+            <p class="sc-seg-desc">User was stationary (speed &le; 5 km/h) with strong signal (avg downlink &ge; 3 Mbps). GenABR should make no difference here — this is the control group validating the system doesn't interfere with stable sessions.</p>
           </div>
-          <div class="gn-cell gn-cell-val gn-val-with">
-            <span class="gn-big-val">{{ fmtN(stats.genabr.withGenabr.avgSigmaVmaf) }}</span>
-          </div>
-          <div class="gn-cell gn-cell-val gn-val-without">
-            <span class="gn-big-val">{{ fmtN(stats.genabr.withoutGenabr.avgSigmaVmaf) }}</span>
-          </div>
-          <div class="gn-cell gn-cell-delta">
-            <span class="{{ improvementClass(stats.genabr.withGenabr.avgSigmaVmaf, stats.genabr.withoutGenabr.avgSigmaVmaf, true) }} gn-delta-val">
-              {{ improvement(stats.genabr.withGenabr.avgSigmaVmaf, stats.genabr.withoutGenabr.avgSigmaVmaf, true) }}
-            </span>
+          <div class="sc-count-chips">
+            <span class="sc-chip sc-chip-on">{{ stats.comparison.stationaryGood.withGenabr.count }} with GenABR</span>
+            <span class="sc-chip sc-chip-off" *ngIf="stats.comparison.stationaryGood.baselineAvailable">{{ stats.comparison.stationaryGood.withoutGenabr.count }} baseline</span>
+            <span class="sc-chip sc-chip-none" *ngIf="!stats.comparison.stationaryGood.baselineAvailable">no baseline yet</span>
           </div>
         </div>
 
-        <!-- Avg Stalls / session -->
-        <div class="gn-compare-row">
-          <div class="gn-cell gn-cell-metric">
-            <span class="gn-metric-name">Stalls / session</span>
-            <span class="gn-metric-desc">Rebuffer events (lower = better)</span>
-          </div>
-          <div class="gn-cell gn-cell-val gn-val-with">
-            <span class="gn-big-val">{{ fmtN(stats.genabr.withGenabr.avgStallCount) }}</span>
-          </div>
-          <div class="gn-cell gn-cell-val gn-val-without">
-            <span class="gn-big-val">{{ fmtN(stats.genabr.withoutGenabr.avgStallCount) }}</span>
-          </div>
-          <div class="gn-cell gn-cell-delta">
-            <span class="{{ improvementClass(stats.genabr.withGenabr.avgStallCount, stats.genabr.withoutGenabr.avgStallCount, true) }} gn-delta-val">
-              {{ improvement(stats.genabr.withGenabr.avgStallCount, stats.genabr.withoutGenabr.avgStallCount, true) }}
-            </span>
-          </div>
+        <div class="sc-control-note">
+          <span class="sc-control-icon">ℹ️</span>
+          Δ values near zero here confirm GenABR does not interfere with sessions where prediction is unnecessary. Significant improvement would indicate a measurement artefact.
         </div>
 
-        <!-- Total Stall Time -->
-        <div class="gn-compare-row">
-          <div class="gn-cell gn-cell-metric">
-            <span class="gn-metric-name">Total stall time</span>
-            <span class="gn-metric-desc">Avg per session (lower = better)</span>
-          </div>
-          <div class="gn-cell gn-cell-val gn-val-with">
-            <span class="gn-big-val">{{ fmtMs(stats.genabr.withGenabr.avgTotalStallMs) }}</span>
-          </div>
-          <div class="gn-cell gn-cell-val gn-val-without">
-            <span class="gn-big-val">{{ fmtMs(stats.genabr.withoutGenabr.avgTotalStallMs) }}</span>
-          </div>
-          <div class="gn-cell gn-cell-delta">
-            <span class="{{ improvementClass(stats.genabr.withGenabr.avgTotalStallMs, stats.genabr.withoutGenabr.avgTotalStallMs, true) }} gn-delta-val">
-              {{ improvement(stats.genabr.withGenabr.avgTotalStallMs, stats.genabr.withoutGenabr.avgTotalStallMs, true) }}
-            </span>
-          </div>
+        <div class="sc-no-data" *ngIf="stats.comparison.stationaryGood.withGenabr.count === 0">
+          No stationary good-signal sessions recorded yet.
         </div>
 
-        <!-- Avg Buffer Level -->
-        <div class="gn-compare-row gn-compare-row-last">
-          <div class="gn-cell gn-cell-metric">
-            <span class="gn-metric-name">Avg buffer level</span>
-            <span class="gn-metric-desc">Seconds of lookahead (higher = better)</span>
-          </div>
-          <div class="gn-cell gn-cell-val gn-val-with">
-            <span class="gn-big-val">
-              {{ stats.genabr.withGenabr.avgBufferSec !== null ? fmtN(stats.genabr.withGenabr.avgBufferSec) + 's' : '—' }}
-            </span>
-          </div>
-          <div class="gn-cell gn-cell-val gn-val-without">
-            <span class="gn-big-val">
-              {{ stats.genabr.withoutGenabr.avgBufferSec !== null ? fmtN(stats.genabr.withoutGenabr.avgBufferSec) + 's' : '—' }}
-            </span>
-          </div>
-          <div class="gn-cell gn-cell-delta">
-            <span class="{{ improvementClass(stats.genabr.withGenabr.avgBufferSec, stats.genabr.withoutGenabr.avgBufferSec) }} gn-delta-val">
-              {{ improvement(stats.genabr.withGenabr.avgBufferSec, stats.genabr.withoutGenabr.avgBufferSec) }}
-            </span>
-          </div>
-        </div>
+        <table class="sc-table" *ngIf="stats.comparison.stationaryGood.withGenabr.count > 0">
+          <thead>
+            <tr>
+              <th class="sc-th-metric">Metric</th>
+              <th class="sc-th-on"><span class="sc-dot sc-dot-on"></span> With GenABR</th>
+              <th class="sc-th-off"><span class="sc-dot sc-dot-off"></span> Baseline (no GenABR)</th>
+              <th class="sc-th-delta">Δ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">Φ Score</span><span class="sc-metric-desc">QoE composite</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtN(stats.comparison.stationaryGood.withGenabr.avgPhi) }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtN(stats.comparison.stationaryGood.withoutGenabr.avgPhi) }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.stationaryGood.withGenabr.avgPhi, stats.comparison.stationaryGood.withoutGenabr.avgPhi) }} sc-delta">{{ improvement(stats.comparison.stationaryGood.withGenabr.avgPhi, stats.comparison.stationaryGood.withoutGenabr.avgPhi) }}</span></td>
+            </tr>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">Avg VMAF</span><span class="sc-metric-desc">Video quality</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtN(stats.comparison.stationaryGood.withGenabr.avgVmaf) }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtN(stats.comparison.stationaryGood.withoutGenabr.avgVmaf) }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.stationaryGood.withGenabr.avgVmaf, stats.comparison.stationaryGood.withoutGenabr.avgVmaf) }} sc-delta">{{ improvement(stats.comparison.stationaryGood.withGenabr.avgVmaf, stats.comparison.stationaryGood.withoutGenabr.avgVmaf) }}</span></td>
+            </tr>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">VMAF σ</span><span class="sc-metric-desc">Quality instability</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtN(stats.comparison.stationaryGood.withGenabr.avgSigmaVmaf) }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtN(stats.comparison.stationaryGood.withoutGenabr.avgSigmaVmaf) }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.stationaryGood.withGenabr.avgSigmaVmaf, stats.comparison.stationaryGood.withoutGenabr.avgSigmaVmaf, true) }} sc-delta">{{ improvement(stats.comparison.stationaryGood.withGenabr.avgSigmaVmaf, stats.comparison.stationaryGood.withoutGenabr.avgSigmaVmaf, true) }}</span></td>
+            </tr>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">Stalls / session</span><span class="sc-metric-desc">Rebuffer events</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtN(stats.comparison.stationaryGood.withGenabr.avgStallCount) }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtN(stats.comparison.stationaryGood.withoutGenabr.avgStallCount) }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.stationaryGood.withGenabr.avgStallCount, stats.comparison.stationaryGood.withoutGenabr.avgStallCount, true) }} sc-delta">{{ improvement(stats.comparison.stationaryGood.withGenabr.avgStallCount, stats.comparison.stationaryGood.withoutGenabr.avgStallCount, true) }}</span></td>
+            </tr>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">Total stall time</span><span class="sc-metric-desc">Avg per session</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtMs(stats.comparison.stationaryGood.withGenabr.avgTotalStallMs) }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtMs(stats.comparison.stationaryGood.withoutGenabr.avgTotalStallMs) }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.stationaryGood.withGenabr.avgTotalStallMs, stats.comparison.stationaryGood.withoutGenabr.avgTotalStallMs, true) }} sc-delta">{{ improvement(stats.comparison.stationaryGood.withGenabr.avgTotalStallMs, stats.comparison.stationaryGood.withoutGenabr.avgTotalStallMs, true) }}</span></td>
+            </tr>
+            <tr>
+              <td class="sc-td-metric"><span class="sc-metric-name">Avg buffer level</span><span class="sc-metric-desc">Lookahead buffer depth</span></td>
+              <td class="sc-td-val sc-td-on"><span class="sc-val">{{ stats.comparison.stationaryGood.withGenabr.avgBufferSec !== null ? fmtN(stats.comparison.stationaryGood.withGenabr.avgBufferSec) + 's' : '—' }}</span></td>
+              <td class="sc-td-val sc-td-off"><span class="sc-val">{{ stats.comparison.stationaryGood.withoutGenabr.avgBufferSec !== null ? fmtN(stats.comparison.stationaryGood.withoutGenabr.avgBufferSec) + 's' : '—' }}</span></td>
+              <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.stationaryGood.withGenabr.avgBufferSec, stats.comparison.stationaryGood.withoutGenabr.avgBufferSec) }} sc-delta">{{ improvement(stats.comparison.stationaryGood.withGenabr.avgBufferSec, stats.comparison.stationaryGood.withoutGenabr.avgBufferSec) }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-      </div><!-- /gn-compare-card -->
-
-      <!-- ── Recent Sessions Table ──────────────────────────────────────── -->
-      <div class="gn-table-card" *ngIf="stats.genabr.recentSessions.length > 0">
+      <!-- ── Recent Sessions Table ─────────────────────────────────────────── -->
+      <div class="gn-table-card" *ngIf="stats.comparison.recentSessions.length > 0">
         <div class="gn-table-header">
           <span class="gn-table-icon">📋</span>
           <h3 class="gn-table-title">Recent Sessions</h3>
-          <span class="ad-note">Last {{ stats.genabr.recentSessions.length }} completed sessions</span>
+          <span class="ad-note">Last {{ stats.comparison.recentSessions.length }} completed sessions</span>
         </div>
 
         <div class="gn-table-wrap">
@@ -440,7 +486,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let s of stats.genabr.recentSessions; trackBy: trackBySessionId"
+              <tr *ngFor="let s of stats.comparison.recentSessions; trackBy: trackBySessionId"
                   [class.gn-row-active]="s.genabrActive">
                 <td class="gn-td-session">
                   <span class="gn-session-id">{{ s.sessionId | slice:0:8 }}…</span>
@@ -476,7 +522,7 @@
         </div>
       </div>
 
-    </ng-container><!-- /genabr data -->
+    </ng-container><!-- /comparison data -->
 
     <!-- ════════════════════════════════════════════════════════════════════ -->
     <!-- Oracle Engine Intelligence (research-grade metrics)                    -->
@@ -812,6 +858,84 @@
       </div>
 
     </ng-container><!-- /oracle data -->
+
+    <!-- ── Student Network Events ─────────────────────────────────────────── -->
+    <ng-container *ngIf="stats?.student as sn">
+      <div class="sn-section">
+
+        <!-- Header -->
+        <div class="sn-header">
+          <span class="sn-icon">📡</span>
+          <div>
+            <h2 class="sn-title">Student Network Events</h2>
+            <p class="sn-subtitle">Network signals logged on every Student-tier decision &mdash; including cycles where Oracle was never consulted.</p>
+          </div>
+        </div>
+
+        <!-- Summary chips -->
+        <div class="sn-chips">
+          <div class="sn-chip">
+            <span class="sn-chip-val">{{ sn.last30dSummary.totalDecisions | number }}</span>
+            <span class="sn-chip-lbl">Student decisions (30d)</span>
+          </div>
+          <div class="sn-chip sn-chip--purple">
+            <span class="sn-chip-val">{{ sn.last30dSummary.oraclePendingCount | number }}</span>
+            <span class="sn-chip-lbl">Also fired Oracle ({{ studentOraclePendingPct() }}%)</span>
+          </div>
+          <div class="sn-chip">
+            <span class="sn-chip-val">{{ sn.last30dSummary.avgConfidence !== null ? fmtN(sn.last30dSummary.avgConfidence! * 100, 1) + '%' : '—' }}</span>
+            <span class="sn-chip-lbl">Avg Student confidence</span>
+          </div>
+          <div class="sn-chip">
+            <span class="sn-chip-val">{{ sn.last30dSummary.avgEffectiveRisk !== null ? fmtN(sn.last30dSummary.avgEffectiveRisk!, 3) : '—' }}</span>
+            <span class="sn-chip-lbl">Avg effective risk</span>
+          </div>
+        </div>
+
+        <!-- Two-column body -->
+        <div class="sn-body">
+
+          <!-- Network factors -->
+          <div class="sn-card" *ngIf="sn.byNetworkFactor.length > 0; else noFactors">
+            <h3 class="sn-card-title">Network Risk Factors</h3>
+            <p class="sn-card-sub">Signals that raised or lowered effective risk score (top 10, last 30 d)</p>
+            <div class="sn-factor-row" *ngFor="let f of sn.byNetworkFactor">
+              <span class="sn-factor-tag {{ networkFactorClass(f.label) }}">{{ networkFactorLabel(f.label) }}</span>
+              <div class="sn-bar-wrap">
+                <div class="sn-bar" [style.width.%]="barPct(f.count, studentMaxCount(sn.byNetworkFactor))"></div>
+              </div>
+              <span class="sn-factor-count">{{ f.count | number }} ({{ f.pct }}%)</span>
+            </div>
+          </div>
+          <ng-template #noFactors>
+            <div class="sn-card sn-empty">
+              <span class="sn-empty-icon">📶</span>
+              <p>No network events recorded yet.<br>Events appear once Student decisions log network risk factors.</p>
+            </div>
+          </ng-template>
+
+          <!-- Connection types -->
+          <div class="sn-card" *ngIf="sn.byConnectionType.length > 0; else noConn">
+            <h3 class="sn-card-title">Connection Types</h3>
+            <p class="sn-card-sub">Seen during Student-tier decisions (last 30 d)</p>
+            <div class="sn-factor-row" *ngFor="let c of sn.byConnectionType">
+              <span class="sn-factor-tag nf-tag-neutral">{{ connTypeLabel(c.label) }}</span>
+              <div class="sn-bar-wrap">
+                <div class="sn-bar sn-bar--conn" [style.width.%]="barPct(c.count, studentMaxCount(sn.byConnectionType))"></div>
+              </div>
+              <span class="sn-factor-count">{{ c.count | number }} ({{ c.pct }}%)</span>
+            </div>
+          </div>
+          <ng-template #noConn>
+            <div class="sn-card sn-empty">
+              <span class="sn-empty-icon">📱</span>
+              <p>No connection type data yet.<br>Events appear once Student decisions are recorded with connection type.</p>
+            </div>
+          </ng-template>
+
+        </div><!-- /sn-body -->
+      </div><!-- /sn-section -->
+    </ng-container><!-- /student data -->
 
     <!-- ── Free tier footnote ─────────────────────────────────────────────── -->
     <div class="ad-footer">

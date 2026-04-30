@@ -74,10 +74,23 @@ export async function appendStall(
     },
   );
 
-  // Auto-ingest dead zone at stall location
+  // Auto-ingest dead zone at stall location.
+  // Derive signal score from reported downlink if available, otherwise fall
+  // back to the passed-in signalScore or a conservative default of 0.15
+  // (stalls indicate genuinely bad signal regardless of throughput).
   const s = stall as any;
   if (s.lat != null && s.lng != null) {
-    const score = signalScore ?? 0.2;
+    let score: number;
+    if (signalScore !== undefined) {
+      score = signalScore;
+    } else if (s.downlink_mbps != null) {
+      score = s.downlink_mbps < 0.20 ? 0.02
+            : s.downlink_mbps < 0.50 ? 0.08
+            : s.downlink_mbps < 1.00 ? 0.18
+            : 0.25;   // stalled despite decent downlink — transient spike
+    } else {
+      score = 0.15;   // unknown conditions but we know it stalled
+    }
     ingestDeadZone(s.lat, s.lng, score, 'inferred').catch(() => {});
   }
 }

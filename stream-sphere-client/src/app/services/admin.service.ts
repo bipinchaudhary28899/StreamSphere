@@ -3,7 +3,9 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export interface SessionGroupStats {
+// ── 3-Segment Research Comparison ────────────────────────────────────────────
+
+export interface SegmentStats {
   count:              number;
   avgPhi:             number | null;
   avgVmaf:            number | null;
@@ -11,6 +13,19 @@ export interface SessionGroupStats {
   avgTotalStallMs:    number | null;
   avgStallCount:      number | null;
   avgBufferSec:       number | null;
+}
+
+export interface SegmentData {
+  withGenabr:        SegmentStats;
+  withoutGenabr:     SegmentStats;
+  baselineAvailable: boolean;
+}
+
+export interface SegmentedComparison {
+  mobile:            SegmentData;
+  mobilePoorSignal:  SegmentData;
+  stationaryGood:    SegmentData;
+  recentSessions:    RecentSession[];
 }
 
 export interface RecentSession {
@@ -79,6 +94,25 @@ export interface OracleInsights {
   recentDecisions: OracleRecentDecision[];
 }
 
+// ── Student Network Events ────────────────────────────────────────────────────
+
+export interface StudentNetworkItem {
+  label: string;
+  count: number;
+  pct:   number;
+}
+
+export interface StudentInsights {
+  last30dSummary: {
+    totalDecisions:     number;
+    oraclePendingCount: number;
+    avgConfidence:      number | null;
+    avgEffectiveRisk:   number | null;
+  };
+  byNetworkFactor:  StudentNetworkItem[];
+  byConnectionType: StudentNetworkItem[];
+}
+
 // ── Full dashboard stats ──────────────────────────────────────────────────────
 
 export interface AdminStats {
@@ -107,15 +141,16 @@ export interface AdminStats {
     cloudfront: { requests: number; dataTransferGB: number };
     s3:         { storageGB: number; putRequests: number; getRequests: number; dataTransferGB: number };
   };
-  genabr: {
-    totalSessions:  number;
-    withGenabr:     SessionGroupStats;
-    withoutGenabr:  SessionGroupStats;
-    baselineIsReal: boolean;   // true = real recorded data; false = hardcoded estimates
-    recentSessions: RecentSession[];
-  } | null;
-  oracle: OracleInsights | null;
-  errors: { cloudfront: string | null; s3: string | null; genabr: string | null; oracle: string | null };
+  comparison: SegmentedComparison | null;
+  oracle:     OracleInsights      | null;
+  student:    StudentInsights     | null;
+  errors: {
+    cloudfront:  string | null;
+    s3:          string | null;
+    comparison:  string | null;
+    oracle:      string | null;
+    student:     string | null;
+  };
 }
 
 @Injectable({ providedIn: 'root' })
