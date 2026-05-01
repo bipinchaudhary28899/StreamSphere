@@ -1,3 +1,7 @@
+# ── Research Paper ────────────────────────────────────────────────────
+genabr_paper_v2.tex
+genabr_refs.bib
+
 # ── Secrets — NEVER commit these ─────────────────────────────────────
 .env
 .env.*
