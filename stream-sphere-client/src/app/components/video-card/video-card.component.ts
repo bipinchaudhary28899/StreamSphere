@@ -38,10 +38,12 @@ export class VideoCardComponent implements OnInit {
       console.error('No video data provided to video card component');
       return;
     }
-    // Use the short preview clip for hover playback. Falls back to the raw
-    // S3 URL for legacy videos uploaded before preview generation was added.
-    const previewSrc = this.video.previewUrl || this.video.S3_url;
-    this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(previewSrc);
+    // Only use previewUrl — S3_url (raw file) is deleted after transcoding.
+    // If previewUrl is absent the hover just shows the thumbnail overlay with no video.
+    const previewSrc = this.video.previewUrl ?? null;
+    this.safeUrl = previewSrc
+      ? this.sanitizer.bypassSecurityTrustResourceUrl(previewSrc)
+      : null;
     const userData = localStorage.getItem('user');
     if (userData) {
       const user = JSON.parse(userData);
@@ -73,12 +75,13 @@ export class VideoCardComponent implements OnInit {
   }
 
   onThumbHover(event: MouseEvent): void {
+    if (!this.safeUrl) return;            // no preview available — skip entirely
     const thumbWrap = event.currentTarget as HTMLElement;
     this.mediaManager.cardHoverStart();   // pause the hero carousel
 
     // Wait 2 s before starting the preview so brief mouseovers don't trigger it
     this.previewDelayTimer = setTimeout(() => {
-      this.isPreviewPlaying = true;       // fades out the thumbnail cover
+      // Don't fade the thumbnail yet — wait until the video has a frame ready
       if (!this.previewLoaded) {
         // First time — inject <source>, let Angular render it, then play
         this.previewLoaded = true;
@@ -106,9 +109,20 @@ export class VideoCardComponent implements OnInit {
 
   private playPreview(thumbWrap: HTMLElement): void {
     const video = thumbWrap.querySelector<HTMLVideoElement>('video.video-preview');
-    if (video) {
-      video.play().catch(() => {});
-    }
+    if (!video) return;
+
+    // Fade the thumbnail only once the video has a decoded frame ready.
+    // This prevents the black flash between thumbnail fade-out and first frame.
+    const onCanPlay = () => {
+      this.isPreviewPlaying = true;
+      video.removeEventListener('canplay', onCanPlay);
+    };
+    video.addEventListener('canplay', onCanPlay);
+
+    video.play().catch(() => {
+      // Autoplay blocked or src error — keep thumbnail visible
+      video.removeEventListener('canplay', onCanPlay);
+    });
   }
 
   deleteVideo() {
