@@ -132,32 +132,42 @@ exports.handler = async (event) => {
 
   console.log(`[ORCH] Invoking ${RENDITIONS.length} rendition workers + 1 AI worker in parallel…`);
 
+  // Per-worker timing (ms) — populated as each worker resolves/rejects
+  const timingMs = { ai: null, p360: null, p720: null, p1080: null };
+
   const [renditionResults, aiResult] = await Promise.all([
 
     Promise.allSettled(
-      RENDITIONS.map(rendition =>
-        invokeWorker(RENDITION_WORKER_FN, { bucket: BUCKET, rawKey, uuid, rendition })
+      RENDITIONS.map(rendition => {
+        const workerStart = Date.now();
+        return invokeWorker(RENDITION_WORKER_FN, { bucket: BUCKET, rawKey, uuid, rendition })
           .then(r => {
-            console.log(`[ORCH] ✅ ${rendition.name} done (${r.segmentCount} segments)`);
+            timingMs[`p${rendition.name}`] = Date.now() - workerStart;
+            console.log(`[ORCH] ✅ ${rendition.name} done (${r.segmentCount} segments) — ${timingMs[`p${rendition.name}`]}ms`);
             return r;
           })
           .catch(err => {
+            timingMs[`p${rendition.name}`] = Date.now() - workerStart;
             console.error(`[ORCH] ❌ ${rendition.name} FAILED:`, err.message);
-            throw err; // re-throw so allSettled records status: 'rejected'
-          })
-      )
+            throw err;
+          });
+      })
     ),
 
-    invokeWorker(AI_WORKER_FN, { bucket: BUCKET, rawKey, uuid })
-      .then(r => {
-        console.log(`[ORCH] ✅ AI done — category="${r.category}"`);
-        return r;
-      })
-      .catch(err => {
-        // AI failure is non-fatal — video still gets published with fallback metadata
-        console.error('[ORCH] ❌ AI worker FAILED (non-fatal):', err.message);
-        return { aiSummary: null, category: 'General' };
-      }),
+    (() => {
+      const aiStart = Date.now();
+      return invokeWorker(AI_WORKER_FN, { bucket: BUCKET, rawKey, uuid })
+        .then(r => {
+          timingMs.ai = Date.now() - aiStart;
+          console.log(`[ORCH] ✅ AI done — category="${r.category}" — ${timingMs.ai}ms`);
+          return r;
+        })
+        .catch(err => {
+          timingMs.ai = Date.now() - aiStart;
+          console.error('[ORCH] ❌ AI worker FAILED (non-fatal):', err.message);
+          return { aiSummary: null, category: 'General' };
+        });
+    })(),
 
   ]);
 
@@ -199,7 +209,7 @@ exports.handler = async (event) => {
   console.log(`[ORCH] Calling backend webhook — category="${category}"…`);
   await axios.post(
     `${BACKEND_URL}/api/internal/hls-complete`,
-    { rawS3Key: rawKey, masterHlsUrl, previewUrl, thumbnailUrl, category, aiSummary },
+    { rawS3Key: rawKey, masterHlsUrl, previewUrl, thumbnailUrl, category, aiSummary, timingMs },
     {
       headers: { 'Content-Type': 'application/json', 'x-hls-secret': HLS_WEBHOOK_SECRET },
       timeout: 15000,

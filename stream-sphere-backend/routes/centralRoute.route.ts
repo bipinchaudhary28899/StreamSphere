@@ -1,6 +1,12 @@
 import express, { Router, Request, Response } from 'express';
 import { googleLogin }            from '../controllers/auth.controller';
-import { uploadController }       from '../controllers/upload.controller';
+import {
+  uploadController,
+  startMultipartController,
+  partUrlsController,
+  completeMultipartController,
+  abortMultipartController,
+}                                  from '../controllers/upload.controller';
 import { saveVideoController }    from '../controllers/saveVideo.controller';
 import { VideoController }        from '../controllers/getVideo.controller';
 import { CommentController }      from '../controllers/comment.controller';
@@ -41,6 +47,10 @@ import {
   updateCommentSchema,
   commentIdParamSchema,
   watchHistorySchema,
+  startMultipartSchema,
+  partUrlsSchema,
+  completeMultipartSchema,
+  abortMultipartSchema,
 } from '../validators/schemas';
 
 const router: Router          = express.Router();
@@ -83,6 +93,39 @@ router.post(
   uploadLimiter,
   validate(uploadUrlSchema),
   uploadController,
+);
+
+// ── Multipart upload ─────────────────────────────────────────────────────────
+router.post(
+  '/upload/multipart/start',
+  authenticateJWT,
+  uploadLimiter,
+  validate(startMultipartSchema),
+  startMultipartController,
+);
+
+router.post(
+  '/upload/multipart/part-urls',
+  authenticateJWT,
+  uploadLimiter,
+  validate(partUrlsSchema),
+  partUrlsController,
+);
+
+router.post(
+  '/upload/multipart/complete',
+  authenticateJWT,
+  uploadLimiter,
+  validate(completeMultipartSchema),
+  completeMultipartController,
+);
+
+router.post(
+  '/upload/multipart/abort',
+  authenticateJWT,
+  uploadLimiter,
+  validate(abortMultipartSchema),
+  abortMultipartController,
 );
 
 router.post(

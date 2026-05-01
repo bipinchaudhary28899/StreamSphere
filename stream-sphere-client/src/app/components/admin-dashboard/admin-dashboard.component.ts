@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import {
   AdminService, AdminStats, RecentSession,
   OracleTriggerItem, OracleRecentDecision, StudentNetworkItem,
+  UploadTimingVideo, UploadTiming,
 } from '../../services/admin.service';
 
 @Component({
@@ -344,4 +345,38 @@ export class AdminDashboardComponent implements OnInit {
     if (!s || s.totalDecisions === 0) return 0;
     return Math.round((s.oraclePendingCount / s.totalDecisions) * 100);
   }
+
+  // ── Upload Pipeline Timing helpers ────────────────────────────────────────
+
+  /** Format a byte count as human-readable size. */
+  fmtBytes(bytes: number | undefined): string {
+    if (bytes == null) return '—';
+    if (bytes >= 1_073_741_824) return (bytes / 1_073_741_824).toFixed(2) + ' GB';
+    if (bytes >= 1_048_576)     return (bytes / 1_048_576).toFixed(1) + ' MB';
+    if (bytes >= 1_024)         return (bytes / 1_024).toFixed(0) + ' KB';
+    return bytes + ' B';
+  }
+
+  /** Format seconds as "m:ss". */
+  fmtVideoDuration(sec: number | undefined): string {
+    if (sec == null || sec === 0) return '—';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }
+
+  /** Sum all known timing fields to get total pipeline duration. */
+  totalPipelineMs(t: UploadTiming): number | null {
+    const vals = [t.s3UploadMs, t.aiMs, t.p360Ms, t.p720Ms, t.p1080Ms, t.dbUpdateMs];
+    const known = vals.filter((v): v is number => v != null);
+    return known.length > 0 ? known.reduce((a, b) => Math.max(a, b), 0) : null;
+  }
+
+  /** Width % for a timing bar relative to total. */
+  timingBarPct(ms: number | undefined, total: number | null): number {
+    if (ms == null || total == null || total === 0) return 0;
+    return Math.min(100, Math.round((ms / total) * 100));
+  }
+
+  trackByVideoId(_i: number, v: UploadTimingVideo): string { return v._id; }
 }

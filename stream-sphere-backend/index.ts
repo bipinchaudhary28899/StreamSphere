@@ -1,4 +1,4 @@
-import express, { Application } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -41,6 +41,17 @@ redisService.connect();
 mongoose.connect(process.env.MONGODB_URI!)
   .then(() => console.log('✅ MongoDB connected'))
   .catch((err) => console.error('❌ MongoDB connection error:', err));
+
+// ── Global error handler (must have 4 params for Express to recognise it) ────
+// Catches any unhandled async errors thrown in route handlers (Express 5).
+// Without this, Express returns an opaque 500 with no logging.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('[unhandled]', err?.message ?? err);
+  if (!res.headersSent) {
+    res.status(err?.status ?? 500).json({ message: err?.message ?? 'Internal server error' });
+  }
+});
 
 if (process.env.NODE_ENV !== 'production') {
   app.listen(3000, () => console.log('🚀 Server running on http://localhost:3000'));

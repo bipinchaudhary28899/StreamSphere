@@ -1,6 +1,17 @@
 // models/video.model.ts
 import mongoose, { Schema, Document } from 'mongoose';
 
+export interface IUploadTiming {
+  fileSizeBytes?: number;   // raw file size sent by browser
+  durationSec?:   number;   // video duration in seconds
+  s3UploadMs?:    number;   // multipart upload → S3 (frontend measured)
+  aiMs?:          number;   // AI worker (Lambda measured)
+  p360Ms?:        number;   // 360p rendition worker
+  p720Ms?:        number;   // 720p rendition worker
+  p1080Ms?:       number;   // 1080p rendition worker
+  dbUpdateMs?:    number;   // findOneAndUpdate in webhook
+}
+
 interface IVideo extends Document {
   title: string;
   description: string;
@@ -20,6 +31,7 @@ interface IVideo extends Document {
   likedBy: string[];
   dislikedBy: string[];
   views: number;
+  uploadTiming?: IUploadTiming;
 }
 
 const videoSchema: Schema = new Schema(
@@ -42,6 +54,16 @@ const videoSchema: Schema = new Schema(
     likedBy: [{ type: String }],
     dislikedBy: [{ type: String }],
     views: { type: Number, default: 0 },
+    uploadTiming: {
+      fileSizeBytes: { type: Number },
+      durationSec:   { type: Number },
+      s3UploadMs:    { type: Number },
+      aiMs:          { type: Number },
+      p360Ms:        { type: Number },
+      p720Ms:        { type: Number },
+      p1080Ms:       { type: Number },
+      dbUpdateMs:    { type: Number },
+    },
   },
   { timestamps: true }
 );

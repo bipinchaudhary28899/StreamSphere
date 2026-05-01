@@ -5,7 +5,7 @@
   align-items: center;
   background: var(--bg-surface);
   position: sticky;
-  top: 0;
+  top: 68px;
   width: 100%;
   z-index: 300;
   border-bottom: 1px solid var(--border);

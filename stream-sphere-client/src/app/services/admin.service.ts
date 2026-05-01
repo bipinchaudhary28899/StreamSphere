@@ -113,6 +113,26 @@ export interface StudentInsights {
   byConnectionType: StudentNetworkItem[];
 }
 
+// ── Upload Pipeline Timings ───────────────────────────────────────────────────
+
+export interface UploadTiming {
+  fileSizeBytes?: number;
+  durationSec?:   number;
+  s3UploadMs?:    number;
+  aiMs?:          number;
+  p360Ms?:        number;
+  p720Ms?:        number;
+  p1080Ms?:       number;
+  dbUpdateMs?:    number;
+}
+
+export interface UploadTimingVideo {
+  _id:          string;
+  title:        string;
+  uploadedAt:   string;
+  uploadTiming: UploadTiming;
+}
+
 // ── Full dashboard stats ──────────────────────────────────────────────────────
 
 export interface AdminStats {
@@ -141,9 +161,10 @@ export interface AdminStats {
     cloudfront: { requests: number; dataTransferGB: number };
     s3:         { storageGB: number; putRequests: number; getRequests: number; dataTransferGB: number };
   };
-  comparison: SegmentedComparison | null;
-  oracle:     OracleInsights      | null;
-  student:    StudentInsights     | null;
+  comparison:     SegmentedComparison   | null;
+  oracle:         OracleInsights        | null;
+  student:        StudentInsights       | null;
+  uploadTimings:  UploadTimingVideo[]   | null;
   errors: {
     cloudfront:  string | null;
     s3:          string | null;

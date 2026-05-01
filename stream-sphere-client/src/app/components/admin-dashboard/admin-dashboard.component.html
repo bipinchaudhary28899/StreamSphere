@@ -937,6 +937,106 @@
       </div><!-- /sn-section -->
     </ng-container><!-- /student data -->
 
+    <!-- ══════════════════════════════════════════════════════════════════════
+         UPLOAD PIPELINE TIMINGS
+         ═══════════════════════════════════════════════════════════════════ -->
+    <div class="upt-section" *ngIf="stats.uploadTimings && stats.uploadTimings.length > 0; else noTimings">
+      <div class="upt-header">
+        <h2 class="upt-title">⏱ Upload Pipeline Timings</h2>
+        <p class="upt-sub">Last {{ stats.uploadTimings.length }} uploaded video{{ stats.uploadTimings.length > 1 ? 's' : '' }} — latency breakdown per stage</p>
+      </div>
+
+      <div class="upt-cards">
+        <div class="upt-card" *ngFor="let v of stats.uploadTimings; trackBy: trackByVideoId">
+
+          <!-- Card header -->
+          <div class="upt-card-head">
+            <span class="upt-card-title" [title]="v.title">{{ v.title }}</span>
+            <span class="upt-card-meta">
+              {{ fmtBytes(v.uploadTiming.fileSizeBytes) }}
+              <ng-container *ngIf="v.uploadTiming.durationSec"> · {{ fmtVideoDuration(v.uploadTiming.durationSec) }}</ng-container>
+            </span>
+          </div>
+
+          <!-- Timing rows -->
+          <div class="upt-rows">
+
+            <!-- S3 Upload -->
+            <div class="upt-row" *ngIf="v.uploadTiming.s3UploadMs != null">
+              <span class="upt-label">S3 Upload</span>
+              <div class="upt-bar-wrap">
+                <div class="upt-bar upt-bar--s3"
+                     [style.width.%]="timingBarPct(v.uploadTiming.s3UploadMs, v.uploadTiming.s3UploadMs)"></div>
+              </div>
+              <span class="upt-value">{{ fmtMs(v.uploadTiming.s3UploadMs) }}</span>
+            </div>
+
+            <!-- 360p -->
+            <div class="upt-row" *ngIf="v.uploadTiming.p360Ms != null">
+              <span class="upt-label">360p</span>
+              <div class="upt-bar-wrap">
+                <div class="upt-bar upt-bar--360"
+                     [style.width.%]="timingBarPct(v.uploadTiming.p360Ms, totalPipelineMs(v.uploadTiming))"></div>
+              </div>
+              <span class="upt-value">{{ fmtMs(v.uploadTiming.p360Ms) }}</span>
+            </div>
+
+            <!-- 720p -->
+            <div class="upt-row" *ngIf="v.uploadTiming.p720Ms != null">
+              <span class="upt-label">720p</span>
+              <div class="upt-bar-wrap">
+                <div class="upt-bar upt-bar--720"
+                     [style.width.%]="timingBarPct(v.uploadTiming.p720Ms, totalPipelineMs(v.uploadTiming))"></div>
+              </div>
+              <span class="upt-value">{{ fmtMs(v.uploadTiming.p720Ms) }}</span>
+            </div>
+
+            <!-- 1080p -->
+            <div class="upt-row" *ngIf="v.uploadTiming.p1080Ms != null">
+              <span class="upt-label">1080p</span>
+              <div class="upt-bar-wrap">
+                <div class="upt-bar upt-bar--1080"
+                     [style.width.%]="timingBarPct(v.uploadTiming.p1080Ms, totalPipelineMs(v.uploadTiming))"></div>
+              </div>
+              <span class="upt-value">{{ fmtMs(v.uploadTiming.p1080Ms) }}</span>
+            </div>
+
+            <!-- AI worker -->
+            <div class="upt-row" *ngIf="v.uploadTiming.aiMs != null">
+              <span class="upt-label">AI Worker</span>
+              <div class="upt-bar-wrap">
+                <div class="upt-bar upt-bar--ai"
+                     [style.width.%]="timingBarPct(v.uploadTiming.aiMs, totalPipelineMs(v.uploadTiming))"></div>
+              </div>
+              <span class="upt-value">{{ fmtMs(v.uploadTiming.aiMs) }}</span>
+            </div>
+
+            <!-- DB update -->
+            <div class="upt-row" *ngIf="v.uploadTiming.dbUpdateMs != null">
+              <span class="upt-label">DB Update</span>
+              <div class="upt-bar-wrap">
+                <div class="upt-bar upt-bar--db"
+                     [style.width.%]="timingBarPct(v.uploadTiming.dbUpdateMs, totalPipelineMs(v.uploadTiming))"></div>
+              </div>
+              <span class="upt-value">{{ fmtMs(v.uploadTiming.dbUpdateMs) }}</span>
+            </div>
+
+          </div><!-- /upt-rows -->
+
+          <div class="upt-card-foot">
+            <span class="upt-foot-date">{{ v.uploadedAt | date:'MMM d, y HH:mm' }}</span>
+          </div>
+        </div><!-- /upt-card -->
+      </div><!-- /upt-cards -->
+    </div>
+
+    <ng-template #noTimings>
+      <div class="upt-empty">
+        <span class="upt-empty-icon">⏱</span>
+        <p>No upload timing data yet. Upload a video to start collecting pipeline metrics.</p>
+      </div>
+    </ng-template>
+
     <!-- ── Free tier footnote ─────────────────────────────────────────────── -->
     <div class="ad-footer">
       <p>☁️ CloudFront free tier applies for the <strong>first 12 months</strong> of your AWS account.</p>

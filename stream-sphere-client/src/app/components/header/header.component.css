@@ -10,6 +10,7 @@
   right: 0;
   z-index: 500;
   background: transparent;
+  border-bottom: none;
   transition: background 0.35s ease, box-shadow 0.35s ease;
 }
 
@@ -25,9 +26,8 @@
 
 /* Once scrolled → solid surface */
 .app-header.scrolled {
-  background: var(--bg-surface);
+  background: var(--bg-base);
   box-shadow: var(--shadow-header);
-  border-bottom: 1px solid var(--border);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
@@ -38,7 +38,7 @@
 
 /* When search panel is open, force solid so the panel sits on a background */
 .app-header.search-active {
-  background: var(--bg-surface);
+  background: var(--bg-base);
   box-shadow: var(--shadow-header);
 }
 .app-header.search-active::before { opacity: 0; }
@@ -154,20 +154,17 @@
 
 /* ── Search panel ──────────────────────────────────────────────────────── */
 .search-panel {
-  background: var(--bg-surface);
-  /* Border kept transparent when closed so it never bleeds as a visible
-     line under the transparent header.  Colour is applied only when open. */
-  border-top: 1px solid transparent;
+  background: transparent;
   overflow: hidden;
   max-height: 0;
-  transition: max-height 0.3s ease, padding 0.3s ease, border-color 0.3s ease;
+  transition: max-height 0.3s ease, padding 0.3s ease, background 0.3s ease;
   padding: 0 24px;
 }
 
 .search-panel.open {
   max-height: 300px;
   padding: 16px 24px 20px;
-  border-top-color: var(--border);
+  background: var(--bg-base);
 }
 
 /* Search input row */

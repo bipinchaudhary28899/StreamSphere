@@ -1410,3 +1410,148 @@
   .sn-chip--purple .sn-chip-val { color: #a78bfa; }
   .sn-chip--purple { border-color: #7c3aed; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   UPLOAD PIPELINE TIMINGS
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.upt-section {
+  margin-top: 40px;
+}
+
+.upt-header {
+  margin-bottom: 16px;
+}
+
+.upt-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.upt-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Grid of cards */
+.upt-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
+}
+
+/* Individual card */
+.upt-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Card header */
+.upt-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.upt-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
+}
+
+.upt-card-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Timing rows */
+.upt-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.upt-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 56px;
+  align-items: center;
+  gap: 8px;
+}
+
+.upt-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.upt-bar-wrap {
+  background: var(--bg-base);
+  border-radius: 4px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.upt-bar {
+  height: 100%;
+  border-radius: 4px;
+  min-width: 2px;
+  transition: width 0.4s ease;
+}
+
+/* Per-stage colours */
+.upt-bar--s3   { background: #3b82f6; }   /* blue    — S3 multipart */
+.upt-bar--360  { background: #10b981; }   /* emerald — 360p */
+.upt-bar--720  { background: #f59e0b; }   /* amber   — 720p */
+.upt-bar--1080 { background: #ef4444; }   /* red     — 1080p */
+.upt-bar--ai   { background: #8b5cf6; }   /* violet  — AI worker */
+.upt-bar--db   { background: #6b7280; }   /* gray    — DB write */
+
+.upt-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Card footer */
+.upt-card-foot {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.upt-foot-date {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* Empty state */
+.upt-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-top: 40px;
+}
+
+.upt-empty-icon { font-size: 32px; }
+.upt-empty p    { margin: 0; line-height: 1.6; }

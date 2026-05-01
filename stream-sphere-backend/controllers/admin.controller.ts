@@ -464,6 +464,19 @@ export async function toggleGenabrController(req: Request, res: Response): Promi
   res.json({ enabled });
 }
 
+// ── Upload pipeline timings ───────────────────────────────────────────────────
+
+async function getUploadTimings() {
+  const videos = await Video.find(
+    { 'uploadTiming.s3UploadMs': { $exists: true, $ne: null } },
+    { title: 1, uploadedAt: 1, category: 1, uploadTiming: 1 },
+  )
+    .sort({ uploadedAt: -1 })
+    .limit(10)
+    .lean();
+  return videos;
+}
+
 // ── Main stats controller ─────────────────────────────────────────────────────
 
 export async function adminStatsController(req: Request, res: Response): Promise<void> {
@@ -473,6 +486,7 @@ export async function adminStatsController(req: Request, res: Response): Promise
   const [
     cfStats, s3Stats, s3UploadsMonth, apiMonth, apiToday,
     videoCount, userCount, commentCount, comparisonResult, oracleInsights, studentInsights,
+    uploadTimingsResult,
   ] = await Promise.allSettled([
     distributionId ? getCloudFrontStats(distributionId) : Promise.resolve(null),
     getS3StorageStats(),
@@ -485,6 +499,7 @@ export async function adminStatsController(req: Request, res: Response): Promise
     getSegmentedComparison(),
     getOracleInsights(),
     getStudentInsights(),
+    getUploadTimings(),
   ]);
 
   const cf         = cfStats.status            === 'fulfilled' ? cfStats.value            : null;
@@ -495,9 +510,10 @@ export async function adminStatsController(req: Request, res: Response): Promise
   const videos     = videoCount.status         === 'fulfilled' ? videoCount.value         : 0;
   const users      = userCount.status          === 'fulfilled' ? userCount.value          : 0;
   const comments   = commentCount.status       === 'fulfilled' ? commentCount.value       : 0;
-  const comparison = comparisonResult.status   === 'fulfilled' ? comparisonResult.value   : null;
-  const oracle     = oracleInsights.status     === 'fulfilled' ? oracleInsights.value     : null;
-  const student    = studentInsights.status    === 'fulfilled' ? studentInsights.value    : null;
+  const comparison     = comparisonResult.status    === 'fulfilled' ? comparisonResult.value    : null;
+  const oracle         = oracleInsights.status      === 'fulfilled' ? oracleInsights.value      : null;
+  const student        = studentInsights.status     === 'fulfilled' ? studentInsights.value      : null;
+  const uploadTimings  = uploadTimingsResult.status === 'fulfilled' ? uploadTimingsResult.value  : [];
 
   res.json({
     period,
@@ -518,6 +534,7 @@ export async function adminStatsController(req: Request, res: Response): Promise
     comparison,
     oracle,
     student,
+    uploadTimings,
     errors: {
       cloudfront:  cfStats.status          === 'rejected' ? String(cfStats.reason)                         : null,
       s3:          s3Stats.status          === 'rejected' ? String(s3Stats.reason)                         : null,
