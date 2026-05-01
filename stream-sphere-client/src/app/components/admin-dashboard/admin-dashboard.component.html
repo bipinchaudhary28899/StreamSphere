@@ -953,9 +953,16 @@
           <div class="upt-card-head">
             <span class="upt-card-title" [title]="v.title">{{ v.title }}</span>
             <span class="upt-card-meta">
-              {{ fmtBytes(v.uploadTiming.fileSizeBytes) }}
+              <ng-container *ngIf="v.uploadTiming.fileSizeBytes">{{ fmtBytes(v.uploadTiming.fileSizeBytes) }}</ng-container>
               <ng-container *ngIf="v.uploadTiming.durationSec"> · {{ fmtVideoDuration(v.uploadTiming.durationSec) }}</ng-container>
             </span>
+          </div>
+
+          <!-- Total pipeline time badge -->
+          <div class="upt-total" *ngIf="totalPipelineMs(v.uploadTiming) as total">
+            <span class="upt-total-label">Total (wall clock)</span>
+            <span class="upt-total-value">{{ fmtMs(total) }}</span>
+            <span class="upt-total-note">parallel stages counted once</span>
           </div>
 
           <!-- Timing rows -->
@@ -971,12 +978,18 @@
               <span class="upt-value">{{ fmtMs(v.uploadTiming.s3UploadMs) }}</span>
             </div>
 
+            <!-- Parallel section label -->
+            <div class="upt-parallel-label"
+                 *ngIf="v.uploadTiming.p360Ms != null || v.uploadTiming.aiMs != null">
+              ⟳ parallel
+            </div>
+
             <!-- 360p -->
             <div class="upt-row" *ngIf="v.uploadTiming.p360Ms != null">
               <span class="upt-label">360p</span>
               <div class="upt-bar-wrap">
                 <div class="upt-bar upt-bar--360"
-                     [style.width.%]="timingBarPct(v.uploadTiming.p360Ms, totalPipelineMs(v.uploadTiming))"></div>
+                     [style.width.%]="timingBarPct(v.uploadTiming.p360Ms, parallelWindowMs(v.uploadTiming))"></div>
               </div>
               <span class="upt-value">{{ fmtMs(v.uploadTiming.p360Ms) }}</span>
             </div>
@@ -986,7 +999,7 @@
               <span class="upt-label">720p</span>
               <div class="upt-bar-wrap">
                 <div class="upt-bar upt-bar--720"
-                     [style.width.%]="timingBarPct(v.uploadTiming.p720Ms, totalPipelineMs(v.uploadTiming))"></div>
+                     [style.width.%]="timingBarPct(v.uploadTiming.p720Ms, parallelWindowMs(v.uploadTiming))"></div>
               </div>
               <span class="upt-value">{{ fmtMs(v.uploadTiming.p720Ms) }}</span>
             </div>
@@ -996,7 +1009,7 @@
               <span class="upt-label">1080p</span>
               <div class="upt-bar-wrap">
                 <div class="upt-bar upt-bar--1080"
-                     [style.width.%]="timingBarPct(v.uploadTiming.p1080Ms, totalPipelineMs(v.uploadTiming))"></div>
+                     [style.width.%]="timingBarPct(v.uploadTiming.p1080Ms, parallelWindowMs(v.uploadTiming))"></div>
               </div>
               <span class="upt-value">{{ fmtMs(v.uploadTiming.p1080Ms) }}</span>
             </div>
@@ -1006,7 +1019,7 @@
               <span class="upt-label">AI Worker</span>
               <div class="upt-bar-wrap">
                 <div class="upt-bar upt-bar--ai"
-                     [style.width.%]="timingBarPct(v.uploadTiming.aiMs, totalPipelineMs(v.uploadTiming))"></div>
+                     [style.width.%]="timingBarPct(v.uploadTiming.aiMs, parallelWindowMs(v.uploadTiming))"></div>
               </div>
               <span class="upt-value">{{ fmtMs(v.uploadTiming.aiMs) }}</span>
             </div>

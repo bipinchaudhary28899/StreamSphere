@@ -1555,3 +1555,42 @@
 
 .upt-empty-icon { font-size: 32px; }
 .upt-empty p    { margin: 0; line-height: 1.6; }
+
+/* Total pipeline time badge */
+.upt-total {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-base);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.upt-total-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.upt-total-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-left: auto;
+}
+
+.upt-total-note {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Parallel section label */
+.upt-parallel-label {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+  padding-left: 2px;
+}

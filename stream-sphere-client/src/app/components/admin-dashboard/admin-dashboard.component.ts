@@ -365,17 +365,29 @@ export class AdminDashboardComponent implements OnInit {
     return `${m}:${String(s).padStart(2, '0')}`;
   }
 
-  /** Sum all known timing fields to get total pipeline duration. */
+  /**
+   * Actual wall-clock pipeline time, accounting for parallelism:
+   *   total = s3UploadMs  (sequential, before Lambda)
+   *         + max(p360Ms, p720Ms, p1080Ms, aiMs)  (all run in parallel)
+   *         + dbUpdateMs  (sequential, after workers)
+   */
   totalPipelineMs(t: UploadTiming): number | null {
-    const vals = [t.s3UploadMs, t.aiMs, t.p360Ms, t.p720Ms, t.p1080Ms, t.dbUpdateMs];
-    const known = vals.filter((v): v is number => v != null);
-    return known.length > 0 ? known.reduce((a, b) => Math.max(a, b), 0) : null;
+    const parallelMs = Math.max(t.p360Ms ?? 0, t.p720Ms ?? 0, t.p1080Ms ?? 0, t.aiMs ?? 0);
+    const s3Ms = t.s3UploadMs ?? 0;
+    const dbMs = t.dbUpdateMs ?? 0;
+    if (parallelMs === 0 && s3Ms === 0) return null;
+    return s3Ms + parallelMs + dbMs;
   }
 
-  /** Width % for a timing bar relative to total. */
+  /** Width % for a timing bar — parallel stages scale against the parallel window. */
   timingBarPct(ms: number | undefined, total: number | null): number {
     if (ms == null || total == null || total === 0) return 0;
     return Math.min(100, Math.round((ms / total) * 100));
+  }
+
+  /** Max of the parallel worker timings — used to scale bars within the parallel window. */
+  parallelWindowMs(t: UploadTiming): number {
+    return Math.max(t.p360Ms ?? 0, t.p720Ms ?? 0, t.p1080Ms ?? 0, t.aiMs ?? 0);
   }
 
   trackByVideoId(_i: number, v: UploadTimingVideo): string { return v._id; }
