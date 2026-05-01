@@ -13,8 +13,8 @@ import { UploadStatusService } from '../../services/upload-status.service';
 
 type UploadPhase = 'idle' | 'uploading' | 'saving' | 'success';
 
-/** S3 minimum part size is 5 MiB; 10 MiB gives good parallelism without excessive parts. */
-const PART_SIZE_BYTES = 10 * 1024 * 1024; // 10 MiB
+/** S3 minimum part size is 5 MiB; 5 MiB gives smooth progress updates. */
+const PART_SIZE_BYTES = 5 * 1024 * 1024; // 5 MiB
 
 /** Number of parts to upload concurrently. */
 const CONCURRENCY = 4;

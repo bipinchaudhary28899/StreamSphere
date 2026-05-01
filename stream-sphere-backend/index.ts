@@ -38,9 +38,35 @@ app.use('/api', centralRoute);
 
 redisService.connect();
 
-mongoose.connect(process.env.MONGODB_URI!)
-  .then(() => console.log('✅ MongoDB connected'))
-  .catch((err) => console.error('❌ MongoDB connection error:', err));
+// ── MongoDB connection with Vercel cold-start safety ─────────────────────────
+// bufferTimeoutMS raised to 30 s so cold-start containers don't time out on
+// the first request before the connection is ready.
+// The cached-connection pattern avoids re-connecting on every warm invocation.
+let mongoConnected = false;
+
+async function ensureMongoConnected(): Promise<void> {
+  if (mongoConnected || mongoose.connection.readyState === 1) return;
+  await mongoose.connect(process.env.MONGODB_URI!, {
+    serverSelectionTimeoutMS: 30_000,
+    socketTimeoutMS:          45_000,
+    bufferCommands:           true,
+  });
+  mongoConnected = true;
+  console.log('✅ MongoDB connected');
+}
+
+// Kick off connection immediately so it's ready before the first request
+ensureMongoConnected().catch((err) => console.error('❌ MongoDB connection error:', err));
+
+// Middleware: ensure DB is connected before any route runs
+app.use(async (_req: Request, _res: Response, next: NextFunction) => {
+  try {
+    await ensureMongoConnected();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 // ── Global error handler (must have 4 params for Express to recognise it) ────
 // Catches any unhandled async errors thrown in route handlers (Express 5).
