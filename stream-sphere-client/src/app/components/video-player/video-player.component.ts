@@ -10,6 +10,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { VideoService } from '../../services/video.service';
 import { CommentSectionComponent } from '../comment-section/comment-section.component';
 import Hls from 'hls.js';
+import { Subscription } from 'rxjs';
+import { TelemetryService } from '../../services/telemetry.service';
+import { PredictionService } from '../../services/prediction.service';
 
 @Component({
   selector: 'app-video-player',
@@ -28,7 +31,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   @ViewChild('videoElement',   { static: false }) videoRef!: ElementRef<HTMLVideoElement>;
   @ViewChild('playerContainer',{ static: false }) playerContainerRef!: ElementRef<HTMLDivElement>;
 
-  // ── Video data ────────────────────────────────────────────────────────────
   video: any = null;
   loading = true;
   error: string | null = null;
@@ -41,14 +43,23 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   isLiking = false;
   isDisliking = false;
 
-  // ── HLS quality switcher ──────────────────────────────────────────────────
   private hls: Hls | null = null;
   hlsLevels: Array<{ name: string; index: number }> = [];
   hlsCurrentLevel = -1;
   hlsAutoLevel = -1;
   showSettingsMenu = false;
 
-  // ── Custom controls state ─────────────────────────────────────────────────
+  /** Set to true just before we force a level change via GenABR so the
+   *  LEVEL_SWITCHED handler can tag the switch as 'genabr_override'. */
+  private _genabrForcedLevel = false;
+  /** Set to true just before the user manually picks a quality level so the
+   *  LEVEL_SWITCHED handler can tag the switch as 'user_manual'. */
+  private _userManualLevel = false;
+  /** Track how many consecutive 'normal' cycles before releasing the
+   *  manual level lock and handing control back to ABR auto. */
+  private _normalCycleCount = 0;
+  private readonly NORMAL_RELEASE_CYCLES = 2;
+
   isPlaying = false;
   isMuted = false;
   currentTime = 0;
@@ -56,12 +67,17 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   controlsVisible = true;
   isFullscreen = false;
   private controlsTimer: any = null;
-  // Set to true by onTouchZone() so the immediately-following synthesised
-  // click event (fired by mobile browsers after every touch) is ignored.
-  // Without this, the synthesised mousemove makes controls visible and the
-  // synthesised click sees them as visible and hides them again — net result:
-  // a single tap on mobile never shows the controls.
+  // Blocks the synthesised click/mousemove that follows a touch tap.
   private _touchHandled = false;
+  private predictionSub: Subscription | null = null;
+
+  // ── GenABR activity badge ──────────────────────────────────────────────────
+  genabrBadgeVisible   = false;   // drives *ngIf + CSS enter/leave animation
+  genabrBadgeLabel     = '';
+  genabrBadgeSublabel  = '';
+  genabrBadgeLevel: 'moderate' | 'aggressive' = 'moderate';
+  genabrBadgeOracle    = false;   // true = Oracle tier is driving the decision
+  private _badgeHideTimer: any = null;
 
   get seekPercent(): number {
     return this.duration > 0 ? (this.currentTime / this.duration) * 100 : 0;
@@ -71,9 +87,10 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private videoService: VideoService,
     private cdr: ChangeDetectorRef,
+    private telemetry: TelemetryService,
+    private prediction: PredictionService,
   ) {}
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
     const videoId = this.route.snapshot.paramMap.get('id');
@@ -88,22 +105,22 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroyHls();
     clearTimeout(this.controlsTimer);
+    clearTimeout(this._badgeHideTimer);
+    this.predictionSub?.unsubscribe();
+    this.telemetry.stopSession();
   }
 
-  // ── Close settings menu when clicking outside the player ─────────────────
   @HostListener('document:click')
   onDocumentClick(): void {
     if (this.showSettingsMenu) this.showSettingsMenu = false;
   }
 
-  // ── Track browser fullscreen changes ──────────────────────────────────────
   @HostListener('document:fullscreenchange')
   onFullscreenChange(): void {
     this.isFullscreen = !!document.fullscreenElement;
     this.cdr.detectChanges();
   }
 
-  // ── Data loading ──────────────────────────────────────────────────────────
 
   loadVideo(videoId: string): void {
     this.loading = true;
@@ -121,6 +138,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
           // so <video #videoElement> is in the DOM before HLS.js attaches.
           this.cdr.detectChanges();
           setTimeout(() => this.initHlsPlayer(), 0);
+          this.telemetry.startSession(videoId);
         } else {
           this.error = 'Video not found';
           this.loading = false;
@@ -134,7 +152,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ── HLS player ────────────────────────────────────────────────────────────
 
   private initHlsPlayer(): void {
     const videoEl = this.videoRef?.nativeElement;
@@ -143,7 +160,20 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.destroyHls();
 
     if (Hls.isSupported()) {
-      this.hls = new Hls({ startLevel: -1, capLevelToPlayerSize: true });
+      this.hls = new Hls({
+        startLevel:          -1,    // ABR auto-selects quality based on bandwidth
+        capLevelToPlayerSize: true, // never fetch higher quality than player dimensions
+
+        // Buffer tuning — HLS.js default is 30s which fires ~5 segment requests
+        // upfront. 10s is enough for smooth VOD playback while halving CDN load.
+        maxBufferLength:    10,   // target 10s of forward buffer (default: 30)
+        maxMaxBufferLength: 30,   // hard cap — never exceed 30s total (default: 600)
+        maxBufferSize:      20 * 1000 * 1000, // 20MB cap (default: 60MB)
+
+        // Start playback as soon as the first segment is ready, not after a
+        // full buffer fill — reduces perceived time-to-first-frame on mobile.
+        maxBufferHole: 0.5,
+      });
       this.hls.loadSource(this.video.hlsUrl);
       this.hls.attachMedia(videoEl);
 
@@ -164,7 +194,60 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       this.hls.on(Hls.Events.LEVEL_SWITCHED, (_evt, data) => {
         this.hlsAutoLevel = data.level;
         this.cdr.detectChanges();
+        // Stamp the switch reason — priority: genabr_override > user_manual > abr_auto
+        const reason: 'abr_auto' | 'genabr_override' | 'user_manual' =
+          this._genabrForcedLevel ? 'genabr_override' :
+          this._userManualLevel   ? 'user_manual'     : 'abr_auto';
+        this._genabrForcedLevel = false;
+        this._userManualLevel   = false;
+        const lvl = this.hls?.levels[data.level];
+        if (lvl) this.telemetry.updateBitrate(Math.round(lvl.bitrate / 1000), reason);
       });
+
+      // Subscribe to GenABR buffer targets — apply only when recommendation changes
+      this.predictionSub?.unsubscribe();
+      this.predictionSub = this.prediction.bufferTargetChanged$.subscribe(target => {
+        if (!target || !this.hls) return;
+
+        // 1. Adjust buffer window
+        this.hls.config.maxBufferLength    = target.max_buffer_length;
+        this.hls.config.maxMaxBufferLength = target.max_max_buffer_length;
+
+        // 2. Proactive quality management ─────────────────────────────────
+        // Unlike reactive ABR (which only switches when the buffer empties),
+        // GenABR steps quality down immediately when it predicts degradation
+        // ahead — demonstrating the core "predictive vs reactive" advantage.
+        if (target.recommendation === 'prebuffer_aggressive') {
+          this._normalCycleCount = 0;
+          // Choose the current playing level: nextAutoLevel when in ABR auto,
+          // or currentLevel when manually locked.
+          const playingLevel =
+            this.hlsCurrentLevel === -1
+              ? this.hls.nextAutoLevel
+              : this.hls.currentLevel;
+
+          if (playingLevel > 0) {
+            // Step down one quality tier and tag the upcoming LEVEL_SWITCHED event
+            this._genabrForcedLevel = true;
+            this.hls.nextLevel = playingLevel - 1;
+          }
+        } else if (target.recommendation === 'normal') {
+          // Count consecutive normal cycles before releasing the manual lock
+          this._normalCycleCount++;
+          if (this._normalCycleCount >= this.NORMAL_RELEASE_CYCLES
+              && this.hlsCurrentLevel === -1) {
+            // Hand control back to HLS.js ABR auto-select
+            this.hls.nextLevel = -1;
+            this._normalCycleCount = 0;
+          }
+        } else {
+          // Moderate: leave quality where it is, only the buffer window changes
+          this._normalCycleCount = 0;
+        }
+      });
+
+      // Subscribe to full inference result for the activity badge
+      this.prediction.inference$.subscribe(result => this.updateGenabrBadge(result));
 
     } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
       // Safari native HLS
@@ -175,7 +258,9 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   setQuality(levelIndex: number): void {
     if (!this.hls) return;
-    this.hlsCurrentLevel = levelIndex;
+    // Flag the upcoming LEVEL_SWITCHED event as user-initiated before changing level
+    this._userManualLevel = true;
+    this.hlsCurrentLevel  = levelIndex;
     this.hls.currentLevel = levelIndex;  // -1 = ABR auto
   }
 
@@ -196,7 +281,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.hlsLevels = [];
   }
 
-  // ── Custom player controls ────────────────────────────────────────────────
 
   togglePlay(): void {
     const v = this.videoRef?.nativeElement;
@@ -204,15 +288,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     v.paused ? v.play() : v.pause();
   }
 
-  /**
-   * Mobile touch handler — fires on touchstart, before the browser synthesises
-   * mousemove / click events.  Manages the controls toggle directly and sets
-   * _touchHandled so onClickZone() (which fires ~300ms later as a synthesised
-   * click) knows to skip the toggle and not undo what we just did.
-   *
-   * Touches on interactive controls (.vp-controls, .vp-center-btn) are ignored
-   * here so those elements' own click handlers remain in charge.
-   */
   onTouchZone(event: TouchEvent): void {
     const target = event.target as HTMLElement;
     if (target.closest('.vp-controls, .vp-center-btn')) return;
@@ -237,12 +312,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     setTimeout(() => { this._touchHandled = false; }, 400);
   }
 
-  /**
-   * Desktop click handler for the transparent video area:
-   *  - If controls are hidden  → reveal them (auto-hide again if playing)
-   *  - If controls are visible → hide them immediately
-   * On mobile this is skipped because onTouchZone() already handled it.
-   */
   onClickZone(): void {
     if (this._touchHandled) return; // touch already toggled visibility
     clearTimeout(this.controlsTimer);
@@ -304,7 +373,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   }
 
 
-  // ── Video element event handlers ──────────────────────────────────────────
 
   onVideoPlay(): void {
     this.isPlaying = true;
@@ -329,7 +397,13 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   onTimeUpdate(): void {
     const v = this.videoRef?.nativeElement;
-    if (v) this.currentTime = v.currentTime;
+    if (v) {
+      this.currentTime = v.currentTime;
+      if (this.hls) {
+        const buf = this.hls.mainForwardBufferInfo?.len ?? null;
+        if (buf !== null) this.telemetry.updateBufferLevel(buf);
+      }
+    }
   }
 
   onLoadedMetadata(): void {
@@ -342,7 +416,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     if (v) this.isMuted = v.muted;
   }
 
-  // ── Auth / view helpers ───────────────────────────────────────────────────
 
   private recordWatchHistory(videoId: string): void {
     const userData = localStorage.getItem('user');
@@ -428,7 +501,68 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ── Formatters ────────────────────────────────────────────────────────────
+
+  // ── GenABR badge logic ─────────────────────────────────────────────────────
+
+  private updateGenabrBadge(result: any | null): void {
+    if (!result) {
+      this.scheduleHideBadge();
+      return;
+    }
+
+    const rec      = result.buffer_target?.recommendation ?? 'normal';
+    const tier     = result.tier_used ?? 'student';
+    const pending  = result.oracle_pending ?? false;
+    const reason   = result.oracle_reason ?? '';
+
+    if (rec === 'normal') {
+      // GenABR returned to normal — linger for a moment then hide
+      this.scheduleHideBadge();
+      return;
+    }
+
+    // Cancel any pending hide timer — GenABR is still active
+    clearTimeout(this._badgeHideTimer);
+    this._badgeHideTimer = null;
+
+    const isOracle      = tier === 'oracle';
+    const isAggressive  = rec === 'prebuffer_aggressive';
+    this.genabrBadgeOracle = isOracle;
+    this.genabrBadgeLevel  = isAggressive ? 'aggressive' : 'moderate';
+
+    // Main label
+    this.genabrBadgeLabel = isOracle ? '🔮 +GenABR AI' : '⚡ +GenABR';
+
+    // Contextual sublabel — pick the most specific reason available
+    if (pending) {
+      this.genabrBadgeSublabel = 'AI analyzing…';
+    } else if (isAggressive && isOracle) {
+      this.genabrBadgeSublabel = 'Shielding dead zone';
+    } else if (isAggressive) {
+      this.genabrBadgeSublabel = 'Boosting buffer';
+    } else if (reason.includes('signal_degrading')) {
+      this.genabrBadgeSublabel = 'Weak signal detected';
+    } else if (reason.includes('highway_speed')) {
+      this.genabrBadgeSublabel = 'High-speed mode';
+    } else if (reason.includes('peak_hours')) {
+      this.genabrBadgeSublabel = 'Peak hours active';
+    } else {
+      this.genabrBadgeSublabel = 'Pre-buffering ahead';
+    }
+
+    this.genabrBadgeVisible = true;
+    this.cdr.detectChanges();
+  }
+
+  private scheduleHideBadge(): void {
+    if (!this.genabrBadgeVisible) return;          // already hidden
+    if (this._badgeHideTimer)     return;          // timer already running
+    this._badgeHideTimer = setTimeout(() => {
+      this.genabrBadgeVisible  = false;
+      this._badgeHideTimer     = null;
+      this.cdr.detectChanges();
+    }, 4_000);
+  }
 
   formatDate(dateString: string): string {
     return new Date(dateString).toLocaleDateString('en-US', {

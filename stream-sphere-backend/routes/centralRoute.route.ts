@@ -1,21 +1,43 @@
 import express, { Router, Request, Response } from 'express';
 import { googleLogin }            from '../controllers/auth.controller';
-import { uploadController }       from '../controllers/upload.controller';
+import {
+  uploadController,
+  startMultipartController,
+  partUrlsController,
+  completeMultipartController,
+  abortMultipartController,
+}                                  from '../controllers/upload.controller';
 import { saveVideoController }    from '../controllers/saveVideo.controller';
 import { VideoController }        from '../controllers/getVideo.controller';
 import { CommentController }      from '../controllers/comment.controller';
 import { authenticateJWT }        from '../services/auth.service';
 import { WatchHistoryController } from '../controllers/watchHistory.controller';
-import { adminStatsController }   from '../controllers/admin.controller';
+import {
+  adminStatsController,
+  getGenabrStatusController,
+  toggleGenabrController,
+}                                  from '../controllers/admin.controller';
 import { hlsWebhookController }   from '../controllers/hlsWebhook.controller';
+import {
+  startSessionController,
+  pingController,
+  batchPingController,
+  stallController,
+  bitrateSwitchController,
+  endSessionController,
+} from '../controllers/telemetry.controller';
+import {
+  queryCoverageController,
+  ingestDeadZoneController,
+} from '../controllers/shadowMap.controller';
+import { bufferTargetController } from '../controllers/predictionCone.controller';
+import { genabrDecisionController, testOracleController } from '../controllers/genabr.controller';
 import { Video }                  from '../models/video';
 
-// ── Middleware ────────────────────────────────────────────────────────────────
 import { validate }        from '../middleware/validate.middleware';
 import { authLimiter, uploadLimiter, writeLimiter } from '../middleware/rateLimiter.middleware';
 import { statsMiddleware } from '../middleware/stats.middleware';
 
-// ── Schemas ───────────────────────────────────────────────────────────────────
 import {
   googleLoginSchema,
   uploadUrlSchema,
@@ -25,9 +47,12 @@ import {
   updateCommentSchema,
   commentIdParamSchema,
   watchHistorySchema,
+  startMultipartSchema,
+  partUrlsSchema,
+  completeMultipartSchema,
+  abortMultipartSchema,
 } from '../validators/schemas';
 
-// ── Setup ─────────────────────────────────────────────────────────────────────
 const router: Router          = express.Router();
 const commentController       = new CommentController();
 const watchHistoryController  = new WatchHistoryController();
@@ -35,11 +60,12 @@ const watchHistoryController  = new WatchHistoryController();
 // Count every API request for the dev dashboard
 router.use(statsMiddleware);
 
-// ── Admin guard (email-based) ─────────────────────────────────────────────────
 const ADMIN_EMAIL = 'bkumar28899@gmail.com';
 function requireAdmin(req: any, res: Response, next: any): void {
-  if (req.user?.email !== ADMIN_EMAIL) {
-    res.status(403).json({ message: 'Forbidden' });
+  const userEmail = req.user?.email ?? '(no email in token)';
+  if (userEmail !== ADMIN_EMAIL) {
+    console.warn(`[requireAdmin] Rejected: token email="${userEmail}" expected="${ADMIN_EMAIL}"`);
+    res.status(403).json({ message: `Admin only. Token email: ${userEmail}` });
     return;
   }
   next();
@@ -54,7 +80,6 @@ const wrap = (fn: H) => async (req: Request, res: Response): Promise<void> => {
   await fn(req, res);
 };
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
 router.post(
   '/google-login',
   authLimiter,
@@ -62,13 +87,45 @@ router.post(
   googleLogin,
 );
 
-// ── Upload ────────────────────────────────────────────────────────────────────
 router.post(
   '/upload-url',
   authenticateJWT,
   uploadLimiter,
   validate(uploadUrlSchema),
   uploadController,
+);
+
+// ── Multipart upload ─────────────────────────────────────────────────────────
+router.post(
+  '/upload/multipart/start',
+  authenticateJWT,
+  uploadLimiter,
+  validate(startMultipartSchema),
+  startMultipartController,
+);
+
+router.post(
+  '/upload/multipart/part-urls',
+  authenticateJWT,
+  uploadLimiter,
+  validate(partUrlsSchema),
+  partUrlsController,
+);
+
+router.post(
+  '/upload/multipart/complete',
+  authenticateJWT,
+  uploadLimiter,
+  validate(completeMultipartSchema),
+  completeMultipartController,
+);
+
+router.post(
+  '/upload/multipart/abort',
+  authenticateJWT,
+  uploadLimiter,
+  validate(abortMultipartSchema),
+  abortMultipartController,
 );
 
 router.post(
@@ -79,7 +136,6 @@ router.post(
   saveVideoController,
 );
 
-// ── Feed — cursor-paginated + Redis cached ─────────────────────────────────────
 // GET /api/feed?cursor=<id>&category=<cat>&limit=<n>
 router.get('/feed',        wrap(VideoController.getFeed.bind(VideoController)));
 // GET /api/feed/search?q=<term>
@@ -88,7 +144,6 @@ router.get('/feed/search', wrap(VideoController.searchFeed.bind(VideoController)
 // Legacy /home — redirects to /feed for backward compatibility
 router.get('/home', wrap(VideoController.getFeed.bind(VideoController)));
 
-// ── Video reads — SPECIFIC routes MUST come before /:videoId ─────────────────
 router.get('/videos/top-liked', wrap(VideoController.getTopLikedVideos.bind(VideoController)));
 
 router.get('/videos/liked',
@@ -116,7 +171,6 @@ router.get('/videos/:videoId/reaction',
 
 router.get('/videos/:videoId', wrap(VideoController.getVideoById.bind(VideoController)));
 
-// ── Video writes ──────────────────────────────────────────────────────────────
 router.post('/videos/:videoId/like',
   authenticateJWT,
   writeLimiter,
@@ -137,7 +191,6 @@ router.delete('/videos/:videoId',
   wrap(VideoController.deleteVideo.bind(VideoController)),
 );
 
-// ── Comments ──────────────────────────────────────────────────────────────────
 // Get replies route MUST come before the catch-all /:commentId routes
 router.get('/comments/:commentId/replies',
   wrap((req, res) => commentController.getReplies(req, res)),
@@ -176,7 +229,6 @@ router.get('/user/comments',
   wrap((req, res) => commentController.getCommentsByUserId(req, res)),
 );
 
-// ── Watch history ─────────────────────────────────────────────────────────────
 router.post('/history/:videoId',
   authenticateJWT,
   writeLimiter,
@@ -189,7 +241,6 @@ router.get('/history',
   wrap((req, res) => watchHistoryController.getWatchHistory(req, res)),
 );
 
-// ── Internal Lambda endpoints (authenticated by x-hls-secret, no JWT) ────────
 
 // POST /api/internal/hls-complete — called by Lambda after transcoding + AI
 router.post('/internal/hls-complete', wrap(hlsWebhookController));
@@ -219,11 +270,44 @@ router.get('/internal/video-meta', async (req: Request, res: Response): Promise<
   res.json({ title: video.title || '', description: video.description || '' });
 });
 
-// ── Admin ─────────────────────────────────────────────────────────────────────
 router.get('/admin/stats',
   authenticateJWT,
   requireAdmin,
   wrap(adminStatsController),
 );
+
+// GET /api/admin/genabr-status  — authenticated (any user); returns { enabled: boolean }
+router.get('/admin/genabr-status',
+  authenticateJWT,
+  wrap(getGenabrStatusController),
+);
+
+// POST /api/admin/genabr-toggle  — admin only; body: { enabled: boolean }
+router.post('/admin/genabr-toggle',
+  authenticateJWT,
+  requireAdmin,
+  wrap(toggleGenabrController),
+);
+
+
+// Telemetry — auth optional (anon sessions are allowed)
+router.post('/telemetry/session',                 wrap(startSessionController));
+router.post('/telemetry/pings',                   wrap(batchPingController));        // ← batch (primary)
+router.post('/telemetry/ping',                    wrap(pingController));              // ← single (deprecated, kept for compat)
+router.post('/telemetry/stall',                   wrap(stallController));
+router.post('/telemetry/bitrate-switch',          wrap(bitrateSwitchController));
+router.patch('/telemetry/session/:sessionId/end', wrap(endSessionController));
+
+// Shadow Network Map — auth optional
+router.post('/shadow-map/query',     wrap(queryCoverageController));
+router.post('/shadow-map/dead-zone', wrap(ingestDeadZoneController));
+
+// Prediction Cone (raw Phase 4, for debugging/research)
+router.post('/prediction/buffer-target', wrap(bufferTargetController));
+
+// GenABR unified decision — Phase 5 Tiered Inference Engine
+router.post('/genabr/decision',     wrap(genabrDecisionController));
+// Force Oracle call for testing LLM connectivity (admin only)
+router.post('/genabr/test-oracle',  authenticateJWT, requireAdmin, wrap(testOracleController));
 
 export default router;

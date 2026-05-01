@@ -1,7 +1,6 @@
 import { Comment, IComment } from '../models/comment';
 
 export class CommentService {
-  // Get all top-level comments for a video (exclude replies)
   async getCommentsByVideoId(videoId: string): Promise<IComment[]> {
     try {
       const comments = await Comment.find({ video_id: videoId, parent_id: null })
@@ -14,7 +13,6 @@ export class CommentService {
     }
   }
 
-  // Get replies to a comment
   async getReplies(parentCommentId: string): Promise<IComment[]> {
     try {
       const replies = await Comment.find({ parent_id: parentCommentId })
@@ -27,7 +25,6 @@ export class CommentService {
     }
   }
 
-  // Create a new comment or reply
   async createComment(commentData: {
     video_id: string;
     user_id: string;
@@ -55,7 +52,6 @@ export class CommentService {
     }
   }
 
-  // Update a comment
   async updateComment(commentId: string, userId: string, content: string): Promise<IComment | null> {
     try {
       const comment = await Comment.findOneAndUpdate(
@@ -70,7 +66,6 @@ export class CommentService {
     }
   }
 
-  // Delete a comment or reply
   async deleteComment(commentId: string, userId: string): Promise<boolean> {
     try {
       const comment = await Comment.findById(commentId);
@@ -98,7 +93,6 @@ export class CommentService {
     }
   }
 
-  // Get comment count for a video (top-level only)
   async getCommentCount(videoId: string): Promise<number> {
     try {
       const count = await Comment.countDocuments({ video_id: videoId, parent_id: null });
@@ -109,7 +103,6 @@ export class CommentService {
     }
   }
 
-  // Get comments by user
   async getCommentsByUserId(userId: string): Promise<IComment[]> {
     try {
       const comments = await Comment.find({ user_id: userId })

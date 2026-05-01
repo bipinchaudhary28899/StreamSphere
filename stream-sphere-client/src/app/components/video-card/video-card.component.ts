@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, Input, OnInit, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
 import { MatCard, MatCardContent } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -31,6 +31,7 @@ export class VideoCardComponent implements OnInit {
     private sanitizer: DomSanitizer,
     private router: Router,
     private mediaManager: MediaManagerService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -38,20 +39,18 @@ export class VideoCardComponent implements OnInit {
       console.error('No video data provided to video card component');
       return;
     }
-    // Use the short preview clip for hover playback. Falls back to the raw
-    // S3 URL for legacy videos uploaded before preview generation was added.
-    const previewSrc = this.video.previewUrl || this.video.S3_url;
-    this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(previewSrc);
+    // Only use previewUrl — S3_url (raw file) is deleted after transcoding.
+    // If previewUrl is absent the hover just shows the thumbnail overlay with no video.
+    const previewSrc = this.video.previewUrl ?? null;
+    this.safeUrl = previewSrc
+      ? this.sanitizer.bypassSecurityTrustResourceUrl(previewSrc)
+      : null;
     const userData = localStorage.getItem('user');
     if (userData) {
       const user = JSON.parse(userData);
       this.currentUserId = user.userId;
       this.isOwner = this.video.user_id === user.userId;
     }
-  }
-
-  get safeVideoUrl(): string {
-    return this.video?.S3_url || '';
   }
 
   onVideoClick() {
@@ -73,12 +72,13 @@ export class VideoCardComponent implements OnInit {
   }
 
   onThumbHover(event: MouseEvent): void {
+    if (!this.safeUrl) return;            // no preview available — skip entirely
     const thumbWrap = event.currentTarget as HTMLElement;
     this.mediaManager.cardHoverStart();   // pause the hero carousel
 
-    // Wait 2 s before starting the preview so brief mouseovers don't trigger it
+    // Wait 1 s before starting the preview so brief mouseovers don't trigger it
     this.previewDelayTimer = setTimeout(() => {
-      this.isPreviewPlaying = true;       // fades out the thumbnail cover
+      // Don't fade the thumbnail yet — wait until the video has a frame ready
       if (!this.previewLoaded) {
         // First time — inject <source>, let Angular render it, then play
         this.previewLoaded = true;
@@ -86,7 +86,7 @@ export class VideoCardComponent implements OnInit {
       } else {
         this.playPreview(thumbWrap);
       }
-    }, 2000);
+    }, 1000);
   }
 
   onThumbLeave(event: MouseEvent): void {
@@ -106,9 +106,25 @@ export class VideoCardComponent implements OnInit {
 
   private playPreview(thumbWrap: HTMLElement): void {
     const video = thumbWrap.querySelector<HTMLVideoElement>('video.video-preview');
-    if (video) {
-      video.play().catch(() => {});
-    }
+    if (!video) return;
+
+    // Set muted as a DOM property — the HTML attribute alone is unreliable in some browsers
+    video.muted = true;
+
+    // REQUIRED: when <source> is injected dynamically via *ngIf, the browser
+    // does not automatically detect the new source. load() re-scans child
+    // <source> elements so the browser registers the URL before play() fires.
+    video.load();
+
+    video.play()
+      .then(() => {
+        // play() resolves once the first frame is committed — safe to fade now
+        this.isPreviewPlaying = true;
+        this.cdr.detectChanges();
+      })
+      .catch(() => {
+        // Autoplay blocked or bad src — keep thumbnail visible, do nothing
+      });
   }
 
   deleteVideo() {

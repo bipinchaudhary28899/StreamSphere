@@ -11,7 +11,7 @@
             <div class="thumb-wrap" (mouseenter)="onThumbHover($event)" (mouseleave)="onThumbLeave($event)">
               <!-- Preview video (lazy-loaded on first hover after 2 s) -->
               <video class="video-preview" preload="none" muted playsinline loop controlsList="nodownload">
-                <source *ngIf="previewLoaded" [src]="safeUrl" type="video/mp4" />
+                <source *ngIf="previewLoaded && safeUrl" [src]="safeUrl" type="video/mp4" />
               </video>
 
               <!-- Thumbnail cover — shown until preview plays, fades out after 2 s hover -->

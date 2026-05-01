@@ -1,11 +1,4 @@
-// services/saveVideo.service.ts
-//
-// Saves the initial video document with status='processing'.
-// Category and aiSummary are NOT set here — the HLS Lambda pipeline runs
-// Whisper + GPT-4o-mini + HuggingFace and sends them via the webhook
-// (POST /api/internal/hls-complete) once transcoding + AI are complete.
-
-import { Video } from '../models/video';
+import { Video, IUploadTiming } from '../models/video';
 import { redisService, CK } from './redis.service';
 
 export const saveVideoService = async (
@@ -15,6 +8,7 @@ export const saveVideoService = async (
   user_id: string,
   userName?: string,
   user_profile_image?: string,
+  uploadTiming?: Pick<IUploadTiming, 'fileSizeBytes' | 'durationSec' | 's3UploadMs'>,
 ) => {
   try {
     const newVideo = new Video({
@@ -32,6 +26,7 @@ export const saveVideoService = async (
       // category and aiSummary arrive later via the Lambda webhook
       category:          'Uncategorized',
       aiSummary:         null,
+      uploadTiming:      uploadTiming ?? {},
     });
 
     const savedVideo = await newVideo.save();

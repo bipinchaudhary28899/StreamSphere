@@ -1,14 +1,3 @@
-/**
- * stats.middleware.ts
- *
- * Silently increments Redis counters on every API request so the dev
- * dashboard can show backend traffic without external tooling.
- *
- * Keys (both auto-expire after the period rolls over):
- *   ss:stats:api:monthly:YYYY-MM   TTL 35 days
- *   ss:stats:api:daily:YYYY-MM-DD  TTL 2 days
- */
-
 import { Request, Response, NextFunction } from 'express';
 import { redisService } from '../services/redis.service';
 

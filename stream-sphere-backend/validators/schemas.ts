@@ -43,17 +43,79 @@ export const uploadUrlSchema = z.object({
   }),
 });
 
+// ── Multipart upload ──────────────────────────────────────────────────────────
+
+const s3Key = z
+  .string({ error: 'key is required' })
+  .min(1)
+  .max(1024);
+
+const uploadId = z
+  .string({ error: 'uploadId is required' })
+  .min(1)
+  .max(512);
+
+/**
+ * POST /api/upload/multipart/start
+ * Body: { filename, filetype }
+ */
+export const startMultipartSchema = z.object({
+  body: z.object({
+    filename: nonEmptyString('Filename', 255),
+    filetype: z
+      .string({ error: 'File type is required' })
+      .regex(/^video\//i, 'Only video file types are allowed (e.g. video/mp4)'),
+  }),
+});
+
+/**
+ * POST /api/upload/multipart/part-urls
+ * Body: { key, uploadId, partCount }
+ */
+export const partUrlsSchema = z.object({
+  body: z.object({
+    key:       s3Key,
+    uploadId,
+    partCount: z
+      .number({ error: 'partCount must be a number' })
+      .int()
+      .min(1, 'partCount must be ≥ 1')
+      .max(10_000, 'S3 supports a maximum of 10 000 parts'),
+  }),
+});
+
+/**
+ * POST /api/upload/multipart/complete
+ * Body: { key, uploadId }
+ */
+export const completeMultipartSchema = z.object({
+  body: z.object({ key: s3Key, uploadId }),
+});
+
+/**
+ * POST /api/upload/multipart/abort
+ * Body: { key, uploadId }
+ */
+export const abortMultipartSchema = z.object({
+  body: z.object({ key: s3Key, uploadId }),
+});
+
 /**
  * POST /api/save-video
  * Body: { title, description?, S3_url, user_id, userName }
  */
 export const saveVideoSchema = z.object({
   body: z.object({
-    title:       nonEmptyString('Title', 200),
-    description: z.string().trim().max(2000, 'Description cannot exceed 2000 characters').optional(),
-    S3_url:      z.string({ error: 'S3 URL is required' }).url('S3_url must be a valid URL'),
-    user_id:     nonEmptyString('User ID', 100),
-    userName:    nonEmptyString('User name', 100),
+    title:              nonEmptyString('Title', 200),
+    description:        z.string().trim().max(2000, 'Description cannot exceed 2000 characters').optional(),
+    S3_url:             z.string({ error: 'S3 URL is required' }).url('S3_url must be a valid URL'),
+    user_id:            nonEmptyString('User ID', 100),
+    userName:           nonEmptyString('User name', 100),
+    user_profile_image: z.string().url().nullable().optional(),
+    // Upload pipeline timing fields — captured by the frontend
+    fileSizeBytes:      z.number().int().positive().optional(),
+    durationSec:        z.number().nonnegative().optional(),
+    s3UploadMs:         z.number().int().nonnegative().optional(),
   }),
 });
 

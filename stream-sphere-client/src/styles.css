@@ -35,7 +35,7 @@
   --shadow-sm:     0 1px 4px rgba(0,0,0,0.06);
   --shadow-md:     0 2px 12px rgba(0,0,0,0.08);
   --shadow-lg:     0 4px 24px rgba(0,0,0,0.10);
-  --shadow-header: 0 1px 0 #f0f0f0, 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-header: 0 2px 8px rgba(0,0,0,0);
 
   /* Category tag gradient */
   --tag-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -74,7 +74,7 @@
   --shadow-sm:     0 1px 4px rgba(0,0,0,0.35);
   --shadow-md:     0 2px 12px rgba(0,0,0,0.45);
   --shadow-lg:     0 4px 24px rgba(0,0,0,0.55);
-  --shadow-header: 0 1px 0 rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.4);
+  --shadow-header: 0 2px 8px rgba(0,0,0,0);
 
   --tag-gradient: linear-gradient(135deg, #4f5ec8 0%, #6b39a0 100%);
 

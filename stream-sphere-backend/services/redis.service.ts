@@ -1,22 +1,8 @@
-/**
- * redis.service.ts
- *
- * Thin singleton wrapper around ioredis.
- *
- * Design decisions:
- *  - All cache errors are swallowed (logged but never thrown) so a Redis
- *    outage degrades gracefully to full MongoDB reads — never crashes the API.
- *  - The client is created lazily via connect() called once from index.ts.
- *  - If REDIS_URL is absent, every method is a no-op so local dev works
- *    without a Redis instance.
- */
-
 import Redis from 'ioredis';
 
 class RedisService {
   private client: Redis | null = null;
 
-  // ── Lifecycle ────────────────────────────────────────────────────────────────
 
   connect(): void {
     const REDIS_URL = process.env.REDIS_URL;
@@ -53,12 +39,10 @@ class RedisService {
     return this.client !== null && this.client.status === 'ready';
   }
 
-  /** Public — lets callers decide whether to use Redis-dependent features */
   isAvailable(): boolean {
     return this.alive();
   }
 
-  // ── Core helpers ─────────────────────────────────────────────────────────────
 
   async get<T>(key: string): Promise<T | null> {
     if (!this.alive()) return null;
@@ -80,11 +64,6 @@ class RedisService {
     }
   }
 
-  /**
-   * Atomically increment a counter key by 1.
-   * The key is created if it doesn't exist (starts at 0 then becomes 1).
-   * TTL is set only on first creation so monthly keys naturally expire.
-   */
   async incr(key: string, ttlSeconds?: number): Promise<void> {
     if (!this.alive()) return;
     try {
@@ -97,7 +76,6 @@ class RedisService {
     }
   }
 
-  /** Read a raw integer counter (returns 0 if missing or Redis is down). */
   async getCounter(key: string): Promise<number> {
     if (!this.alive()) return 0;
     try {
@@ -118,11 +96,6 @@ class RedisService {
     }
   }
 
-  /**
-   * Delete all keys matching a glob pattern.
-   * Uses SCAN so it never blocks the Redis event loop.
-   * Example pattern: "ss:feed:all:*"
-   */
   async delPattern(pattern: string): Promise<void> {
     if (!this.alive()) return;
     try {
@@ -136,24 +109,50 @@ class RedisService {
       console.error('[Redis] delPattern error:', e.message);
     }
   }
+
+  /** Persist a value with NO expiry — survives until explicitly changed.
+   *  Used for admin-controlled feature flags (e.g. genabr_enabled). */
+  async setPersistent(key: string, value: unknown): Promise<void> {
+    if (!this.alive()) return;
+    try {
+      await this.client!.set(key, JSON.stringify(value));
+    } catch (e: any) {
+      console.error('[Redis] setPersistent error:', e.message);
+    }
+  }
 }
 
 // Export singleton
 export const redisService = new RedisService();
 
-// ── Cache key factory (keeps naming consistent everywhere) ────────────────────
 export const CK = {
-  feedAll:      (cursor: string) => `ss:feed:all:${cursor}`,
-  feedCat:      (cat: string, cursor: string) => `ss:feed:cat:${encodeURIComponent(cat)}:${cursor}`,
-  search:       (term: string) => `ss:search:${encodeURIComponent(term.toLowerCase())}`,
-  topLiked:     () => 'ss:top-liked',
-  singleVideo:  (id: string) => `ss:video:${id}`,
+  feedAll:        (cursor: string) => `ss:feed:all:${cursor}`,
+  feedCat:        (cat: string, cursor: string) => `ss:feed:cat:${encodeURIComponent(cat)}:${cursor}`,
+  search:         (term: string) => `ss:search:${encodeURIComponent(term.toLowerCase())}`,
+  topLiked:       () => 'ss:top-liked',
+  singleVideo:    (id: string) => `ss:video:${id}`,
+  // GenABR — Oracle result cached per user+tile for one prediction cycle
+  oracleResult:   (userId: string, tileId: string) => `genabr:oracle:${userId}:${tileId}`,
+  // GenABR — in-flight lock: set when an Oracle LLM call is in progress.
+  // Prevents a second prediction cycle from firing a duplicate LLM call before
+  // the first one has written its result to Redis (race window: ~2–4 seconds).
+  oracleInflight: (userId: string, tileId: string) => `genabr:oracle:inflight:${userId}:${tileId}`,
+  // Admin feature flag — persisted indefinitely; defaults to true if missing
+  genabrEnabled:  () => 'ss:admin:genabr_enabled',
 } as const;
 
-// ── TTLs (seconds) ─────────────────────────────────────────────────────────────
 export const TTL = {
-  feed:    120,   // 2 min  — home/category pages
-  search:   60,   // 1 min  — search results
-  topLiked: 300,  // 5 min  — hero carousel
-  video:    600,  // 10 min — single video page
+  feed:        120,   // 2 min  — home/category pages
+  search:       60,   // 1 min  — search results
+  topLiked:    300,   // 5 min  — hero carousel
+  video:       600,   // 10 min — single video page
+  // Oracle cache TTL: 5 minutes per tile.
+  // Mobile users moving to a new tile get a fresh Oracle call immediately
+  // (new tile = new cache key = cache miss, regardless of TTL).
+  // Stationary/laptop users re-use the same cache key, so Oracle only re-fires
+  // every 5 min instead of every 60 s — ~5× less token spend for static sessions.
+  oracleResult:    300,
+  // In-flight lock TTL: 30s covers the worst-case LLM response time (typically 2–4s).
+  // If the LLM call takes longer than 30s it has already timed out anyway.
+  oracleInflight:   30,
 } as const;

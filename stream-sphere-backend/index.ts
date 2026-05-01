@@ -1,52 +1,87 @@
-import express from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
 
-// Force IPv4 to avoid ENETUNREACH errors with Google APIs
+dotenv.config();
+
 process.env.NODE_OPTIONS = '--dns-result-order=ipv4first';
 
 import centralRoute from './routes/centralRoute.route';
 import { globalLimiter } from './middleware/rateLimiter.middleware';
 import { redisService } from './services/redis.service';
+import './models/telemetryPing';
+import './models/radioMapCache';
+import './models/streamingSession';
+import './models/oracleDecision';
 
-dotenv.config();
+const app: Application = express();
 
-const app = express();
-
-// ── CORS ──────────────────────────────────────────────────────────────────────
-app.use(cors({
+const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    const allowed = process.env.CLIENT_URL?.split(',').map(o => o.trim()) || [];
-    if (!origin || allowed.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    const allowed = (process.env.CLIENT_URL ?? '').split(',').map(o => o.trim()).filter(Boolean);
+    if (!origin || allowed.includes(origin)) callback(null, true);
+    else callback(new Error('Not allowed by CORS'));
   },
-}));
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+  allowedHeaders: 'Content-Type,Authorization',
+  optionsSuccessStatus: 200,
+};
 
-// ── Body parsing ──────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '10kb' })); // reject abnormally large JSON bodies
+// cors() middleware automatically handles OPTIONS preflight when used with app.use()
+// Do NOT use app.options('*', ...) — bare '*' crashes Express 5 (path-to-regexp v8)
+app.use(cors(corsOptions));
 
-// ── Global rate limiter (backstop for all routes) ─────────────────────────────
+app.use(express.json({ limit: '10kb' }));
 app.use(globalLimiter);
-
-// ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api', centralRoute);
 
-// ── Database + server start ───────────────────────────────────────────────────
-// Connect Redis (non-blocking — if REDIS_URL absent, caching silently disabled)
 redisService.connect();
 
-mongoose.connect(process.env.MONGODB_URI!)
-  .then(() => {
-    console.log('✅ MongoDB connected');
-    app.listen(3000, () => {
-      console.log('🚀 Server running on http://localhost:3000');
-    });
-  })
-  .catch((err: any) => {
-    console.error('❌ MongoDB connection error:', err);
-    process.exit(1);
+// ── MongoDB connection with Vercel cold-start safety ─────────────────────────
+// bufferTimeoutMS raised to 30 s so cold-start containers don't time out on
+// the first request before the connection is ready.
+// The cached-connection pattern avoids re-connecting on every warm invocation.
+let mongoConnected = false;
+
+async function ensureMongoConnected(): Promise<void> {
+  if (mongoConnected || mongoose.connection.readyState === 1) return;
+  await mongoose.connect(process.env.MONGODB_URI!, {
+    serverSelectionTimeoutMS: 30_000,
+    socketTimeoutMS:          45_000,
+    bufferCommands:           true,
   });
+  mongoConnected = true;
+  console.log('✅ MongoDB connected');
+}
+
+// Kick off connection immediately so it's ready before the first request
+ensureMongoConnected().catch((err) => console.error('❌ MongoDB connection error:', err));
+
+// Middleware: ensure DB is connected before any route runs
+app.use(async (_req: Request, _res: Response, next: NextFunction) => {
+  try {
+    await ensureMongoConnected();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── Global error handler (must have 4 params for Express to recognise it) ────
+// Catches any unhandled async errors thrown in route handlers (Express 5).
+// Without this, Express returns an opaque 500 with no logging.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('[unhandled]', err?.message ?? err);
+  if (!res.headersSent) {
+    res.status(err?.status ?? 500).json({ message: err?.message ?? 'Internal server error' });
+  }
+});
+
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(3000, () => console.log('🚀 Server running on http://localhost:3000'));
+}
+
+// Required for @vercel/node — must be CommonJS export, not ES module export
+module.exports = app;
