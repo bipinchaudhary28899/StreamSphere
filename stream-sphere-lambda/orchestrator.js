@@ -142,12 +142,14 @@ exports.handler = async (event) => {
         const workerStart = Date.now();
         return invokeWorker(RENDITION_WORKER_FN, { bucket: BUCKET, rawKey, uuid, rendition })
           .then(r => {
-            timingMs[`p${rendition.name}`] = Date.now() - workerStart;
-            console.log(`[ORCH] ✅ ${rendition.name} done (${r.segmentCount} segments) — ${timingMs[`p${rendition.name}`]}ms`);
+            const key = `p${rendition.name.replace('p', '')}`; // '360p' → 'p360'
+            timingMs[key] = Date.now() - workerStart;
+            console.log(`[ORCH] ✅ ${rendition.name} done (${r.segmentCount} segments) — ${timingMs[key]}ms`);
             return r;
           })
           .catch(err => {
-            timingMs[`p${rendition.name}`] = Date.now() - workerStart;
+            const key = `p${rendition.name.replace('p', '')}`;
+            timingMs[key] = Date.now() - workerStart;
             console.error(`[ORCH] ❌ ${rendition.name} FAILED:`, err.message);
             throw err;
           });

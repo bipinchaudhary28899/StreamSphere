@@ -49,18 +49,26 @@ export async function hlsWebhookController(req: Request, res: Response): Promise
           category:     category     ?? 'General',
           aiSummary:    aiSummary    ?? null,
           status:       'ready',
-          // Merge Lambda timings + DB update time into uploadTiming
+          // Merge Lambda timings (DB timing added after await below)
           ...(timingMs || {}) && {
             'uploadTiming.aiMs':    timingMs?.ai,
             'uploadTiming.p360Ms':  timingMs?.p360,
             'uploadTiming.p720Ms':  timingMs?.p720,
             'uploadTiming.p1080Ms': timingMs?.p1080,
-            'uploadTiming.dbUpdateMs': Date.now() - dbStart,
           },
         },
       },
       { new: true },
     );
+    const dbUpdateMs = Date.now() - dbStart;
+
+    // Patch dbUpdateMs in a second update so it reflects the actual elapsed time
+    if (video) {
+      await Video.updateOne(
+        { _id: video._id },
+        { $set: { 'uploadTiming.dbUpdateMs': dbUpdateMs } },
+      );
+    }
 
     if (!video) {
       // 404 here is expected if metadata hasn't been saved yet.
