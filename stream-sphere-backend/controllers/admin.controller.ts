@@ -468,7 +468,13 @@ export async function toggleGenabrController(req: Request, res: Response): Promi
 
 async function getUploadTimings() {
   const videos = await Video.find(
-    { 'uploadTiming.aiMs': { $exists: true, $ne: null } },
+    {
+      $or: [
+        { 'uploadTiming.aiMs':          { $ne: null } },
+        { 'uploadTiming.s3UploadMs':    { $ne: null } },
+        { 'uploadTiming.fileSizeBytes': { $ne: null } },
+      ],
+    },
     { title: 1, uploadedAt: 1, category: 1, uploadTiming: 1 },
   )
     .sort({ uploadedAt: -1 })

@@ -106,11 +106,16 @@ export const abortMultipartSchema = z.object({
  */
 export const saveVideoSchema = z.object({
   body: z.object({
-    title:       nonEmptyString('Title', 200),
-    description: z.string().trim().max(2000, 'Description cannot exceed 2000 characters').optional(),
-    S3_url:      z.string({ error: 'S3 URL is required' }).url('S3_url must be a valid URL'),
-    user_id:     nonEmptyString('User ID', 100),
-    userName:    nonEmptyString('User name', 100),
+    title:              nonEmptyString('Title', 200),
+    description:        z.string().trim().max(2000, 'Description cannot exceed 2000 characters').optional(),
+    S3_url:             z.string({ error: 'S3 URL is required' }).url('S3_url must be a valid URL'),
+    user_id:            nonEmptyString('User ID', 100),
+    userName:           nonEmptyString('User name', 100),
+    user_profile_image: z.string().url().nullable().optional(),
+    // Upload pipeline timing fields — captured by the frontend
+    fileSizeBytes:      z.number().int().positive().optional(),
+    durationSec:        z.number().nonnegative().optional(),
+    s3UploadMs:         z.number().int().nonnegative().optional(),
   }),
 });
 
