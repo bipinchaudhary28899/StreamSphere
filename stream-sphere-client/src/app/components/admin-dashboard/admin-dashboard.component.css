@@ -256,28 +256,6 @@
   color: var(--text-secondary);
   margin: 0;
 }
-.gn-share-pill {
-  margin-left: auto;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 6px 14px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.gn-share-num {
-  display: block;
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: var(--accent);
-  line-height: 1.1;
-}
-.gn-share-label {
-  display: block;
-  font-size: 0.68rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
 
 /* ── No-data warning ─────────────────────────────────────────────────────── */
 .gn-no-data { margin-bottom: 32px; }
@@ -987,10 +965,8 @@
   .sc-table th, .sc-table td { padding: 8px 10px; }
 }
 
-/* ── Responsive: collapse table columns on narrow screens ────────────────── */
 @media (max-width: 720px) {
   .gn-section-header { flex-wrap: wrap; }
-  .gn-share-pill     { margin-left: 0; }
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -1248,9 +1224,6 @@
 :host.genabr-off .gn-section-header h2 {
   color: #d97706;
 }
-
-/* GenABR share bar goes amber when OFF */
-:host.genabr-off .gn-bar-with { background: #d97706; }
 
 /* ON state — restore vibrant blue theme accents (already default) */
 :host.genabr-on .ad-title    { color: var(--text-primary); }
