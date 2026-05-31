@@ -63,6 +63,18 @@ export interface IStreamingSession extends Document {
     student: number;
     oracle:  number;
   };
+
+  // ── Per-session inference cost (USD) ────────────────────────────────────
+  // Sum of (prompt_tokens × prompt_rate) + (completion_tokens × completion_rate)
+  // across all OracleDecision records for this session, computed at session end.
+  // Required for Φ score per paper Eq. 9: Φ = (VMAF − α·σ − β·N·T) / C_session
+  // For baseline (no Oracle calls), a $0.0001 floor is applied so Φ stays finite.
+  oracle_cost_usd:  number | null;
+
+  // ── Route identifier (for "K unique routes" research claim) ─────────────
+  // Stable hash derived from start + end GPS tile at session end.
+  // Same physical commute → same route_id → enables grouping for analysis.
+  route_id:         string | null;
 }
 
 // ── Sub-schemas ───────────────────────────────────────────────────────────────
@@ -122,6 +134,8 @@ const streamingSessionSchema = new Schema<IStreamingSession>(
       student: { type: Number, default: 0 },
       oracle:  { type: Number, default: 0 },
     },
+    oracle_cost_usd:  { type: Number,  default: null },
+    route_id:         { type: String,  default: null, index: true },
   },
   { timestamps: true },
 );

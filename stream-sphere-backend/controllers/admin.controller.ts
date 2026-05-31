@@ -32,6 +32,8 @@ interface SegmentStats {
   avgTotalStallMs:    number | null;
   avgStallCount:      number | null;
   avgBufferSec:       number | null;
+  avgOracleCostUsd:   number | null;
+  uniqueRouteCount:   number;
 }
 
 interface SegmentData {
@@ -42,18 +44,23 @@ interface SegmentData {
 
 function emptyStats(): SegmentStats {
   return { count: 0, avgPhi: null, avgVmaf: null, avgSigmaVmaf: null,
-           avgTotalStallMs: null, avgStallCount: null, avgBufferSec: null };
+           avgTotalStallMs: null, avgStallCount: null, avgBufferSec: null,
+           avgOracleCostUsd: null, uniqueRouteCount: 0 };
 }
 
 function toSegmentStats(row: any): SegmentStats {
   return {
-    count:           row?.count           ?? 0,
-    avgPhi:          row?.avgPhi          ?? null,
-    avgVmaf:         row?.avgVmaf         ?? null,
-    avgSigmaVmaf:    row?.avgSigmaVmaf    ?? null,
-    avgTotalStallMs: row?.avgTotalStallMs ?? null,
-    avgStallCount:   row?.avgStallCount   ?? null,
-    avgBufferSec:    row?.avgBufferSec    ?? null,
+    count:            row?.count            ?? 0,
+    avgPhi:           row?.avgPhi           ?? null,
+    avgVmaf:          row?.avgVmaf          ?? null,
+    avgSigmaVmaf:     row?.avgSigmaVmaf     ?? null,
+    avgTotalStallMs:  row?.avgTotalStallMs  ?? null,
+    avgStallCount:    row?.avgStallCount    ?? null,
+    avgBufferSec:     row?.avgBufferSec     ?? null,
+    avgOracleCostUsd: row?.avgOracleCostUsd ?? null,
+    uniqueRouteCount: Array.isArray(row?.uniqueRoutes)
+      ? row.uniqueRoutes.filter((r: string | null) => r !== null && r !== '').length
+      : 0,
   };
 }
 
@@ -67,14 +74,18 @@ async function aggregateSegment(sessionIds: string[]): Promise<SegmentData> {
     { $addFields: { stallCount: { $size: '$stall_events' } } },
     {
       $group: {
-        _id:             '$genabr_active',
-        count:           { $sum: 1 },
-        avgPhi:          { $avg: '$phi_score' },
-        avgVmaf:         { $avg: '$avg_vmaf' },
-        avgSigmaVmaf:    { $avg: '$sigma_vmaf' },
-        avgTotalStallMs: { $avg: '$total_stall_ms' },
-        avgStallCount:   { $avg: '$stallCount' },
-        avgBufferSec:    { $avg: '$avg_buffer_sec' },
+        _id:              '$genabr_active',
+        count:            { $sum: 1 },
+        avgPhi:           { $avg: '$phi_score' },
+        avgVmaf:          { $avg: '$avg_vmaf' },
+        avgSigmaVmaf:     { $avg: '$sigma_vmaf' },
+        avgTotalStallMs:  { $avg: '$total_stall_ms' },
+        avgStallCount:    { $avg: '$stallCount' },
+        avgBufferSec:     { $avg: '$avg_buffer_sec' },
+        avgOracleCostUsd: { $avg: '$oracle_cost_usd' },
+        // Collect distinct route IDs so we can show "K unique routes" in the
+        // dashboard (paper Section VII.C.5: "M markers from K unique routes").
+        uniqueRoutes:     { $addToSet: '$route_id' },
       },
     },
   ]);
@@ -144,6 +155,7 @@ async function getSegmentedComparison(): Promise<{
         session_id: 1, started_at: 1, ended_at: 1, video_id: 1,
         genabr_active: 1, phi_score: 1, avg_vmaf: 1, sigma_vmaf: 1,
         total_stall_ms: 1, stall_events: 1, tier_counts: 1,
+        oracle_cost_usd: 1, route_id: 1,
       },
     ).sort({ started_at: -1 }).limit(10).lean(),
   ]);
@@ -153,16 +165,18 @@ async function getSegmentedComparison(): Promise<{
     mobilePoorSignal,
     stationaryGood,
     recentSessions: recentRaw.map((s: any) => ({
-      sessionId:    s.session_id,
-      startedAt:    s.started_at,
-      endedAt:      s.ended_at,
-      videoId:      s.video_id,
-      genabrActive: s.genabr_active,
-      phiScore:     s.phi_score,
-      avgVmaf:      s.avg_vmaf,
-      sigmaVmaf:    s.sigma_vmaf,
-      totalStallMs: s.total_stall_ms,
-      stallCount:   (s.stall_events ?? []).length,
+      sessionId:     s.session_id,
+      startedAt:     s.started_at,
+      endedAt:       s.ended_at,
+      videoId:       s.video_id,
+      genabrActive:  s.genabr_active,
+      phiScore:      s.phi_score,
+      avgVmaf:       s.avg_vmaf,
+      sigmaVmaf:     s.sigma_vmaf,
+      totalStallMs:  s.total_stall_ms,
+      stallCount:    (s.stall_events ?? []).length,
+      oracleCostUsd: s.oracle_cost_usd ?? null,
+      routeId:       s.route_id        ?? null,
       tierCounts: {
         guard:   s.tier_counts?.guard   ?? 0,
         student: s.tier_counts?.student ?? 0,
@@ -189,13 +203,18 @@ async function getOracleInsights(): Promise<{
   bySpeedCategory:  Array<{ label: string; count: number; pct: number }>;
   byTriggerReason:  Array<{ label: string; count: number; pct: number }>;
   corridorStats: {
-    scannedCount:       number;
-    deadZoneCount:      number;
-    deadZoneRate:       number | null;
-    feasibleCount:      number;
-    feasibilityRate:    number | null;
-    avgEntrySeconds:    number | null;
-    avgDurationSeconds: number | null;
+    scannedCount:           number;
+    deadZoneCount:          number;
+    deadZoneRate:           number | null;
+    feasibleCount:          number;     // dead zones that were prebuffer-feasible
+    feasibilityRate:        number | null; // feasibleCount / deadZoneCount (0–100)
+    avgEntrySeconds:        number | null;
+    avgDurationSeconds:     number | null;
+    // Section VII.C.4 — average warning seconds before user enters dead zone
+    // for cycles where the system actually fired a prebuffer command. This is
+    // GenABR's headline "lead time" — no reactive baseline exhibits any.
+    avgProactiveLeadTime:   number | null;
+    proactiveTriggerCount:  number;     // # cycles that fired prebuffer on a dead zone
   };
   recentDecisions: Array<{
     sessionId:           string | null;
@@ -272,6 +291,14 @@ async function getOracleInsights(): Promise<{
     ]),
 
     // ── Corridor scanner stats ────────────────────────────────────────────
+    // FIX: feasibleCount must only count dead zones that are prebuffer-feasible.
+    // Previously it counted EVERY corridor scan with corridor_feasible=true —
+    // including no-dead-zone scans (feasible defaults to true). With 1 dead
+    // zone among 20 scans this produced "2000% feasibility".
+    //
+    // Proactive lead time = avg(dead_zone_entry_sec) for cycles where Oracle
+    // recommended a prebuffer action on a real dead zone. This is GenABR's
+    // headline lead-time metric (paper Section VII.C.4).
     OracleDecision.aggregate([
       { $match: { timestamp: { $gte: since30d }, has_dead_zone: { $ne: null } } },
       {
@@ -279,9 +306,44 @@ async function getOracleInsights(): Promise<{
           _id:                 null,
           scannedCount:        { $sum: 1 },
           deadZoneCount:       { $sum: { $cond: ['$has_dead_zone', 1, 0] } },
-          feasibleCount:       { $sum: { $cond: ['$corridor_feasible', 1, 0] } },
+          feasibleCount: {
+            $sum: {
+              $cond: [
+                { $and: ['$has_dead_zone', '$corridor_feasible'] },
+                1, 0,
+              ],
+            },
+          },
           avgEntrySeconds:     { $avg: { $cond: ['$has_dead_zone', '$dead_zone_entry_sec', null] } },
           avgDurationSeconds:  { $avg: { $cond: ['$has_dead_zone', '$dead_zone_duration_sec', null] } },
+          // Lead time: only cycles that BOTH saw a dead zone AND fired prebuffer
+          proactiveLeadTimeSum: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    '$has_dead_zone',
+                    { $in: ['$recommendation', ['prebuffer_moderate', 'prebuffer_aggressive']] },
+                  ],
+                },
+                { $ifNull: ['$dead_zone_entry_sec', 0] },
+                0,
+              ],
+            },
+          },
+          proactiveTriggerCount: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    '$has_dead_zone',
+                    { $in: ['$recommendation', ['prebuffer_moderate', 'prebuffer_aggressive']] },
+                  ],
+                },
+                1, 0,
+              ],
+            },
+          },
         },
       },
     ]),
@@ -332,17 +394,25 @@ async function getOracleInsights(): Promise<{
     bySpeedCategory:  toPct(bySpeed),
     byTriggerReason:  toPct(byReason),
     corridorStats: {
-      scannedCount:       corr?.scannedCount      ?? 0,
-      deadZoneCount:      corr?.deadZoneCount      ?? 0,
-      deadZoneRate:       corr?.scannedCount > 0
-                            ? Math.round((corr.deadZoneCount / corr.scannedCount) * 100)
-                            : null,
-      feasibleCount:      corr?.feasibleCount      ?? 0,
-      feasibilityRate:    corr?.deadZoneCount > 0
-                            ? Math.round((corr.feasibleCount / corr.deadZoneCount) * 100)
-                            : null,
-      avgEntrySeconds:    corr?.avgEntrySeconds    ?? null,
-      avgDurationSeconds: corr?.avgDurationSeconds ?? null,
+      scannedCount:           corr?.scannedCount      ?? 0,
+      deadZoneCount:          corr?.deadZoneCount     ?? 0,
+      deadZoneRate:           corr?.scannedCount > 0
+                                ? Math.round((corr.deadZoneCount / corr.scannedCount) * 100)
+                                : null,
+      feasibleCount:          corr?.feasibleCount     ?? 0,
+      // Now bounded 0–100 because numerator and denominator share the
+      // "has_dead_zone" filter (see aggregation pipeline above).
+      feasibilityRate:        corr?.deadZoneCount > 0
+                                ? Math.round((corr.feasibleCount / corr.deadZoneCount) * 100)
+                                : null,
+      avgEntrySeconds:        corr?.avgEntrySeconds    ?? null,
+      avgDurationSeconds:     corr?.avgDurationSeconds ?? null,
+      avgProactiveLeadTime:   corr?.proactiveTriggerCount > 0
+                                ? Math.round(
+                                    (corr.proactiveLeadTimeSum / corr.proactiveTriggerCount) * 10,
+                                  ) / 10
+                                : null,
+      proactiveTriggerCount:  corr?.proactiveTriggerCount ?? 0,
     },
     recentDecisions: recent.map((d: any) => ({
       sessionId:           d.session_id   ?? null,

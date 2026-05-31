@@ -3,6 +3,25 @@ import { StreamingSession } from '../models/streamingSession';
 import { TelemetryPing }    from '../models/telemetryPing';
 import { ingestDeadZone }   from './shadowMap.service';
 import { finaliseSession }  from './qoe.service';
+import { snapToGrid, TILE_SIZE_DEGREES } from '../utils/geo';
+
+// ── Privacy: snap GPS coordinates to tile centre BEFORE storage ───────────────
+// The prediction pipeline (corridor scanner, prediction cone, dead-zone lookup,
+// radio-map cache) operates at 200 m tile resolution throughout. Storing raw
+// GPS precision (~3–10 m from enableHighAccuracy: false) would retain commute
+// traces reconstructable to street level for the 2-day TelemetryPing TTL.
+// Snapping to tile centre keeps predictions identical and bounds stored
+// resolution to ~200 m, which is below street-block precision.
+
+function snapForPrivacy(lat: number, lng: number): { lat: number; lng: number } {
+  // snapToGrid returns the south-west corner of the tile; add half a tile
+  // size so the stored point falls at the tile centre.
+  const half = TILE_SIZE_DEGREES / 2;
+  return {
+    lat: snapToGrid(lat) + half,
+    lng: snapToGrid(lng) + half,
+  };
+}
 
 // ── Session lifecycle ─────────────────────────────────────────────────────────
 
@@ -38,9 +57,16 @@ interface PingData {
 }
 
 /** Enrich a ping object with the GeoJSON `location` field required by the
- *  2dsphere index.  Coordinates are [lng, lat] per the GeoJSON spec. */
+ *  2dsphere index.  Coordinates are [lng, lat] per the GeoJSON spec.
+ *  GPS coordinates are snapped to tile centre for privacy (see snapForPrivacy). */
 function withLocation(p: PingData): PingData & { location: { type: 'Point'; coordinates: [number, number] } } {
-  return { ...p, location: { type: 'Point', coordinates: [p.lng, p.lat] } };
+  const { lat, lng } = snapForPrivacy(p.lat, p.lng);
+  return {
+    ...p,
+    lat,
+    lng,
+    location: { type: 'Point', coordinates: [lng, lat] },
+  };
 }
 
 /** Single ping — kept for backward-compat with the deprecated /telemetry/ping route */
@@ -66,32 +92,39 @@ export async function appendStall(
   stall:       object,
   signalScore?: number,
 ): Promise<void> {
+  // Snap stall coordinates to tile centre for privacy — the stall record is
+  // embedded in StreamingSession and persists indefinitely, so it is the
+  // most privacy-sensitive write path in the system.
+  const s = stall as any;
+  const snappedStall = (s.lat != null && s.lng != null)
+    ? { ...s, ...snapForPrivacy(s.lat, s.lng) }
+    : s;
+
   await StreamingSession.updateOne(
     { session_id: sessionId },
     {
-      $push: { stall_events: stall },
-      $inc:  { total_stall_ms: (stall as any).duration_ms ?? 0 },
+      $push: { stall_events: snappedStall },
+      $inc:  { total_stall_ms: snappedStall.duration_ms ?? 0 },
     },
   );
 
-  // Auto-ingest dead zone at stall location.
+  // Auto-ingest dead zone at the (snapped) stall location.
   // Derive signal score from reported downlink if available, otherwise fall
   // back to the passed-in signalScore or a conservative default of 0.15
   // (stalls indicate genuinely bad signal regardless of throughput).
-  const s = stall as any;
-  if (s.lat != null && s.lng != null) {
+  if (snappedStall.lat != null && snappedStall.lng != null) {
     let score: number;
     if (signalScore !== undefined) {
       score = signalScore;
-    } else if (s.downlink_mbps != null) {
-      score = s.downlink_mbps < 0.20 ? 0.02
-            : s.downlink_mbps < 0.50 ? 0.08
-            : s.downlink_mbps < 1.00 ? 0.18
+    } else if (snappedStall.downlink_mbps != null) {
+      score = snappedStall.downlink_mbps < 0.20 ? 0.02
+            : snappedStall.downlink_mbps < 0.50 ? 0.08
+            : snappedStall.downlink_mbps < 1.00 ? 0.18
             : 0.25;   // stalled despite decent downlink — transient spike
     } else {
       score = 0.15;   // unknown conditions but we know it stalled
     }
-    ingestDeadZone(s.lat, s.lng, score, 'inferred').catch(() => {});
+    ingestDeadZone(snappedStall.lat, snappedStall.lng, score, 'inferred').catch(() => {});
   }
 }
 

@@ -47,6 +47,7 @@
           (loadedmetadata)="onLoadedMetadata()"
           (volumechange)="onVolumeChange()"
           (ended)="onVideoEnded()">
+          <track kind="captions" src="/captions.vtt" srclang="en" label="English" default>
         </video>
 
         <!-- Transparent overlay — no click handler here; click bubbles to vp-player-wrap -->

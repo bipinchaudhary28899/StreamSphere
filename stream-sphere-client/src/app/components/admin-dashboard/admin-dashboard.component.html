@@ -286,7 +286,7 @@
               <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.mobile.withGenabr.avgPhi, stats.comparison.mobile.withoutGenabr.avgPhi) }} sc-delta">{{ improvement(stats.comparison.mobile.withGenabr.avgPhi, stats.comparison.mobile.withoutGenabr.avgPhi) }}</span></td>
             </tr>
             <tr>
-              <td class="sc-td-metric"><span class="sc-metric-name">Avg VMAF</span><span class="sc-metric-desc">Estimated video quality (higher = better)</span></td>
+              <td class="sc-td-metric"><span class="sc-metric-name">Avg VMAF-proxy</span><span class="sc-metric-desc">Bitrate-derived quality estimate (higher = better) — not real Netflix VMAF</span></td>
               <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtN(stats.comparison.mobile.withGenabr.avgVmaf) }}</span></td>
               <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtN(stats.comparison.mobile.withoutGenabr.avgVmaf) }}</span></td>
               <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.mobile.withGenabr.avgVmaf, stats.comparison.mobile.withoutGenabr.avgVmaf) }} sc-delta">{{ improvement(stats.comparison.mobile.withGenabr.avgVmaf, stats.comparison.mobile.withoutGenabr.avgVmaf) }}</span></td>
@@ -355,7 +355,7 @@
               <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.mobilePoorSignal.withGenabr.avgPhi, stats.comparison.mobilePoorSignal.withoutGenabr.avgPhi) }} sc-delta">{{ improvement(stats.comparison.mobilePoorSignal.withGenabr.avgPhi, stats.comparison.mobilePoorSignal.withoutGenabr.avgPhi) }}</span></td>
             </tr>
             <tr>
-              <td class="sc-td-metric"><span class="sc-metric-name">Avg VMAF</span><span class="sc-metric-desc">Estimated video quality (higher = better)</span></td>
+              <td class="sc-td-metric"><span class="sc-metric-name">Avg VMAF-proxy</span><span class="sc-metric-desc">Bitrate-derived quality estimate (higher = better) — not real Netflix VMAF</span></td>
               <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtN(stats.comparison.mobilePoorSignal.withGenabr.avgVmaf) }}</span></td>
               <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtN(stats.comparison.mobilePoorSignal.withoutGenabr.avgVmaf) }}</span></td>
               <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.mobilePoorSignal.withGenabr.avgVmaf, stats.comparison.mobilePoorSignal.withoutGenabr.avgVmaf) }} sc-delta">{{ improvement(stats.comparison.mobilePoorSignal.withGenabr.avgVmaf, stats.comparison.mobilePoorSignal.withoutGenabr.avgVmaf) }}</span></td>
@@ -429,7 +429,7 @@
               <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.stationaryGood.withGenabr.avgPhi, stats.comparison.stationaryGood.withoutGenabr.avgPhi) }} sc-delta">{{ improvement(stats.comparison.stationaryGood.withGenabr.avgPhi, stats.comparison.stationaryGood.withoutGenabr.avgPhi) }}</span></td>
             </tr>
             <tr>
-              <td class="sc-td-metric"><span class="sc-metric-name">Avg VMAF</span><span class="sc-metric-desc">Video quality</span></td>
+              <td class="sc-td-metric"><span class="sc-metric-name">Avg VMAF-proxy</span><span class="sc-metric-desc">Bitrate-derived</span></td>
               <td class="sc-td-val sc-td-on"><span class="sc-val">{{ fmtN(stats.comparison.stationaryGood.withGenabr.avgVmaf) }}</span></td>
               <td class="sc-td-val sc-td-off"><span class="sc-val">{{ fmtN(stats.comparison.stationaryGood.withoutGenabr.avgVmaf) }}</span></td>
               <td class="sc-td-delta"><span class="{{ improvementClass(stats.comparison.stationaryGood.withGenabr.avgVmaf, stats.comparison.stationaryGood.withoutGenabr.avgVmaf) }} sc-delta">{{ improvement(stats.comparison.stationaryGood.withGenabr.avgVmaf, stats.comparison.stationaryGood.withoutGenabr.avgVmaf) }}</span></td>
@@ -479,7 +479,7 @@
                 <th class="gn-th-center">GenABR</th>
                 <th class="gn-th-center">Tier</th>
                 <th class="gn-th-right">Φ Score</th>
-                <th class="gn-th-right">Avg VMAF</th>
+                <th class="gn-th-right">VMAF-proxy</th>
                 <th class="gn-th-right">VMAF σ</th>
                 <th class="gn-th-right">Stalls</th>
                 <th class="gn-th-right">Stall time</th>
@@ -725,7 +725,7 @@
             </div>
             <div class="or-corr-label">Prebuffer feasibility</div>
             <div class="or-corr-sub">
-              could download enough before dead zone
+              of detected dead zones the player can survive
             </div>
           </div>
 
@@ -747,6 +747,19 @@
             </div>
             <div class="or-corr-label">Avg dead zone duration</div>
             <div class="or-corr-sub">seconds of weak signal ahead</div>
+          </div>
+
+          <div class="or-corr-divider"></div>
+
+          <div class="or-corr-stat">
+            <div class="or-corr-val">
+              {{ fmtSec(stats!.oracle!.corridorStats.avgProactiveLeadTime) }}
+            </div>
+            <div class="or-corr-label">Proactive lead time</div>
+            <div class="or-corr-sub">
+              avg s before entry when prebuffer fired
+              ({{ stats!.oracle!.corridorStats.proactiveTriggerCount }} triggers)
+            </div>
           </div>
 
         </div>
@@ -1055,9 +1068,10 @@
       <p>☁️ CloudFront free tier applies for the <strong>first 12 months</strong> of your AWS account.</p>
       <p>🗄️ S3 storage and request free tiers are <strong>always free</strong> (within limits).</p>
       <p>📈 CloudFront hit/miss breakdown requires <em>Additional CloudFront Metrics</em> (~$0.01/month) — not tracked here to stay fully free.</p>
-      <p>🧠 GenABR Φ score = (avg VMAF − 0.30·σ − 0.05·N<sub>stall</sub>·T<sub>stall</sub>) / session minutes.</p>
+      <p>🧠 GenABR Φ score (paper Eq. 9) = (avg VMAF − 0.5·σ − 20·N<sub>stall</sub>·T<sub>stall</sub>) / C<sub>session</sub> where C<sub>session</sub> = Oracle inference cost in USD. Baseline cost is floored at $0.0001 to keep Φ finite.</p>
+      <p>🎬 "VMAF-proxy" is bitrate-derived (lookup table); not real Netflix VMAF SDK output. Replace before publication.</p>
       <p>🔮 Oracle fires when Student confidence &lt; 60% (risk within ±0.125 of a decision boundary at 0.20 or 0.45).</p>
-      <p>🛣️ Corridor scanner projects 200 m steps up to 5 km ahead; feasibility = (entry_s × bandwidth_Mbps) / bitrate_Mbps ≥ required_buffer.</p>
+      <p>🛣️ Corridor scanner projects 200 m steps up to 5 km ahead; feasibility = scans where the player can pre-buffer enough video before the dead zone, as a fraction of all dead-zone scans.</p>
     </div>
 
   </ng-container><!-- /stats && !loading -->

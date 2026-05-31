@@ -1,8 +1,8 @@
 <app-header></app-header>
 
-<div class="main-body" [class.home-page]="isHomePage">
+<main class="main-body" [class.home-page]="isHomePage">
   <router-outlet></router-outlet>
-</div>
+</main>
 
 <!-- Mobile bottom navigation (logged-in only) -->
 <nav class="mobile-bottom-nav" *ngIf="isLoggedIn">
