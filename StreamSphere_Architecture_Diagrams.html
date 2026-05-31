@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>StreamSphere — Architecture Diagrams</title>
+<style>
+  :root{
+    --user:#6366f1; --frontend:#2563eb; --api:#7c3aed; --db:#059669;
+    --cache:#dc2626; --storage:#0891b2; --external:#d97706; --logic:#db2777;
+    --ink:#0f172a; --muted:#64748b; --line:#94a3b8; --page:#f1f5f9;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--page);color:var(--ink);
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;}
+  header.page{background:#0f172a;color:#fff;padding:34px 40px;}
+  header.page h1{margin:0;font-size:30px;font-weight:800;letter-spacing:.3px;}
+  header.page p{margin:8px 0 0;color:#cbd5e1;font-size:15px;max-width:880px;line-height:1.5;}
+  .wrap{max-width:1320px;margin:0 auto;padding:28px 20px 80px;}
+  section.diagram{background:#fff;border:1px solid #e2e8f0;border-radius:16px;
+    box-shadow:0 6px 24px rgba(15,23,42,.06);margin:26px 0;padding:18px 18px 24px;overflow:hidden;}
+  section.diagram h2{margin:6px 4px 4px;font-size:19px;font-weight:700;}
+  section.diagram .cap{margin:0 4px 14px;color:var(--muted);font-size:13.5px;line-height:1.5;max-width:980px;}
+  svg{width:100%;height:auto;display:block;}
+  .legend{display:flex;flex-wrap:wrap;gap:14px 22px;margin:14px 6px 2px;
+    font-size:12.5px;color:#334155;align-items:center;}
+  .legend .it{display:flex;align-items:center;gap:7px;}
+  .sw{width:16px;height:16px;border-radius:4px;border:1px solid rgba(0,0,0,.12);}
+  .ln{width:26px;height:0;border-top:2.5px solid var(--line);}
+  .ln.dash{border-top-style:dashed;}
+  /* SVG text classes */
+  .t-app{font-weight:800;font-size:22px;fill:#fff;}
+  .t-appsub{font-weight:600;font-size:13px;fill:#cbd5e1;}
+  .t-title{font-weight:700;font-size:14px;fill:#0f172a;}
+  .t-titlesm{font-weight:700;font-size:12.5px;fill:#0f172a;}
+  .t-sub{font-weight:400;font-size:11px;fill:#64748b;}
+  .t-tag{font-weight:700;font-size:9.5px;letter-spacing:1.2px;}
+  .t-edge{font-weight:600;font-size:11px;fill:#475569;}
+  .t-edgesm{font-weight:600;font-size:10px;fill:#64748b;}
+  .t-band{font-weight:700;font-size:12px;letter-spacing:1.5px;fill:#94a3b8;}
+  .t-grp{font-weight:700;font-size:11px;letter-spacing:1.2px;fill:#94a3b8;}
+  .erd-h{font-weight:700;font-size:13px;fill:#fff;}
+  .erd-pk{font-weight:700;font-size:11px;fill:#0f172a;}
+  .erd-fk{font-weight:600;font-size:11px;fill:#7c3aed;}
+  .erd-f{font-weight:400;font-size:11px;fill:#334155;}
+  .erd-card{font-weight:700;font-size:11px;fill:#475569;}
+  .erd-rel{font-weight:600;font-size:10.5px;fill:#475569;}
+  .t-rel{font-weight:600;font-size:10px;fill:#64748b;}
+  @media print{body{background:#fff;}section.diagram{box-shadow:none;page-break-inside:avoid;}}
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>StreamSphere — Software Architecture</h1>
+  <p>A full-stack video streaming platform (Angular 19 SPA · Express/Node REST API · MongoDB Atlas · Redis · AWS S3 + CloudFront). Four diagrams covering system context, technical architecture, request lifecycle, and the data model.</p>
+</header>
+<div class="wrap">
+
+<!-- ================= GLOBAL DEFS (markers shared by all diagrams) ================= -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="ah-slate" markerWidth="10" markerHeight="10" refX="7.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#475569"/></marker>
+    <marker id="ah-user" markerWidth="10" markerHeight="10" refX="7.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#6366f1"/></marker>
+    <marker id="ah-frontend" markerWidth="10" markerHeight="10" refX="7.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#2563eb"/></marker>
+    <marker id="ah-api" markerWidth="10" markerHeight="10" refX="7.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#7c3aed"/></marker>
+    <marker id="ah-db" markerWidth="10" markerHeight="10" refX="7.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#059669"/></marker>
+    <marker id="ah-cache" markerWidth="10" markerHeight="10" refX="7.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#dc2626"/></marker>
+    <marker id="ah-storage" markerWidth="10" markerHeight="10" refX="7.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#0891b2"/></marker>
+    <marker id="ah-external" markerWidth="10" markerHeight="10" refX="7.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#d97706"/></marker>
+    <marker id="ah-logic" markerWidth="10" markerHeight="10" refX="7.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#db2777"/></marker>
+    <marker id="ah-green" markerWidth="10" markerHeight="10" refX="7.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#16a34a"/></marker>
+    <marker id="ah-red" markerWidth="10" markerHeight="10" refX="7.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#dc2626"/></marker>
+    <!-- ERD crow's foot -->
+    <marker id="cf-many" markerWidth="22" markerHeight="20" refX="18" refY="10" orient="auto-start-reverse">
+      <path d="M2,10 L18,2 M2,10 L18,10 M2,10 L18,18" stroke="#475569" stroke-width="1.5" fill="none"/>
+    </marker>
+    <marker id="cf-one" markerWidth="16" markerHeight="20" refX="11" refY="10" orient="auto-start-reverse">
+      <path d="M9,3 L9,17" stroke="#475569" stroke-width="1.7" fill="none"/>
+    </marker>
+  </defs>
+</svg>
+
+<!-- ===================== DIAGRAM 1 — HIGH-LEVEL SYSTEM ARCHITECTURE ===================== -->
+<section class="diagram">
+  <h2>Diagram 1 · High-Level System Architecture</h2>
+  <p class="cap">Executive view of how StreamSphere fits together: end users reach the Angular SPA, which talks to the Express API for all data, while large media bytes flow directly between the browser and AWS S3 / CloudFront. Communication paths are labelled with their protocol.</p>
+  <svg viewBox="0 0 1280 720" role="img" aria-label="High-level system architecture">
+    <!-- header -->
+    <rect width="1280" height="64" fill="#0f172a"/>
+    <path d="M26,22 L44,32 L26,42 Z" fill="#6366f1"/>
+    <text x="56" y="38" class="t-app">StreamSphere</text>
+    <text x="1252" y="38" text-anchor="end" class="t-appsub">High-Level System Architecture</text>
+    <rect y="64" width="1280" height="4" fill="#6366f1"/>
+
+    <!-- cloud boundary -->
+    <rect x="300" y="96" width="918" height="600" rx="16" fill="none" stroke="#cbd5e1" stroke-width="1.6" stroke-dasharray="7 6"/>
+    <text x="318" y="118" class="t-grp">CLOUD INFRASTRUCTURE · VERCEL (FRONTEND + SERVERLESS API) · MONGODB ATLAS · UPSTASH · AWS</text>
+
+    <!-- media routing channels (drawn first, under nodes) -->
+    <!-- upload: Frontend -> S3 -->
+    <path d="M430,290 V150 H856 V322" fill="none" stroke="#0891b2" stroke-width="2.2" stroke-dasharray="7 5" marker-end="url(#ah-storage)"/>
+    <text x="610" y="143" text-anchor="middle" class="t-edgesm" fill="#0891b2">Presigned PUT — direct video upload</text>
+    <!-- playback: CloudFront -> Frontend -->
+    <path d="M922,420 H880 V168 H472 V290" fill="none" stroke="#0891b2" stroke-width="2.2" stroke-dasharray="7 5" marker-end="url(#ah-storage)"/>
+    <text x="660" y="186" text-anchor="middle" class="t-edgesm" fill="#0891b2">HLS video playback via CDN</text>
+
+    <!-- ===== END USERS ===== -->
+    <text x="150" y="200" text-anchor="middle" class="t-band">END USERS</text>
+    <g>
+      <rect x="60" y="250" width="180" height="78" rx="12" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+      <text x="78" y="276" class="t-tag" fill="#6366f1">AUTHENTICATED</text>
+      <text x="78" y="296" class="t-titlesm">Signed-in Users</text>
+      <text x="78" y="314" class="t-sub">Google account</text>
+    </g>
+    <g>
+      <rect x="60" y="392" width="180" height="78" rx="12" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+      <text x="78" y="418" class="t-tag" fill="#6366f1">ANONYMOUS</text>
+      <text x="78" y="438" class="t-titlesm">Anonymous Viewers</text>
+      <text x="78" y="456" class="t-sub">browse &amp; watch</text>
+    </g>
+
+    <!-- ===== FRONTEND ===== -->
+    <g>
+      <rect x="330" y="278" width="200" height="164" rx="14" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+      <text x="348" y="306" class="t-tag" fill="#2563eb">FRONTEND</text>
+      <text x="348" y="330" class="t-title">Angular 19 SPA</text>
+      <text x="348" y="352" class="t-sub">Standalone components</text>
+      <text x="348" y="370" class="t-sub">Angular Material · RxJS</text>
+      <text x="348" y="388" class="t-sub">JWT in localStorage</text>
+      <text x="348" y="412" class="t-sub">Hosted on Vercel</text>
+    </g>
+
+    <!-- ===== BACKEND ===== -->
+    <g>
+      <rect x="610" y="278" width="200" height="164" rx="14" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>
+      <text x="628" y="306" class="t-tag" fill="#7c3aed">BACKEND / API</text>
+      <text x="628" y="330" class="t-title">Express REST API</text>
+      <text x="628" y="352" class="t-sub">Node.js · TypeScript</text>
+      <text x="628" y="370" class="t-sub">JWT auth · rate limiting</text>
+      <text x="628" y="388" class="t-sub">Zod validation · CORS</text>
+      <text x="628" y="412" class="t-sub">Vercel serverless function</text>
+    </g>
+
+    <!-- ===== RIGHT COLUMN: data / storage / external ===== -->
+    <!-- CloudFront -->
+    <g>
+      <rect x="922" y="354" width="288" height="66" rx="11" fill="#ecfeff" stroke="#0891b2" stroke-width="2"/>
+      <text x="940" y="377" class="t-tag" fill="#0891b2">CDN</text>
+      <text x="940" y="398" class="t-titlesm">AWS CloudFront</text>
+      <text x="1196" y="392" text-anchor="end" class="t-sub">video delivery</text>
+    </g>
+    <!-- S3 -->
+    <g>
+      <rect x="922" y="276" width="288" height="66" rx="11" fill="#ecfeff" stroke="#0891b2" stroke-width="2"/>
+      <text x="940" y="299" class="t-tag" fill="#0891b2">STORAGE</text>
+      <text x="940" y="320" class="t-titlesm">AWS S3 (ap-south-1)</text>
+      <text x="1196" y="314" text-anchor="end" class="t-sub">video files</text>
+    </g>
+    <!-- MongoDB -->
+    <g>
+      <rect x="922" y="150" width="138" height="66" rx="11" fill="#ecfdf5" stroke="#059669" stroke-width="2"/>
+      <text x="938" y="173" class="t-tag" fill="#059669">DATABASE</text>
+      <text x="938" y="194" class="t-titlesm">MongoDB Atlas</text>
+      <text x="938" y="210" class="t-sub">documents</text>
+    </g>
+    <!-- Redis -->
+    <g>
+      <rect x="1072" y="150" width="138" height="66" rx="11" fill="#fef2f2" stroke="#dc2626" stroke-width="2"/>
+      <text x="1088" y="173" class="t-tag" fill="#dc2626">CACHE</text>
+      <text x="1088" y="194" class="t-titlesm">Redis · Upstash</text>
+      <text x="1088" y="210" class="t-sub">cache + counters</text>
+    </g>
+    <!-- Google OAuth -->
+    <g>
+      <rect x="922" y="454" width="138" height="66" rx="11" fill="#fffbeb" stroke="#d97706" stroke-width="2"/>
+      <text x="938" y="477" class="t-tag" fill="#d97706">EXTERNAL</text>
+      <text x="938" y="498" class="t-titlesm">Google OAuth</text>
+      <text x="938" y="514" class="t-sub">identity</text>
+    </g>
+    <!-- HuggingFace -->
+    <g>
+      <rect x="1072" y="454" width="138" height="66" rx="11" fill="#fffbeb" stroke="#d97706" stroke-width="2"/>
+      <text x="1088" y="477" class="t-tag" fill="#d97706">EXTERNAL</text>
+      <text x="1088" y="498" class="t-titlesm">HuggingFace</text>
+      <text x="1088" y="514" class="t-sub">BART-MNLI AI</text>
+    </g>
+
+    <!-- ===== CONNECTIONS ===== -->
+    <!-- users -> frontend -->
+    <path d="M240,300 H330" fill="none" stroke="#6366f1" stroke-width="2.4" marker-end="url(#ah-user)"/>
+    <path d="M240,420 H300 V392" fill="none" stroke="#6366f1" stroke-width="2.4" marker-end="url(#ah-user)"/>
+    <text x="285" y="292" text-anchor="middle" class="t-edgesm" fill="#6366f1">HTTPS</text>
+    <!-- frontend -> api -->
+    <path d="M530,360 H610" fill="none" stroke="#2563eb" stroke-width="2.6" marker-end="url(#ah-frontend)"/>
+    <text x="570" y="350" text-anchor="middle" class="t-edgesm" fill="#2563eb">REST / JSON</text>
+    <text x="570" y="378" text-anchor="middle" class="t-edgesm" fill="#2563eb">HTTPS · JWT</text>
+    <!-- api -> mongo -->
+    <path d="M810,308 H872 V200 H922" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#ah-db)"/>
+    <text x="862" y="240" class="t-edgesm" fill="#059669">Mongoose / TLS</text>
+    <!-- api -> redis -->
+    <path d="M810,330 H896 V216" fill="none" stroke="#dc2626" stroke-width="2.2" marker-end="url(#ah-cache)"/>
+    <text x="900" y="246" class="t-edgesm" fill="#dc2626">cache · counters</text>
+    <!-- api -> s3 -->
+    <path d="M810,360 H880 V300 H922" fill="none" stroke="#0891b2" stroke-width="2.2" marker-end="url(#ah-storage)"/>
+    <text x="816" y="352" class="t-edgesm" fill="#0891b2">presign · list</text>
+    <!-- api -> google -->
+    <path d="M810,400 H872 V487 H922" fill="none" stroke="#d97706" stroke-width="2.2" marker-end="url(#ah-external)"/>
+    <text x="816" y="430" class="t-edgesm" fill="#d97706">verify ID token</text>
+    <!-- api -> huggingface -->
+    <path d="M810,422 H900 V520 H1072 V520" fill="none" stroke="#d97706" stroke-width="2.2" marker-end="url(#ah-external)"/>
+    <text x="905" y="470" class="t-edgesm" fill="#d97706">classify category</text>
+    <!-- s3 -> cloudfront origin -->
+    <path d="M1066,342 V354" fill="none" stroke="#0891b2" stroke-width="2.2" marker-end="url(#ah-storage)"/>
+    <text x="1074" y="350" class="t-edgesm" fill="#0891b2">origin</text>
+  </svg>
+  <div class="legend">
+    <div class="it"><span class="sw" style="background:#eef2ff;border-color:#6366f1"></span>End users</div>
+    <div class="it"><span class="sw" style="background:#eff6ff;border-color:#2563eb"></span>Frontend</div>
+    <div class="it"><span class="sw" style="background:#f5f3ff;border-color:#7c3aed"></span>Backend / API</div>
+    <div class="it"><span class="sw" style="background:#ecfdf5;border-color:#059669"></span>Database</div>
+    <div class="it"><span class="sw" style="background:#fef2f2;border-color:#dc2626"></span>Cache</div>
+    <div class="it"><span class="sw" style="background:#ecfeff;border-color:#0891b2"></span>Storage / CDN</div>
+    <div class="it"><span class="sw" style="background:#fffbeb;border-color:#d97706"></span>External APIs</div>
+    <div class="it"><span class="ln"></span>Request / response</div>
+    <div class="it"><span class="ln dash"></span>Direct media transfer</div>
+  </div>
+</section>
+
+<!-- ===================== DIAGRAM 2 — DETAILED TECHNICAL ARCHITECTURE ===================== -->
+<section class="diagram">
+  <h2>Diagram 2 · Detailed Technical Architecture</h2>
+  <p class="cap">Layered, service-level view suitable for technical interviews and portfolio review. Requests descend through the client, the serverless edge/middleware chain, API controllers, the business-logic layer, the data layer, and finally storage, CDN, and external integrations.</p>
+  <svg viewBox="0 0 1280 1132" role="img" aria-label="Detailed technical architecture">
+    <!-- header -->
+    <rect width="1280" height="64" fill="#0f172a"/>
+    <path d="M26,22 L44,32 L26,42 Z" fill="#6366f1"/>
+    <text x="56" y="38" class="t-app">StreamSphere</text>
+    <text x="1252" y="38" text-anchor="end" class="t-appsub">Detailed Technical Architecture</text>
+    <rect y="64" width="1280" height="4" fill="#6366f1"/>
+
+    <!-- ===== BAND A: CLIENT ===== -->
+    <rect x="28" y="86" width="1224" height="226" rx="14" fill="#f8fafc" stroke="#2563eb" stroke-width="1.4" stroke-dasharray="6 5"/>
+    <text x="44" y="108" class="t-band" fill="#2563eb">CLIENT LAYER · ANGULAR 19 SPA (VERCEL)</text>
+    <!-- UI components row -->
+    <g font-family="inherit">
+      <rect x="44" y="120" width="186" height="58" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.6"/><text x="137" y="145" text-anchor="middle" class="t-titlesm">Home Feed</text><text x="137" y="164" text-anchor="middle" class="t-sub">flip cards · infinite scroll</text>
+      <rect x="246" y="120" width="186" height="58" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.6"/><text x="339" y="145" text-anchor="middle" class="t-titlesm">Video Player</text><text x="339" y="164" text-anchor="middle" class="t-sub">view + history tracking</text>
+      <rect x="448" y="120" width="186" height="58" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.6"/><text x="541" y="145" text-anchor="middle" class="t-titlesm">Upload Dialog</text><text x="541" y="164" text-anchor="middle" class="t-sub">presigned S3 flow</text>
+      <rect x="650" y="120" width="186" height="58" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.6"/><text x="743" y="145" text-anchor="middle" class="t-titlesm">Search</text><text x="743" y="164" text-anchor="middle" class="t-sub">debounced · category scope</text>
+      <rect x="852" y="120" width="186" height="58" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.6"/><text x="945" y="145" text-anchor="middle" class="t-titlesm">Profile</text><text x="945" y="164" text-anchor="middle" class="t-sub">uploads · likes</text>
+      <rect x="1054" y="120" width="182" height="58" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.6"/><text x="1145" y="145" text-anchor="middle" class="t-titlesm">Admin Dashboard</text><text x="1145" y="164" text-anchor="middle" class="t-sub">owner-only stats</text>
+    </g>
+    <!-- services row -->
+    <g>
+      <rect x="44" y="220" width="282" height="76" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.6"/><text x="58" y="244" class="t-tag" fill="#2563eb">STATE / SERVICES</text><text x="58" y="265" class="t-titlesm">Angular Services</text><text x="58" y="283" class="t-sub">Auth · Video · Comment · Theme</text>
+      <rect x="342" y="220" width="282" height="76" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.6"/><text x="356" y="244" class="t-tag" fill="#2563eb">EVENT BUS</text><text x="356" y="265" class="t-titlesm">RxJS Reactive Streams</text><text x="356" y="283" class="t-sub">BehaviorSubject / Subject</text>
+      <rect x="640" y="220" width="282" height="76" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.8"/><text x="654" y="244" class="t-tag" fill="#2563eb">AUTH (CLIENT)</text><text x="654" y="265" class="t-titlesm">HTTP Interceptor</text><text x="654" y="283" class="t-sub">JWT inject · S3 bypass · 401 logout</text>
+      <rect x="938" y="220" width="298" height="76" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.8"/><text x="952" y="244" class="t-tag" fill="#2563eb">AUTHZ (CLIENT)</text><text x="952" y="265" class="t-titlesm">Route Guard</text><text x="952" y="283" class="t-sub">Auth gate · admin allowlist</text>
+    </g>
+
+    <!-- ===== BAND B: EDGE / MIDDLEWARE ===== -->
+    <rect x="28" y="338" width="1224" height="120" rx="14" fill="#f8fafc" stroke="#7c3aed" stroke-width="1.4" stroke-dasharray="6 5"/>
+    <text x="44" y="360" class="t-band" fill="#7c3aed">API GATEWAY · EDGE &amp; MIDDLEWARE CHAIN (EXPRESS ON VERCEL)</text>
+    <g>
+      <rect x="44" y="372" width="218" height="72" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/><text x="153" y="402" text-anchor="middle" class="t-titlesm">CORS Whitelist</text><text x="153" y="421" text-anchor="middle" class="t-sub">CLIENT_URL origins</text>
+      <rect x="288" y="372" width="218" height="72" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/><text x="397" y="402" text-anchor="middle" class="t-titlesm">Rate Limiter</text><text x="397" y="421" text-anchor="middle" class="t-sub">4 tiers · express-rate-limit</text>
+      <rect x="532" y="372" width="218" height="72" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/><text x="641" y="402" text-anchor="middle" class="t-titlesm">Stats Middleware</text><text x="641" y="421" text-anchor="middle" class="t-sub">Redis traffic counters</text>
+      <rect x="776" y="372" width="218" height="72" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.8"/><text x="885" y="402" text-anchor="middle" class="t-titlesm">JWT Auth</text><text x="885" y="421" text-anchor="middle" class="t-sub">authenticateJWT · HS256</text>
+      <rect x="1020" y="372" width="216" height="72" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/><text x="1128" y="402" text-anchor="middle" class="t-titlesm">Zod Validation</text><text x="1128" y="421" text-anchor="middle" class="t-sub">body schemas · 10kb limit</text>
+    </g>
+
+    <!-- ===== BAND C: CONTROLLERS ===== -->
+    <rect x="28" y="484" width="1224" height="108" rx="14" fill="#f8fafc" stroke="#7c3aed" stroke-width="1.4" stroke-dasharray="6 5"/>
+    <text x="44" y="506" class="t-band" fill="#7c3aed">API CONTROLLERS (ROUTE HANDLERS)</text>
+    <g>
+      <rect x="44" y="518" width="186" height="58" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/><text x="137" y="552" text-anchor="middle" class="t-titlesm">Auth Controller</text>
+      <rect x="246" y="518" width="186" height="58" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/><text x="339" y="552" text-anchor="middle" class="t-titlesm">Video Controller</text>
+      <rect x="448" y="518" width="186" height="58" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/><text x="541" y="552" text-anchor="middle" class="t-titlesm">Comment Controller</text>
+      <rect x="650" y="518" width="186" height="58" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/><text x="743" y="552" text-anchor="middle" class="t-titlesm">History Controller</text>
+      <rect x="852" y="518" width="186" height="58" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/><text x="945" y="552" text-anchor="middle" class="t-titlesm">Upload Controller</text>
+      <rect x="1054" y="518" width="182" height="58" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/><text x="1145" y="552" text-anchor="middle" class="t-titlesm">Admin Controller</text>
+    </g>
+
+    <!-- ===== BAND D: BUSINESS LOGIC ===== -->
+    <rect x="28" y="618" width="1224" height="120" rx="14" fill="#f8fafc" stroke="#db2777" stroke-width="1.4" stroke-dasharray="6 5"/>
+    <text x="44" y="640" class="t-band" fill="#db2777">BUSINESS LOGIC LAYER (SERVICES)</text>
+    <g>
+      <rect x="44" y="652" width="218" height="72" rx="10" fill="#fdf2f8" stroke="#db2777" stroke-width="1.6"/><text x="153" y="680" text-anchor="middle" class="t-titlesm">Video Service</text><text x="153" y="699" text-anchor="middle" class="t-sub">pagination · reactions · views</text>
+      <rect x="288" y="652" width="218" height="72" rx="10" fill="#fdf2f8" stroke="#db2777" stroke-width="1.6"/><text x="397" y="680" text-anchor="middle" class="t-titlesm">Comment Service</text><text x="397" y="699" text-anchor="middle" class="t-sub">2-level threading</text>
+      <rect x="532" y="652" width="218" height="72" rx="10" fill="#fdf2f8" stroke="#db2777" stroke-width="1.6"/><text x="641" y="680" text-anchor="middle" class="t-titlesm">Category Detection</text><text x="641" y="699" text-anchor="middle" class="t-sub">BART-MNLI · retry/backoff</text>
+      <rect x="776" y="652" width="218" height="72" rx="10" fill="#fdf2f8" stroke="#db2777" stroke-width="1.6"/><text x="885" y="680" text-anchor="middle" class="t-titlesm">Cache Service</text><text x="885" y="699" text-anchor="middle" class="t-sub">CK keys · TTL · invalidation</text>
+      <rect x="1020" y="652" width="216" height="72" rx="10" fill="#fdf2f8" stroke="#db2777" stroke-width="1.6"/><text x="1128" y="680" text-anchor="middle" class="t-titlesm">Stats Service</text><text x="1128" y="699" text-anchor="middle" class="t-sub">dashboard aggregation</text>
+    </g>
+
+    <!-- ===== BAND E: DATA ===== -->
+    <rect x="28" y="764" width="1224" height="150" rx="14" fill="#f8fafc" stroke="#059669" stroke-width="1.4" stroke-dasharray="6 5"/>
+    <text x="44" y="786" class="t-band" fill="#059669">DATA LAYER</text>
+    <!-- Mongo -->
+    <rect x="44" y="798" width="640" height="100" rx="12" fill="#ecfdf5" stroke="#059669" stroke-width="1.8"/>
+    <text x="60" y="820" class="t-tag" fill="#059669">DATABASE</text><text x="60" y="840" class="t-title">MongoDB Atlas</text>
+    <g>
+      <rect x="60" y="852" width="142" height="34" rx="7" fill="#fff" stroke="#10b981"/><text x="131" y="874" text-anchor="middle" class="t-sub">Users</text>
+      <rect x="214" y="852" width="142" height="34" rx="7" fill="#fff" stroke="#10b981"/><text x="285" y="874" text-anchor="middle" class="t-sub">Videos</text>
+      <rect x="368" y="852" width="142" height="34" rx="7" fill="#fff" stroke="#10b981"/><text x="439" y="874" text-anchor="middle" class="t-sub">Comments</text>
+      <rect x="522" y="852" width="148" height="34" rx="7" fill="#fff" stroke="#10b981"/><text x="596" y="874" text-anchor="middle" class="t-sub">WatchHistory</text>
+    </g>
+    <!-- Redis -->
+    <rect x="708" y="798" width="528" height="100" rx="12" fill="#fef2f2" stroke="#dc2626" stroke-width="1.8"/>
+    <text x="724" y="820" class="t-tag" fill="#dc2626">CACHE / ANALYTICS</text><text x="724" y="840" class="t-title">Redis · Upstash</text>
+    <g>
+      <rect x="724" y="852" width="116" height="34" rx="7" fill="#fff" stroke="#ef4444"/><text x="782" y="874" text-anchor="middle" class="t-sub">Feed cache</text>
+      <rect x="852" y="852" width="116" height="34" rx="7" fill="#fff" stroke="#ef4444"/><text x="910" y="874" text-anchor="middle" class="t-sub">Search cache</text>
+      <rect x="980" y="852" width="116" height="34" rx="7" fill="#fff" stroke="#ef4444"/><text x="1038" y="874" text-anchor="middle" class="t-sub">View dedup</text>
+      <rect x="1108" y="852" width="112" height="34" rx="7" fill="#fff" stroke="#ef4444"/><text x="1164" y="874" text-anchor="middle" class="t-sub">Counters</text>
+    </g>
+
+    <!-- ===== BAND F: STORAGE / EXTERNAL ===== -->
+    <rect x="28" y="940" width="1224" height="150" rx="14" fill="#f8fafc" stroke="#0891b2" stroke-width="1.4" stroke-dasharray="6 5"/>
+    <text x="44" y="962" class="t-band" fill="#0891b2">FILE STORAGE · CDN · EXTERNAL INTEGRATIONS</text>
+    <g>
+      <rect x="44" y="978" width="218" height="92" rx="10" fill="#ecfeff" stroke="#0891b2" stroke-width="1.6"/><text x="58" y="1002" class="t-tag" fill="#0891b2">STORAGE</text><text x="58" y="1023" class="t-titlesm">AWS S3</text><text x="58" y="1041" class="t-sub">video objects</text><text x="58" y="1059" class="t-sub">presigned PUT/GET</text>
+      <rect x="288" y="978" width="218" height="92" rx="10" fill="#ecfeff" stroke="#0891b2" stroke-width="1.6"/><text x="302" y="1002" class="t-tag" fill="#0891b2">CDN</text><text x="302" y="1023" class="t-titlesm">AWS CloudFront</text><text x="302" y="1041" class="t-sub">video playback URLs</text>
+      <rect x="532" y="978" width="218" height="92" rx="10" fill="#ecfeff" stroke="#0891b2" stroke-width="1.6"/><text x="546" y="1002" class="t-tag" fill="#0891b2">METRICS</text><text x="546" y="1023" class="t-titlesm">AWS CloudWatch</text><text x="546" y="1041" class="t-sub">CDN usage (dashboard)</text>
+      <rect x="776" y="978" width="218" height="92" rx="10" fill="#fffbeb" stroke="#d97706" stroke-width="1.6"/><text x="790" y="1002" class="t-tag" fill="#d97706">IDENTITY</text><text x="790" y="1023" class="t-titlesm">Google OAuth</text><text x="790" y="1041" class="t-sub">ID-token verify</text>
+      <rect x="1020" y="978" width="216" height="92" rx="10" fill="#fffbeb" stroke="#d97706" stroke-width="1.6"/><text x="1034" y="1002" class="t-tag" fill="#d97706">AI</text><text x="1034" y="1023" class="t-titlesm">HuggingFace</text><text x="1034" y="1041" class="t-sub">BART-MNLI zero-shot</text>
+    </g>
+
+    <!-- ===== FLOW ARROWS ===== -->
+    <!-- A -> B -->
+    <path d="M783,296 V372" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#ah-frontend)"/>
+    <text x="793" y="332" class="t-edgesm" fill="#2563eb">HTTPS · Bearer JWT</text>
+    <path d="M1085,296 V372" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ah-frontend)"/>
+    <!-- B -> C (middleware chain passes to controllers) -->
+    <path d="M885,444 V518" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#ah-api)"/>
+    <text x="895" y="492" class="t-edgesm" fill="#7c3aed">authenticated request</text>
+    <!-- C -> D aligned columns -->
+    <path d="M339,576 V652" fill="none" stroke="#db2777" stroke-width="2" marker-end="url(#ah-logic)"/>
+    <path d="M541,576 V652" fill="none" stroke="#db2777" stroke-width="2" marker-end="url(#ah-logic)"/>
+    <path d="M743,576 V652" fill="none" stroke="#db2777" stroke-width="2" marker-end="url(#ah-logic)"/>
+    <path d="M945,576 H885 V652" fill="none" stroke="#db2777" stroke-width="2" marker-end="url(#ah-logic)"/>
+    <path d="M1145,576 V652" fill="none" stroke="#db2777" stroke-width="2" marker-end="url(#ah-logic)"/>
+    <!-- D -> E -->
+    <path d="M153,724 V798" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#ah-db)"/>
+    <text x="163" y="762" class="t-edgesm" fill="#059669">read / write</text>
+    <path d="M885,724 V780 H980 V798" fill="none" stroke="#dc2626" stroke-width="2.2" marker-end="url(#ah-cache)"/>
+    <text x="905" y="762" class="t-edgesm" fill="#dc2626">cache r/w</text>
+    <path d="M1128,724 V780 H1164 V852" fill="none" stroke="#dc2626" stroke-width="2" marker-end="url(#ah-cache)"/>
+    <!-- D/E -> F external -->
+    <path d="M641,724 V978" fill="none" stroke="#d97706" stroke-width="2.2" marker-end="url(#ah-external)"/>
+    <text x="651" y="755" class="t-edgesm" fill="#d97706">HTTPS · classify</text>
+    <path d="M137,576 H40 V1024 H44" fill="none" stroke="#d97706" stroke-width="2" marker-end="url(#ah-external)"/>
+    <text x="20" y="800" class="t-edgesm" fill="#d97706" transform="rotate(-90 20 800)">Auth ctrl → Google OAuth</text>
+    <path d="M945,724 V760 H1255 V1024 H994" fill="none" stroke="#0891b2" stroke-width="2" marker-end="url(#ah-storage)"/>
+    <text x="1262" y="880" class="t-edgesm" fill="#0891b2" transform="rotate(-90 1262 880)">Upload → S3 presign</text>
+    <!-- client direct media to S3/CloudFront -->
+    <path d="M541,178 H636 V200 H1268 V1010 H506" fill="none" stroke="#0891b2" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ah-storage)"/>
+    <text x="1248" y="560" class="t-edgesm" fill="#0891b2" transform="rotate(-90 1248 560)">Browser ↔ S3 / CloudFront (direct media)</text>
+  </svg>
+  <div class="legend">
+    <div class="it"><span class="sw" style="background:#eff6ff;border-color:#2563eb"></span>Client / Angular</div>
+    <div class="it"><span class="sw" style="background:#f5f3ff;border-color:#7c3aed"></span>Edge · Controllers</div>
+    <div class="it"><span class="sw" style="background:#fdf2f8;border-color:#db2777"></span>Business logic</div>
+    <div class="it"><span class="sw" style="background:#ecfdf5;border-color:#059669"></span>Database</div>
+    <div class="it"><span class="sw" style="background:#fef2f2;border-color:#dc2626"></span>Cache</div>
+    <div class="it"><span class="sw" style="background:#ecfeff;border-color:#0891b2"></span>Storage / CDN</div>
+    <div class="it"><span class="sw" style="background:#fffbeb;border-color:#d97706"></span>External</div>
+    <div class="it"><span class="ln dash"></span>Direct media</div>
+  </div>
+</section>
+
+<!-- ===================== DIAGRAM 3 — REQUEST / DATA FLOW ===================== -->
+<section class="diagram">
+  <h2>Diagram 3 · Request / Data Flow</h2>
+  <p class="cap">The full lifecycle of an authenticated write request (e.g. liking a video). The request descends through validation and authorization gates; any failed gate returns a structured JSON error (right). On success it reaches the business logic, checks the Redis cache, hits MongoDB on a miss, writes through the cache, and returns 200.</p>
+  <svg viewBox="0 0 1280 1200" role="img" aria-label="Request and data flow">
+    <!-- header -->
+    <rect width="1280" height="64" fill="#0f172a"/>
+    <path d="M26,22 L44,32 L26,42 Z" fill="#6366f1"/>
+    <text x="56" y="38" class="t-app">StreamSphere</text>
+    <text x="1252" y="38" text-anchor="end" class="t-appsub">Request / Data Flow</text>
+    <rect y="64" width="1280" height="4" fill="#6366f1"/>
+
+    <!-- ERROR PANEL -->
+    <rect x="988" y="296" width="262" height="452" rx="14" fill="#fef2f2" stroke="#dc2626" stroke-width="1.6"/>
+    <text x="1004" y="320" class="t-tag" fill="#dc2626">ERROR PATHS · STRUCTURED JSON</text>
+    <g>
+      <rect x="1004" y="332" width="230" height="62" rx="9" fill="#fff" stroke="#fca5a5"/><text x="1016" y="354" class="t-titlesm" fill="#b91c1c">403 · CORS rejected</text><text x="1016" y="374" class="t-sub">origin not in whitelist</text>
+      <rect x="1004" y="404" width="230" height="62" rx="9" fill="#fff" stroke="#fca5a5"/><text x="1016" y="426" class="t-titlesm" fill="#b91c1c">429 · Too many requests</text><text x="1016" y="446" class="t-sub">rate-limit tier exceeded</text>
+      <rect x="1004" y="476" width="230" height="62" rx="9" fill="#fff" stroke="#fca5a5"/><text x="1016" y="498" class="t-titlesm" fill="#b91c1c">401 · Unauthorized</text><text x="1016" y="518" class="t-sub">interceptor clears token → /home</text>
+      <rect x="1004" y="548" width="230" height="62" rx="9" fill="#fff" stroke="#fca5a5"/><text x="1016" y="570" class="t-titlesm" fill="#b91c1c">400 · Bad request</text><text x="1016" y="590" class="t-sub">Zod validation failed</text>
+      <rect x="1004" y="620" width="230" height="62" rx="9" fill="#fff" stroke="#fca5a5"/><text x="1016" y="642" class="t-titlesm" fill="#b91c1c">403 · Forbidden</text><text x="1016" y="662" class="t-sub">not owner / not admin</text>
+      <rect x="1004" y="694" width="230" height="42" rx="9" fill="#fee2e2" stroke="#fca5a5"/><text x="1119" y="720" text-anchor="middle" class="t-sub" fill="#b91c1c">all return JSON — no HTML leaks</text>
+    </g>
+
+    <!-- MAIN SPINE -->
+    <!-- N1 start -->
+    <rect x="300" y="86" width="280" height="52" rx="26" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+    <text x="440" y="112" text-anchor="middle" class="t-titlesm" fill="#3730a3">User action — like · comment · upload</text>
+    <text x="440" y="129" text-anchor="middle" class="t-sub">in the Angular SPA</text>
+    <!-- N2 -->
+    <rect x="290" y="160" width="300" height="54" rx="11" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+    <text x="440" y="183" text-anchor="middle" class="t-titlesm">HTTP Interceptor</text>
+    <text x="440" y="201" text-anchor="middle" class="t-sub">attaches Authorization: Bearer &lt;JWT&gt;</text>
+    <!-- N3 -->
+    <rect x="290" y="236" width="300" height="52" rx="11" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>
+    <text x="440" y="259" text-anchor="middle" class="t-titlesm">Vercel Serverless — Express API</text>
+    <text x="440" y="277" text-anchor="middle" class="t-sub">request enters middleware chain</text>
+
+    <!-- diamonds -->
+    <!-- D1 CORS cy336 -->
+    <polygon points="440,300 550,336 440,372 330,336" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>
+    <text x="440" y="332" text-anchor="middle" class="t-titlesm">CORS origin</text>
+    <text x="440" y="349" text-anchor="middle" class="t-titlesm">allowed?</text>
+    <!-- D2 Rate cy426 -->
+    <polygon points="440,390 550,426 440,462 330,426" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>
+    <text x="440" y="422" text-anchor="middle" class="t-titlesm">Within rate</text>
+    <text x="440" y="439" text-anchor="middle" class="t-titlesm">limit?</text>
+    <!-- D3 JWT cy516 -->
+    <polygon points="440,480 550,516 440,552 330,516" fill="#ede9fe" stroke="#7c3aed" stroke-width="2.2"/>
+    <text x="440" y="512" text-anchor="middle" class="t-titlesm">JWT valid?</text>
+    <text x="440" y="529" text-anchor="middle" class="t-sub">authenticateJWT</text>
+    <!-- D4 Zod cy606 -->
+    <polygon points="440,570 550,606 440,642 330,606" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>
+    <text x="440" y="602" text-anchor="middle" class="t-titlesm">Input valid?</text>
+    <text x="440" y="619" text-anchor="middle" class="t-sub">Zod schema</text>
+    <!-- D5 Authz cy696 -->
+    <polygon points="440,660 550,696 440,732 330,696" fill="#ede9fe" stroke="#7c3aed" stroke-width="2.2"/>
+    <text x="440" y="692" text-anchor="middle" class="t-titlesm">Authorized?</text>
+    <text x="440" y="709" text-anchor="middle" class="t-sub">owner / admin</text>
+
+    <!-- N4 controller -->
+    <rect x="290" y="750" width="300" height="54" rx="11" fill="#fdf2f8" stroke="#db2777" stroke-width="2"/>
+    <text x="440" y="773" text-anchor="middle" class="t-titlesm">Controller → Business-logic service</text>
+    <text x="440" y="791" text-anchor="middle" class="t-sub">applies domain rules</text>
+
+    <!-- D6 cache hit cy846 -->
+    <polygon points="440,810 552,846 440,882 328,846" fill="#fef2f2" stroke="#dc2626" stroke-width="2"/>
+    <text x="440" y="842" text-anchor="middle" class="t-titlesm">Redis cache</text>
+    <text x="440" y="859" text-anchor="middle" class="t-titlesm">hit?</text>
+
+    <!-- serve cached -->
+    <rect x="660" y="819" width="252" height="54" rx="11" fill="#fef2f2" stroke="#dc2626" stroke-width="2"/>
+    <text x="786" y="842" text-anchor="middle" class="t-titlesm">Serve cached response</text>
+    <text x="786" y="860" text-anchor="middle" class="t-sub">read-through cache</text>
+
+    <!-- N5 mongo -->
+    <rect x="290" y="912" width="300" height="54" rx="11" fill="#ecfdf5" stroke="#059669" stroke-width="2"/>
+    <text x="440" y="935" text-anchor="middle" class="t-titlesm">MongoDB query / update</text>
+    <text x="440" y="953" text-anchor="middle" class="t-sub">$inc · upsert · toggle arrays</text>
+    <!-- N6 update cache -->
+    <rect x="290" y="1006" width="300" height="54" rx="11" fill="#fef2f2" stroke="#dc2626" stroke-width="2"/>
+    <text x="440" y="1029" text-anchor="middle" class="t-titlesm">Write-through cache</text>
+    <text x="440" y="1047" text-anchor="middle" class="t-sub">update / invalidate affected keys</text>
+    <!-- N7 success -->
+    <rect x="290" y="1100" width="300" height="58" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.2"/>
+    <text x="440" y="1124" text-anchor="middle" class="t-titlesm" fill="#15803d">200 OK · JSON response</text>
+    <text x="440" y="1143" text-anchor="middle" class="t-sub">Angular updates UI via RxJS</text>
+
+    <!-- ===== ARROWS ===== -->
+    <path d="M440,138 V160" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#ah-slate)"/>
+    <path d="M440,214 V236" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#ah-slate)"/>
+    <path d="M440,288 V300" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#ah-slate)"/>
+    <!-- pass chain -->
+    <path d="M440,372 V390" fill="none" stroke="#16a34a" stroke-width="2.2" marker-end="url(#ah-green)"/><text x="450" y="385" class="t-edgesm" fill="#16a34a">Yes</text>
+    <path d="M440,462 V480" fill="none" stroke="#16a34a" stroke-width="2.2" marker-end="url(#ah-green)"/><text x="450" y="475" class="t-edgesm" fill="#16a34a">Yes</text>
+    <path d="M440,552 V570" fill="none" stroke="#16a34a" stroke-width="2.2" marker-end="url(#ah-green)"/><text x="450" y="565" class="t-edgesm" fill="#16a34a">Yes</text>
+    <path d="M440,642 V660" fill="none" stroke="#16a34a" stroke-width="2.2" marker-end="url(#ah-green)"/><text x="450" y="655" class="t-edgesm" fill="#16a34a">Yes</text>
+    <path d="M440,732 V750" fill="none" stroke="#16a34a" stroke-width="2.2" marker-end="url(#ah-green)"/><text x="450" y="745" class="t-edgesm" fill="#16a34a">Yes</text>
+    <path d="M440,804 V810" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#ah-slate)"/>
+    <!-- fail arrows to error panel -->
+    <path d="M550,336 H1004 V363" fill="none" stroke="#dc2626" stroke-width="2" marker-end="url(#ah-red)"/><text x="600" y="328" class="t-edgesm" fill="#dc2626">No</text>
+    <path d="M550,426 H976 V435 H1004" fill="none" stroke="#dc2626" stroke-width="2" marker-end="url(#ah-red)"/><text x="600" y="418" class="t-edgesm" fill="#dc2626">No</text>
+    <path d="M550,516 H968 V507 H1004" fill="none" stroke="#dc2626" stroke-width="2" marker-end="url(#ah-red)"/><text x="600" y="508" class="t-edgesm" fill="#dc2626">No</text>
+    <path d="M550,606 H960 V579 H1004" fill="none" stroke="#dc2626" stroke-width="2" marker-end="url(#ah-red)"/><text x="600" y="598" class="t-edgesm" fill="#dc2626">No</text>
+    <path d="M550,696 H952 V651 H1004" fill="none" stroke="#dc2626" stroke-width="2" marker-end="url(#ah-red)"/><text x="600" y="688" class="t-edgesm" fill="#dc2626">No</text>
+    <!-- cache hit branch -->
+    <path d="M552,846 H660" fill="none" stroke="#dc2626" stroke-width="2.2" marker-end="url(#ah-red)"/><text x="590" y="838" class="t-edgesm" fill="#dc2626">Hit</text>
+    <path d="M786,873 V1127 H590" fill="none" stroke="#16a34a" stroke-width="2.2" marker-end="url(#ah-green)"/><text x="796" y="1010" class="t-edgesm" fill="#16a34a">return</text>
+    <!-- cache miss -> mongo -->
+    <path d="M440,882 V912" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#ah-db)"/><text x="450" y="903" class="t-edgesm" fill="#059669">Miss</text>
+    <path d="M440,966 V1006" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#ah-slate)"/>
+    <path d="M440,1060 V1100" fill="none" stroke="#16a34a" stroke-width="2.2" marker-end="url(#ah-green)"/>
+  </svg>
+  <div class="legend">
+    <div class="it"><span class="sw" style="background:#dcfce7;border-color:#16a34a"></span>Success path</div>
+    <div class="it"><span class="sw" style="background:#fef2f2;border-color:#dc2626"></span>Error / cache path</div>
+    <div class="it"><span class="sw" style="background:#f5f3ff;border-color:#7c3aed"></span>Decision gate</div>
+    <div class="it"><span class="ln" style="border-color:#16a34a"></span>Yes / pass</div>
+    <div class="it"><span class="ln" style="border-color:#dc2626"></span>No / fail</div>
+  </div>
+</section>
+
+<!-- ===================== DIAGRAM 4 — ENTITY RELATIONSHIP DIAGRAM ===================== -->
+<section class="diagram">
+  <h2>Diagram 4 · Database / Entity Relationship Diagram</h2>
+  <p class="cap">MongoDB collections and their relationships in crow's-foot notation. User owns Videos, Comments and WatchHistory; Video owns Comments; Comment self-references for threaded replies; WatchHistory is the associative collection between User and Video; likes/dislikes form a many-to-many via embedded arrays on Video.</p>
+  <svg viewBox="0 0 1280 760" role="img" aria-label="Entity relationship diagram">
+    <!-- header -->
+    <rect width="1280" height="64" fill="#0f172a"/>
+    <path d="M26,22 L44,32 L26,42 Z" fill="#6366f1"/>
+    <text x="56" y="38" class="t-app">StreamSphere</text>
+    <text x="1252" y="38" text-anchor="end" class="t-appsub">Database · Entity Relationship Diagram</text>
+    <rect y="64" width="1280" height="4" fill="#6366f1"/>
+
+    <!-- ============ RELATIONSHIP LINES (under tables' labels, over background) ============ -->
+    <!-- R1 User 1 -> N Video : uploads -->
+    <path d="M330,165 H910" fill="none" stroke="#475569" stroke-width="1.8" marker-start="url(#cf-one)" marker-end="url(#cf-many)"/>
+    <rect x="568" y="153" width="74" height="20" rx="5" fill="#fff" stroke="#e2e8f0"/><text x="605" y="167" text-anchor="middle" class="t-rel">uploads</text>
+    <!-- R7 User M <-> N Video : reactions -->
+    <path d="M330,250 H910" fill="none" stroke="#475569" stroke-width="1.6" stroke-dasharray="6 4" marker-start="url(#cf-many)" marker-end="url(#cf-many)"/>
+    <rect x="520" y="238" width="170" height="20" rx="5" fill="#fff" stroke="#e2e8f0"/><text x="605" y="252" text-anchor="middle" class="t-rel">reacts · likedBy / dislikedBy</text>
+    <!-- R2 User 1 -> N Comment : writes -->
+    <path d="M150,302 V472" fill="none" stroke="#475569" stroke-width="1.8" marker-start="url(#cf-one)" marker-end="url(#cf-many)"/>
+    <rect x="113" y="377" width="62" height="20" rx="5" fill="#fff" stroke="#e2e8f0"/><text x="144" y="391" text-anchor="middle" class="t-rel">writes</text>
+    <!-- R4 User 1 -> N WatchHistory : watches -->
+    <path d="M270,302 V430 H660 V540" fill="none" stroke="#475569" stroke-width="1.8" marker-start="url(#cf-one)" marker-end="url(#cf-many)"/>
+    <rect x="430" y="420" width="70" height="20" rx="5" fill="#fff" stroke="#e2e8f0"/><text x="465" y="434" text-anchor="middle" class="t-rel">watches</text>
+    <!-- R3 Video 1 -> N Comment : has -->
+    <path d="M1000,444 V522 H350" fill="none" stroke="#475569" stroke-width="1.8" marker-start="url(#cf-one)" marker-end="url(#cf-many)"/>
+    <rect x="650" y="512" width="52" height="20" rx="5" fill="#fff" stroke="#e2e8f0"/><text x="676" y="526" text-anchor="middle" class="t-rel">has</text>
+    <!-- R5 Video 1 -> N WatchHistory : appears in -->
+    <path d="M1120,444 V610 H840" fill="none" stroke="#475569" stroke-width="1.8" marker-start="url(#cf-one)" marker-end="url(#cf-many)"/>
+    <rect x="912" y="600" width="82" height="20" rx="5" fill="#fff" stroke="#e2e8f0"/><text x="953" y="614" text-anchor="middle" class="t-rel">appears in</text>
+    <!-- R6 Comment self-ref : replies -->
+    <path d="M70,545 C24,540 24,592 70,587" fill="none" stroke="#475569" stroke-width="1.7" marker-start="url(#cf-one)" marker-end="url(#cf-many)"/>
+    <text x="14" y="569" class="t-rel" transform="rotate(-90 14 569)">parent_id · replies</text>
+
+    <!-- ============ ENTITY: USER ============ -->
+    <rect x="70" y="110" width="260" height="192" rx="10" fill="#fff" stroke="#6366f1" stroke-width="2"/>
+    <path d="M70,120 Q70,110 80,110 H320 Q330,110 330,120 V146 H70 Z" fill="#6366f1"/>
+    <text x="86" y="137" class="erd-h">User</text><text x="314" y="137" text-anchor="end" class="erd-h" opacity=".8">collection</text>
+    <g>
+      <text x="86" y="163" class="erd-pk">_id</text><text x="314" y="163" text-anchor="end" class="t-rel">PK</text>
+      <text x="86" y="189" class="erd-f">email · unique</text>
+      <text x="86" y="215" class="erd-f">name</text>
+      <text x="86" y="241" class="erd-f">profileImage</text>
+      <text x="86" y="267" class="erd-f">role</text>
+      <text x="86" y="293" class="erd-f">createdAt</text>
+      <line x1="70" y1="172" x2="330" y2="172" stroke="#eef2f7"/><line x1="70" y1="198" x2="330" y2="198" stroke="#eef2f7"/><line x1="70" y1="224" x2="330" y2="224" stroke="#eef2f7"/><line x1="70" y1="250" x2="330" y2="250" stroke="#eef2f7"/><line x1="70" y1="276" x2="330" y2="276" stroke="#eef2f7"/>
+    </g>
+
+    <!-- ============ ENTITY: VIDEO ============ -->
+    <rect x="910" y="96" width="300" height="348" rx="10" fill="#fff" stroke="#059669" stroke-width="2"/>
+    <path d="M910,106 Q910,96 920,96 H1200 Q1210,96 1210,106 V132 H910 Z" fill="#059669"/>
+    <text x="926" y="123" class="erd-h">Video</text><text x="1194" y="123" text-anchor="end" class="erd-h" opacity=".8">collection</text>
+    <g>
+      <text x="926" y="149" class="erd-pk">_id</text><text x="1194" y="149" text-anchor="end" class="t-rel">PK</text>
+      <text x="926" y="175" class="erd-fk">uploader_id</text><text x="1194" y="175" text-anchor="end" class="t-rel">FK → User</text>
+      <text x="926" y="201" class="erd-f">title</text>
+      <text x="926" y="227" class="erd-f">description</text>
+      <text x="926" y="253" class="erd-f">s3Key</text>
+      <text x="926" y="279" class="erd-f">cloudFrontUrl</text>
+      <text x="926" y="305" class="erd-f">category</text>
+      <text x="926" y="331" class="erd-f">views</text>
+      <text x="926" y="357" class="erd-f">likes · dislikes</text>
+      <text x="926" y="383" class="erd-fk">likedBy[]</text><text x="1194" y="383" text-anchor="end" class="t-rel">FK → User</text>
+      <text x="926" y="409" class="erd-fk">dislikedBy[]</text><text x="1194" y="409" text-anchor="end" class="t-rel">FK → User</text>
+      <text x="926" y="435" class="erd-f">createdAt</text>
+      <line x1="910" y1="158" x2="1210" y2="158" stroke="#eef2f7"/><line x1="910" y1="184" x2="1210" y2="184" stroke="#eef2f7"/><line x1="910" y1="210" x2="1210" y2="210" stroke="#eef2f7"/><line x1="910" y1="236" x2="1210" y2="236" stroke="#eef2f7"/><line x1="910" y1="262" x2="1210" y2="262" stroke="#eef2f7"/><line x1="910" y1="288" x2="1210" y2="288" stroke="#eef2f7"/><line x1="910" y1="314" x2="1210" y2="314" stroke="#eef2f7"/><line x1="910" y1="340" x2="1210" y2="340" stroke="#eef2f7"/><line x1="910" y1="366" x2="1210" y2="366" stroke="#eef2f7"/><line x1="910" y1="392" x2="1210" y2="392" stroke="#eef2f7"/><line x1="910" y1="418" x2="1210" y2="418" stroke="#eef2f7"/>
+    </g>
+
+    <!-- ============ ENTITY: COMMENT ============ -->
+    <rect x="70" y="472" width="280" height="218" rx="10" fill="#fff" stroke="#db2777" stroke-width="2"/>
+    <path d="M70,482 Q70,472 80,472 H340 Q350,472 350,482 V508 H70 Z" fill="#db2777"/>
+    <text x="86" y="499" class="erd-h">Comment</text><text x="334" y="499" text-anchor="end" class="erd-h" opacity=".8">collection</text>
+    <g>
+      <text x="86" y="525" class="erd-pk">_id</text><text x="334" y="525" text-anchor="end" class="t-rel">PK</text>
+      <text x="86" y="551" class="erd-fk">video_id</text><text x="334" y="551" text-anchor="end" class="t-rel">FK → Video</text>
+      <text x="86" y="577" class="erd-fk">user_id</text><text x="334" y="577" text-anchor="end" class="t-rel">FK → User</text>
+      <text x="86" y="603" class="erd-fk">parent_id</text><text x="334" y="603" text-anchor="end" class="t-rel">FK → Comment</text>
+      <text x="86" y="629" class="erd-f">text</text>
+      <text x="86" y="655" class="erd-f">createdAt</text>
+      <text x="86" y="681" class="erd-f">updatedAt</text>
+      <line x1="70" y1="534" x2="350" y2="534" stroke="#eef2f7"/><line x1="70" y1="560" x2="350" y2="560" stroke="#eef2f7"/><line x1="70" y1="586" x2="350" y2="586" stroke="#eef2f7"/><line x1="70" y1="612" x2="350" y2="612" stroke="#eef2f7"/><line x1="70" y1="638" x2="350" y2="638" stroke="#eef2f7"/><line x1="70" y1="664" x2="350" y2="664" stroke="#eef2f7"/>
+    </g>
+
+    <!-- ============ ENTITY: WATCHHISTORY ============ -->
+    <rect x="540" y="540" width="300" height="140" rx="10" fill="#fff" stroke="#0891b2" stroke-width="2"/>
+    <path d="M540,550 Q540,540 550,540 H830 Q840,540 840,550 V576 H540 Z" fill="#0891b2"/>
+    <text x="556" y="567" class="erd-h">WatchHistory</text><text x="824" y="567" text-anchor="end" class="erd-h" opacity=".8">associative</text>
+    <g>
+      <text x="556" y="593" class="erd-pk">_id</text><text x="824" y="593" text-anchor="end" class="t-rel">PK</text>
+      <text x="556" y="619" class="erd-fk">userId</text><text x="824" y="619" text-anchor="end" class="t-rel">FK → User</text>
+      <text x="556" y="645" class="erd-fk">videoId</text><text x="824" y="645" text-anchor="end" class="t-rel">FK → Video</text>
+      <text x="556" y="671" class="erd-f">watchedAt</text>
+      <line x1="540" y1="602" x2="840" y2="602" stroke="#eef2f7"/><line x1="540" y1="628" x2="840" y2="628" stroke="#eef2f7"/><line x1="540" y1="654" x2="840" y2="654" stroke="#eef2f7"/>
+      <text x="556" y="697" class="t-rel" fill="#0891b2">unique (userId, videoId)</text>
+    </g>
+  </svg>
+  <div class="legend">
+    <div class="it"><span class="sw" style="background:#fff;border-color:#6366f1"></span>User</div>
+    <div class="it"><span class="sw" style="background:#fff;border-color:#059669"></span>Video</div>
+    <div class="it"><span class="sw" style="background:#fff;border-color:#db2777"></span>Comment</div>
+    <div class="it"><span class="sw" style="background:#fff;border-color:#0891b2"></span>WatchHistory</div>
+    <div class="it"><span style="font-weight:700">PK</span> primary key &nbsp; <span style="font-weight:700;color:#7c3aed">FK</span> foreign key</div>
+    <div class="it">crow's foot &nbsp;<b>|</b>&nbsp;= one &nbsp;&nbsp;&lt; = many</div>
+  </div>
+</section>
+
+</div>
+</body>
+</html>

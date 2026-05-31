@@ -13,6 +13,8 @@ export interface SegmentStats {
   avgTotalStallMs:    number | null;
   avgStallCount:      number | null;
   avgBufferSec:       number | null;
+  avgOracleCostUsd:   number | null;
+  uniqueRouteCount:   number;
 }
 
 export interface SegmentData {
@@ -29,17 +31,19 @@ export interface SegmentedComparison {
 }
 
 export interface RecentSession {
-  sessionId:    string;
-  startedAt:    string;
-  endedAt:      string | null;
-  videoId:      string;
-  genabrActive: boolean;
-  phiScore:     number | null;
-  avgVmaf:      number | null;
-  sigmaVmaf:    number | null;
-  totalStallMs: number;
-  stallCount:   number;
-  tierCounts:   { guard: number; student: number; oracle: number };
+  sessionId:     string;
+  startedAt:     string;
+  endedAt:       string | null;
+  videoId:       string;
+  genabrActive:  boolean;
+  phiScore:      number | null;
+  avgVmaf:       number | null;
+  sigmaVmaf:     number | null;
+  totalStallMs:  number;
+  stallCount:    number;
+  oracleCostUsd: number | null;
+  routeId:       string | null;
+  tierCounts:    { guard: number; student: number; oracle: number };
 }
 
 // ── Oracle Insights ───────────────────────────────────────────────────────────
@@ -83,13 +87,15 @@ export interface OracleInsights {
   bySpeedCategory:  OracleTriggerItem[];
   byTriggerReason:  OracleTriggerItem[];
   corridorStats: {
-    scannedCount:       number;
-    deadZoneCount:      number;
-    deadZoneRate:       number | null;
-    feasibleCount:      number;
-    feasibilityRate:    number | null;
-    avgEntrySeconds:    number | null;
-    avgDurationSeconds: number | null;
+    scannedCount:           number;
+    deadZoneCount:          number;
+    deadZoneRate:           number | null;
+    feasibleCount:          number;
+    feasibilityRate:        number | null;     // now bounded 0–100
+    avgEntrySeconds:        number | null;
+    avgDurationSeconds:     number | null;
+    avgProactiveLeadTime:   number | null;     // paper Section VII.C.4
+    proactiveTriggerCount:  number;
   };
   recentDecisions: OracleRecentDecision[];
 }

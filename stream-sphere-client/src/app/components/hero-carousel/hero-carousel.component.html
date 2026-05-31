@@ -12,7 +12,9 @@
         loop
         playsinline
         preload="metadata"
+        aria-hidden="true"
         (loadeddata)="onVideoLoad()">
+        <track kind="captions" src="/captions.vtt" srclang="en" label="English">
       </video>
 
       <img
@@ -81,8 +83,8 @@
 
     <!-- Navigation Controls -->
     <div class="hero-controls">
-      <button class="nav-btn prev-btn" (click)="previousVideo()">‹</button>
-      <button class="nav-btn next-btn" (click)="nextVideo()">›</button>
+      <button class="nav-btn prev-btn" (click)="previousVideo()" aria-label="Previous video">‹</button>
+      <button class="nav-btn next-btn" (click)="nextVideo()" aria-label="Next video">›</button>
     </div>
 
   </div>

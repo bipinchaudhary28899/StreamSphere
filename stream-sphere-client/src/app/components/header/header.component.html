@@ -40,6 +40,7 @@
       <!-- Dark mode toggle -->
       <button class="action-btn theme-btn"
               (click)="themeService.toggle()"
+              [attr.aria-label]="themeService.isDark() ? 'Switch to light mode' : 'Switch to dark mode'"
               [matTooltip]="themeService.isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
         <mat-icon>{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
       </button>
@@ -47,6 +48,7 @@
       <!-- Avatar / user menu (logged in) -->
       <button *ngIf="isLoggedIn"
               class="avatar-btn"
+              [attr.aria-label]="'Open menu for ' + user?.name"
               [matMenuTriggerFor]="userMenu">
         <img [src]="profileImage"
              [alt]="user?.name"
@@ -72,7 +74,7 @@
              placeholder="Search videos, channels…"
              [value]="searchTerm"
              (input)="onSearchInput($event)" />
-      <button *ngIf="searchTerm" class="search-clear-btn" (click)="clearSearch()">
+      <button *ngIf="searchTerm" class="search-clear-btn" (click)="clearSearch()" aria-label="Clear search">
         <mat-icon>close</mat-icon>
       </button>
     </div>

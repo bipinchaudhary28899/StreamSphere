@@ -1,0 +1,718 @@
+%% GenABR: A Tiered, Spatially-Aware Adaptive Bitrate Streaming System
+%% IEEE Conference Format — IEEEtran
+%%
+%% This paper describes only what is implemented in the StreamSphere /
+%% GenABR codebase. Empirical results are deferred to a follow-up paper
+%% once paired baseline data has been collected.
+%%
+%% Compile with:
+%%   pdflatex genabr_paper.tex
+%%   pdflatex genabr_paper.tex
+%%
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+% ── Packages ────────────────────────────────────────────────────────────────
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage{hyperref}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+% ── Title ───────────────────────────────────────────────────────────────────
+\title{GenABR: A Tiered, Spatially-Aware Adaptive Bitrate Streaming System with
+       Generative-Model Escalation for Mobile Video}
+
+\author{
+  \IEEEauthorblockN{Bipin Kumar Chaudhary}
+  \IEEEauthorblockA{
+    Independent Researcher \\
+    Bareilly, India \\
+    bkumar28899@gmail.com
+  }
+}
+
+\maketitle
+
+% ── Abstract ────────────────────────────────────────────────────────────────
+\begin{abstract}
+Conventional Adaptive Bitrate (ABR) controllers respond to throughput
+\emph{after} it has already changed. In high-mobility scenarios such as
+trains, vehicles, and walking commutes, this reactive design causes visible
+quality degradation and rebuffering events when the device crosses
+predictable but uncharacterised regions of weak signal. We present
+\textbf{GenABR}, a working ABR intelligence layer that operates above an
+unmodified HLS.js player and aims to make the decision proactive by
+combining (i) a probabilistic spatial look-ahead derived from the user's
+current heading and speed, (ii) a continuously updated radio map built from
+crowd-sourced and personalised observations, and (iii) a three-tier
+inference stack --- on-device Guard, server-side statistical Student, and
+LLM-based Oracle --- that escalates only when the cheaper tiers are
+uncertain. The system is implemented end-to-end on a public streaming
+platform, logs every inference cycle, snaps location data to 200~m tiles
+before persistence for privacy, and uses low-power geolocation to bound
+battery cost. This paper documents the architecture and the evaluation
+framework we have constructed; empirical comparison against reactive
+baselines is reserved for a follow-up after paired sessions are collected.
+\end{abstract}
+
+\begin{IEEEkeywords}
+adaptive bitrate streaming, mobility-aware networking, HLS, tiered
+inference, large language models, edge intelligence, quality of experience
+\end{IEEEkeywords}
+
+% ============================================================================
+\section{Introduction}
+% ============================================================================
+Mobile video already accounts for the largest share of consumer Internet
+traffic, and high-mobility consumption --- on commutes, in vehicles, on
+trains --- continues to grow. Standard client-side ABR controllers such as
+BOLA and the HLS.js default policy treat available bandwidth as a
+quasi-stationary stochastic process estimated from recent segment download
+times. This assumption is reasonable in fixed-network or low-mobility
+contexts, but it fails systematically when the user crosses a network
+``cliff'': a tunnel, a known weak-signal corridor, an inter-cell handover at
+speed. By the time the player observes the throughput drop, its buffer has
+already begun to drain. Two failure modes follow. The first is a stall ---
+the player exhausts its buffer entirely before the next segment is ready.
+The second, and more frequent in practice, is an ABR-driven bitrate
+downshift, in which the controller cliffs from 720p or 1080p to 360p in
+order to avoid the stall, producing a perceptible quality jolt that user
+studies consistently rank as a major QoE regression even when no actual
+freezing occurs.
+
+The two failures share a single root cause: \emph{the controller has no
+information beyond the throughput it has already measured}. We argue that
+mobile video QoE for moving users is better modelled as a problem of
+\emph{decision under spatial uncertainty} than as one of throughput
+forecasting. The spatial distribution of weak-signal regions on a given
+road or transit corridor changes slowly, while the throughput history
+window over which reactive controllers operate refreshes every few seconds.
+A controller that knows where it is heading, how fast, and what the network
+has historically looked like along the projected path, can begin to
+pre-load video while the connection is still strong and absorb the
+upcoming degradation without quality loss.
+
+GenABR pursues this idea with three constraints in mind that distinguish
+the work from prior context-aware ABR proposals:
+\begin{itemize}
+  \item \textbf{Cost discipline.} A predictive controller that consumes
+        large-language-model inference on every decision cycle would not
+        be deployable. GenABR uses a tiered inference stack so that the
+        LLM is invoked only when cheaper layers are uncertain.
+  \item \textbf{Privacy.} A system that records full-precision GPS
+        traces creates a continuous commute-reconstruction risk. GenABR
+        snaps location data to 200~m tile centres at ingestion, matching
+        the resolution at which prediction is performed and discarding
+        sub-tile precision before it ever lands in storage.
+  \item \textbf{Battery.} Continuous high-accuracy GPS is the dominant
+        battery cost in typical smartphone web video stacks. GenABR
+        sources position from Wi-Fi/cell triangulation, which is roughly
+        an order of magnitude lower in power draw and remains adequate
+        at the 200~m tile resolution at which the controller operates.
+\end{itemize}
+
+This paper documents the system as implemented. It describes the four
+architectural pillars, the data model, the three-segment evaluation
+harness we have built, and the two specific code-level mitigations for
+privacy and battery. It does not claim empirical superiority over reactive
+baselines; that comparison requires paired GenABR-on / GenABR-off sessions
+on identical routes and is the explicit subject of follow-up work.
+
+% ============================================================================
+\section{Background and Motivation}
+% ============================================================================
+
+\subsection{HTTP Adaptive Streaming}
+HLS \cite{hls} and MPEG-DASH \cite{dash} divide a video into fixed-duration
+segments encoded at multiple bitrates. A client-side controller selects the
+bitrate of the next segment from a discrete bitrate ladder using observed
+throughput, current player buffer occupancy, and a QoE objective. In most
+production browser deployments the controller is HLS.js with its default
+BOLA-style policy. GenABR is implemented as a buffer-target override above
+this player rather than as a replacement controller, so the base bitrate
+selection logic is preserved and the system can fall back to standard
+behaviour when the override is inactive.
+
+\subsection{The reactive failure mode}
+Consider a user walking into a known coverage shadow with a 720p stream and
+a 5~s player buffer. As the device crosses the coverage boundary, segment
+downloads stretch from $\sim$~1~s each to several seconds. Within a few
+seconds the controller observes the slowdown, requests a lower-bitrate
+representation, and either (a) succeeds in maintaining playback at a
+substantially lower quality for the duration of the shadow, or (b) fails
+to fetch even the lower-bitrate segment in time and stalls. In neither
+case can the controller exploit the fact that, two minutes earlier, the
+device was on the same street with five times the available bandwidth and
+could have prefetched the upcoming segments at the higher bitrate.
+
+\subsection{Quality of Experience metrics}
+The QoE literature treats three components as primary contributors to
+perceived video quality: average video quality (commonly measured by VMAF
+\cite{vmaf}), quality variability across the session ($\sigma_{\text{VMAF}}$), and
+rebuffering events. Even a single-second stall is often weighted as
+equivalent to a multi-point average-quality drop. In the present
+implementation, per-frame VMAF is not computed: instead we report a
+bitrate-derived VMAF proxy obtained from a fixed lookup table over the
+HLS bitrate ladder. We are explicit about this throughout: the metric is
+labelled ``VMAF-proxy'' in both the dashboard and the data model, and
+replacing it with real Netflix VMAF SDK output is listed as required
+future work before publication of empirical claims.
+
+% ============================================================================
+\section{Related Work}
+% ============================================================================
+Reactive ABR has been studied for over a decade. BOLA \cite{bola} casts the
+problem as Lyapunov-style optimisation; MPC \cite{mpc} uses receding-horizon
+control over a small look-ahead window; Pensieve \cite{pensieve} learns a
+controller via deep reinforcement learning. All three derive their state
+from recent throughput history alone, and none consult any spatial signal.
+
+Several prior works have introduced location context to ABR. Xia
+\textit{et al.} \cite{xia} build per-cell-tower throughput models; Stick
+\textit{et al.} \cite{stick} demonstrate that mobility speed is a
+significant predictor of throughput variance. These are the closest
+points of comparison for our radio-map layer. GenABR extends this line in
+three ways: it represents path uncertainty as a probability-weighted cone
+rather than a single predicted trajectory, it auto-promotes weak-signal
+tiles to dead-zone markers without requiring stalls as triggers, and it
+introduces a tiered inference engine in which a generative model serves as
+the high-uncertainty escalation layer.
+
+Mobility prediction itself is a mature area, with HMM and deep-learning
+trajectory models in widespread use for cellular handover preparation;
+GenABR uses a simpler fixed-probability cone, deferring trajectory
+learning to future work.
+
+% ============================================================================
+\section{System Architecture}
+% ============================================================================
+GenABR consists of four loosely-coupled components: a frontend telemetry
+service running in the browser; a backend inference engine that combines
+a probabilistic spatial cone with a shadow radio map; a tiered inference
+escalation pipeline; and a structured observation layer that logs every
+decision for later analysis. Figure~1 (reserved for a forthcoming
+camera-ready revision) summarises the data flow; this section describes
+each component as currently implemented in the codebase.
+
+\subsection{Frontend telemetry service}
+The frontend is implemented in Angular~19. A telemetry service measures
+the device state every \textbf{4~s} and pushes a sample into a local ping
+buffer. To avoid storing redundant samples, the service applies
+change-detection thresholds: a ping is enqueued only if the buffer level
+has changed by at least 2~s, the device has moved at least 50~m, the
+bitrate has changed, the network connection type has changed, or 15~s
+have elapsed since the last enqueue (a heartbeat). A batch of ten enqueued
+pings, or the end-of-session signal, triggers a single HTTP POST to the
+backend.
+
+A separate \textbf{prediction service} polls the backend every
+\textbf{25~s} for an updated buffer-target recommendation. The first such
+request is fired immediately on the first GPS fix to warm the
+server-side cache before the steady-state poll cycle begins.
+
+Each ping contains: snapped latitude and longitude (see
+Section~\ref{sec:privacy}), speed (km/h), heading, current buffer level
+(s), current bitrate (kbps), the most recent downlink and RTT estimates
+from the browser's Network Information API, the connection type
+(\texttt{4g}, \texttt{3g}, \texttt{2g}, \texttt{slow-2g}, \texttt{wifi}),
+and the device battery level when accessible.
+
+\subsection{Probabilistic prediction cone}
+\label{sec:cone}
+The prediction cone is generated centred on the device's current position
+along its current heading. Three branches are evaluated, with fixed
+probabilities reflecting that straight-on continuation is most likely and
+sharp turns are equally likely on either side:
+\begin{itemize}
+  \item Straight ($+0\degree$ offset), probability $0.70$
+  \item Left ($-30\degree$ offset), probability $0.15$
+  \item Right ($+30\degree$ offset), probability $0.15$
+\end{itemize}
+Each branch is sampled at three look-ahead horizons of $30$, $60$, and
+$90$~s, weighted $0.50$, $0.30$, $0.20$ respectively (so points further
+in the future contribute proportionally less to the composite risk).
+For each sampled point, the system computes the destination tile and
+queries the Shadow Map for that tile's fused coverage score
+$c(x,y) \in [0, 1]$. The point risk is then
+\[
+  r_{\text{point}} = p_{\text{branch}} \cdot (1 - c(x, y)) \cdot w_{\text{horizon}}
+\]
+and the overall spatial risk is the sum of all point risks across all
+branches, clipped to $[0, 1]$. We emphasise that the branch probabilities
+are presently \emph{fixed constants}, not learned --- replacing them with a
+Markov road-topology model is a future-work item.
+
+\subsubsection{Corridor scanner}
+In parallel to the cone, a corridor scanner steps along the device's
+current heading in 200~m increments up to a maximum of 5~km, querying the
+fused score at each step. The first contiguous run of tiles with fused
+score below a dead-zone threshold of $0.35$ is identified; the scanner
+returns its entry-time-from-now (s), duration (s), required prebuffer
+seconds with a $1.30\times$ safety factor, and a feasibility flag set
+when the device's current bandwidth is sufficient to download enough
+video before reaching the dead zone. The corridor scanner is invoked
+only when the device speed exceeds 5~km/h.
+
+\subsection{Shadow Network Map}
+\label{sec:shadow}
+The Shadow Map is a MongoDB collection (\texttt{radio\_map\_cache}) keyed
+on a 200~m geographic tile identifier. Per-tile fields include the
+running averages of measured downlink, RTT, and player buffer level; a
+sample count; and a fused coverage score. Tiles with no observed samples
+fall back to a static crowd-sourced layer (placeholder pluggable to
+OpenSignal/OpenCellID); unmapped tiles use a default coverage score of
+$0.6$, slightly above the safe threshold and well above the dead-zone
+threshold, so that unknown territory does not trigger unnecessary
+prebuffering on first visit.
+
+The map is updated by two complementary write paths:
+\begin{enumerate}
+  \item \textbf{Stall-triggered ingestion.} When the player reports a
+        rebuffer event, the (snapped) stall coordinates are written
+        directly as a dead-zone marker with a low signal score derived
+        from the concurrent downlink reading. This is the conventional
+        path used by stall-driven prior work.
+  \item \textbf{Auto-promotion at session end.} After every session, the
+        \texttt{updateRadioMapFromSession} routine walks all tiles
+        touched by the session's pings, applies a Welford-style running
+        average to the per-tile downlink statistics, and promotes any
+        tile satisfying $\bar{d}_{\text{tile}} < 1.0$~Mbps with sample
+        count $\geq 5$ to a dead-zone marker. This path requires no
+        stall as a trigger.
+\end{enumerate}
+The auto-promotion threshold (1.0~Mbps) corresponds to the floor below
+which the lowest bitrate ladder rung (360p, $\sim$0.4~Mbps) is at risk;
+the sample-count gate (5) prevents single-visit anomalies from
+contaminating the map. Stale samples are down-weighted: tiles not visited
+within the last 14~days have their effective historical sample count
+halved when new data arrives, giving fresh observations more leverage.
+
+\subsection{Tiered inference engine}
+\label{sec:tiered}
+The escalation hierarchy has three layers, each with progressively higher
+latency and cost, and is engineered so that the cheapest tier capable of
+handling a given decision actually handles it.
+
+\paragraph{Guard (on-device, free)}
+The Guard runs entirely client-side. If the device speed is at or above
+3~km/h, the Guard \emph{never} clears the cycle: even on currently
+excellent signal, a moving user must be allowed to reach the spatial
+look-ahead. If the device is below 3~km/h, the Guard additionally requires
+a stable connection type (\texttt{4g} or \texttt{wifi}), a downlink of at
+least 5~Mbps, a buffer depth of at least 15~s, and zero stalls in the
+preceding 60~s. Only when all four conditions are met does Guard ``pass''
+and the cycle is short-circuited with no backend call. The 3~km/h
+threshold is set just above the typical apparent-speed noise floor of the
+HTML5 Geolocation API for stationary devices ($\approx$~3~km/h with
+$\pm$1--3~m accuracy at 1~Hz).
+
+\paragraph{Student (server-side statistical, microcent-level cost)}
+When Guard does not pass, the request is dispatched to a Node.js endpoint
+\texttt{POST /genabr/decision}. The Student tier computes the spatial
+risk from the prediction cone, then applies a \emph{network overlay}
+based on the most recent 5 downlink and 5 RTT readings supplied by the
+client. The overlay produces a signed risk delta clamped to
+$[-0.20, +0.50]$, with structured factor tags drawn from the following
+vocabulary: \texttt{conn\_2g}, \texttt{conn\_3g},
+\texttt{rtt\_critical} ($>$1000~ms), \texttt{rtt\_high} ($>$500~ms),
+\texttt{rtt\_elevated} ($>$200~ms), \texttt{rtt\_rising\_fast},
+\texttt{rtt\_rising}, \texttt{dl\_degrading} (with magnitude-scaled
+boost), \texttt{dl\_improving}, \texttt{dl\_volatile}, and
+\texttt{healthy\_network}. The downlink trend is computed via ordinary
+least-squares slope over the last five readings, which correctly
+classifies plateau-then-drop patterns that a simple last-minus-first
+delta would miss. The composite risk maps to a buffer-target tier:
+\begin{itemize}
+  \item $\text{risk} < 0.20$: \texttt{normal} (10~s / 30~s caps)
+  \item $0.20 \leq \text{risk} < 0.45$: \texttt{prebuffer\_moderate} (20~s / 45~s)
+  \item $\text{risk} \geq 0.45$: \texttt{prebuffer\_aggressive} (30~s / 60~s)
+\end{itemize}
+A Student \emph{confidence} score is computed as the distance to the
+nearest decision boundary divided by a half-zone of $0.125$, capped at
+$1.0$. When confidence falls below $0.60$ the request is escalated to
+the Oracle.
+
+\paragraph{Oracle (cloud LLM, sub-cent cost)}
+The Oracle is OpenAI \texttt{gpt-4o-mini} with temperature $0.2$ and a
+JSON-output schema. The prompt embeds the spatial cone summary, the
+current-tile observed statistics, the recent network readings and trend,
+the connection type, and the structured network-factor delta. The model
+returns an adjusted risk, a recommendation, the corresponding buffer
+caps, a confidence value, and a free-text reasoning string. To bound
+latency from the user's perspective, the Oracle is dispatched
+asynchronously in the background: the HTTP response returned to the
+client is the Student's tentative answer with an
+\texttt{oracle\_pending} flag; the next prediction cycle reads the
+Oracle's result from a Redis cache and upgrades the recommendation if it
+arrived. A per-tile in-flight lock prevents duplicate Oracle calls when
+two consecutive cycles both miss the cache during the model's response
+window. A per-user limiter caps Oracle calls at ten per minute. When the
+Oracle call fails (network error, timeout, schema violation), the system
+falls back to a heuristic adjustment computed from speed, downlink
+trend, and the time-of-day peak-hours flag, and the failure is logged.
+
+Per-session cost is computed from prompt and completion token counts using
+current OpenAI \texttt{gpt-4o-mini} pricing: \$0.15 per million prompt
+tokens and \$0.60 per million completion tokens. A baseline cost floor of
+\$0.0001 per session is applied at metric computation time so that
+zero-Oracle sessions remain numerically comparable to GenABR sessions.
+
+\subsection{Observation layer}
+Every Student-tier invocation writes a \texttt{StudentDecision} document,
+even when no Oracle is fired, containing: location, speed and speed
+category, spatial risk, network delta, structured factor tags, effective
+risk, recommendation, confidence, connection type, latest downlink,
+latest RTT, and an \texttt{oracle\_pending} boolean. Every Oracle
+invocation additionally writes an \texttt{OracleDecision} document
+containing the prompt-context tile statistics, the model used, the token
+counts, the LLM-returned adjusted risk and reasoning, the heuristic
+recommendation that would have applied in the LLM's absence, a
+\texttt{diverged} boolean, the corridor-scan results
+(\texttt{has\_dead\_zone}, \texttt{dead\_zone\_entry\_sec},
+\texttt{dead\_zone\_duration\_sec}, \texttt{corridor\_feasible}), and
+the failure-mode flag. \texttt{StudentDecision} records are retained for
+30~days; \texttt{OracleDecision} for 90~days.
+
+The \texttt{healthy\_network} tag is logged when no other risk-elevating
+factor fires and the device is on \texttt{4g} or \texttt{wifi} with
+RTT~$<$~100~ms and downlink~$>$~2~Mbps under a stable trend; recording
+this affirmative ``no risk found'' state allows the eventual analysis to
+distinguish ``system evaluated and approved'' from ``system was never
+invoked''.
+
+% ============================================================================
+\section{Privacy Preservation}
+\label{sec:privacy}
+% ============================================================================
+The system records continuous location data, which is a privacy concern
+that must be addressed at the implementation layer rather than as a
+deployment afterthought. We adopt three measures.
+
+\textbf{Snap-to-tile at ingestion.} The browser geolocation API returns
+positions whose precision (under low-power Wi-Fi/cell triangulation) is
+typically 50--100~m. The prediction pipeline operates at a 200~m tile
+resolution throughout: the corridor scanner steps in 200~m increments,
+the prediction cone samples tile-quantised points, the radio-map cache
+is keyed on tile identifiers, and dead-zone markers are recorded at
+tile-level granularity. Storing the full reported position is therefore
+gratuitous data collection. The backend telemetry handler snaps every
+incoming latitude/longitude pair to its enclosing tile centre before
+writing it to the \texttt{telemetry\_pings} or stall collections; the
+GeoJSON \texttt{location} field used by the 2dsphere geospatial index is
+populated from the snapped coordinates. No code path after this
+snapping step has access to sub-tile precision. Stall events embedded
+in \texttt{StreamingSession} (which persist longer than the 2-day
+\texttt{TelemetryPing} TTL) are snapped through the same routine.
+
+\textbf{Bounded retention.} \texttt{TelemetryPing} carries a 2-day TTL;
+all derived intelligence (radio-map running averages, dead-zone markers,
+session summaries) is kept at tile resolution and is not user-keyed.
+
+\textbf{Disabled high-accuracy GPS.} The frontend never requests
+\texttt{enableHighAccuracy: true}: the GPS chip is not invoked, and the
+data the system never receives at high precision cannot be exfiltrated
+or compelled.
+
+These measures are local mitigations rather than a complete privacy
+model. Federated radio-map updates with formal differential-privacy
+guarantees, and an explicit user opt-in flow, are proposed as follow-up
+work.
+
+% ============================================================================
+\section{Battery Cost Mitigation}
+% ============================================================================
+On a typical Android browser, requesting
+\texttt{enableHighAccuracy: true} from the Geolocation API engages the
+GPS chip directly, with an additional power draw on the order of
+50--100~mW when active continuously. Across a 30-minute streaming
+session this corresponds to roughly 0.4--0.5\% extra battery on a
+typical 4000~mAh device --- bounded but measurable, and entirely
+attributable to the predictive layer.
+
+The implementation declines high-accuracy mode and instead obtains
+position from the system's Wi-Fi/cell triangulation provider. The
+resulting reports are accurate to roughly 50--100~m, which is below the
+200~m tile resolution at which all prediction is performed: the cone
+sample, corridor step, radio-map key, and dead-zone marker are all
+quantised to the same grid, so coarse positioning does not degrade
+prediction accuracy. The \texttt{maximumAge} parameter is also raised
+from 3~s to 5~s, allowing the system to reuse cached fixes when the
+device is briefly stationary and avoiding redundant chip wake-ups.
+
+The remaining contributors --- a 25-second prediction-loop POST and a
+batched telemetry POST every 3--5 minutes (after the change-detection
+filter described in the previous section drops 60--80\% of redundant
+pings) --- are negligible compared to the GPS overhead they replace.
+
+We make no quantitative battery claim in this paper. A controlled
+measurement on a reference device, comparing GenABR-on, GenABR-off, and
+GenABR-on-with-high-accuracy-GPS, is part of the future work plan.
+
+% ============================================================================
+\section{Implementation}
+% ============================================================================
+The system is implemented as an intelligence layer on top of
+\textbf{StreamSphere}, an HLS streaming platform with S3-backed segment
+delivery. No modifications are made to the segment delivery path; the
+GenABR controller intercepts only the HLS.js buffer-length configuration
+keys (\texttt{maxBufferLength}, \texttt{maxMaxBufferLength}), preserving
+full CDN performance and enabling clean fallback to the default ABR
+policy when the override is inactive. Concretely:
+
+\begin{itemize}
+  \item \textbf{Frontend.} Angular~19. Geolocation API, Battery API,
+        and Network Information API. HLS.js for the player.
+  \item \textbf{Backend.} Node.js with Express, deployed on Vercel.
+        MongoDB for persistence (sessions, pings, radio-map cache,
+        dead-zone markers, Student/Oracle decision logs). Upstash Redis
+        for the Oracle in-flight lock, cached LLM results, the global
+        GenABR enable flag, and rate counters.
+  \item \textbf{LLM provider.} OpenAI \texttt{gpt-4o-mini} via the
+        official Node SDK, called with \texttt{response\_format =
+        json\_object}, temperature 0.2, max-tokens 300.
+  \item \textbf{Geospatial.} Custom 200~m tile grid; MongoDB
+        \texttt{2dsphere} index on the GeoJSON \texttt{location} field
+        for dead-zone proximity queries.
+\end{itemize}
+
+A \textbf{global GenABR enable flag} is persisted in Redis and exposed
+through admin endpoints; toggling it switches all clients to the
+unmodified HLS.js policy on their next prediction cycle. This is the
+primary control surface for paired A/B data collection.
+
+A \textbf{three-segment admin dashboard} renders, in real time: the
+per-segment QoE comparison (Section~\ref{sec:eval}); the Oracle
+intelligence panel (decision counts, divergence rate, token totals,
+cost, recommendation distribution, network-factor distribution at
+trigger time, corridor-scanner statistics including the proactive
+lead-time metric); the Student events panel (top-10 network factors,
+connection-type distribution, and the share of decisions that escalated
+to Oracle); and the recent-sessions log with per-session VMAF-proxy,
+$\sigma$, stalls, buffer level, $\Phi$ score, Oracle cost, and route ID.
+
+% ============================================================================
+\section{Evaluation Framework}
+\label{sec:eval}
+% ============================================================================
+A direct GenABR-vs-baseline comparison computed over all sessions would
+mix three segments with different expected behaviour and produce an
+uninterpretable headline number. We therefore classify every session
+into one of three non-exclusive segments by aggregating its
+\texttt{TelemetryPing} stream:
+
+\begin{itemize}
+  \item \textbf{MOBILE} --- $\max(\text{speed}) > 5$~km/h. The device
+        was in motion at some point; the spatial look-ahead is the
+        relevant mechanism.
+  \item \textbf{MOBILE+POOR\_SIGNAL} --- mobile and either average
+        downlink $<$~1.5~Mbps or minimum downlink $<$~0.5~Mbps. Both
+        the corridor scanner and the network-overlay buffer elevation
+        are the relevant mechanisms. This is the highest-value segment
+        for the system.
+  \item \textbf{STATIONARY+GOOD} --- $\max(\text{speed}) \leq 5$~km/h
+        and average downlink $\geq$~3~Mbps. Control group: the Guard
+        should pass and the system should defer to HLS.js. Any
+        non-zero $\Delta$ in this segment indicates a measurement
+        artefact rather than a benefit.
+\end{itemize}
+
+Within each segment, sessions are grouped by the
+\texttt{genabr\_active} flag and the following per-session metrics are
+aggregated:
+
+\begin{itemize}
+  \item \textbf{Average VMAF-proxy} --- bitrate-derived quality
+        estimate. The current implementation uses a fixed lookup table
+        over the bitrate ladder; replacing this with real per-frame
+        VMAF SDK output is a prerequisite for any quality claim in a
+        camera-ready paper.
+  \item \textbf{$\sigma_{\text{VMAF-proxy}}$} --- session-level
+        standard deviation. A direct measure of bitrate-switching
+        intensity, which is the proximate user-visible quality
+        regression we aim to reduce.
+  \item \textbf{Stall count and total stall duration} --- the
+        rebuffer-event metrics.
+  \item \textbf{Average and minimum buffer level} --- the latter is a
+        leading indicator of stall risk; the former demonstrates
+        proactive buffer fill.
+  \item \textbf{Bitrate variance across raw pings} --- complements the
+        bitrate-switch event log by capturing micro-fluctuations.
+  \item \textbf{Oracle cost (USD)} --- per-session inference cost
+        derived from token counts. Reported separately as the cost
+        side of the cost-vs-benefit story.
+  \item \textbf{Tier distribution} --- counts of Guard / Student /
+        Oracle invocations per session, which characterise the
+        architectural cost profile.
+  \item \textbf{Route identifier} --- a stable hash of the (snapped)
+        first and last GPS tile, ordered so that reverse traversal of
+        the same physical route yields the same identifier. Allows the
+        ``$K$ unique routes'' summary the system produces.
+  \item \textbf{Proactive lead time} --- average dead-zone-entry-time
+        across cycles where the corridor scanner identified a dead
+        zone \emph{and} the inference engine returned a prebuffer
+        recommendation. No reactive baseline produces a non-zero value
+        here by construction.
+\end{itemize}
+
+\subsection{The composite $\Phi$ metric}
+We compute a composite QoE-to-cost score
+\begin{equation}
+  \Phi = \frac{\overline{\text{VMAF-proxy}} - \alpha \, \sigma - \beta \, N_{\text{stall}} \, T_{\text{stall}}}{C_{\text{session}}}
+\end{equation}
+with $\alpha = 0.5$, $\beta = 20$, and $C_{\text{session}}$ the per-session
+inference cost in USD. $C_{\text{session}}$ is floored at \$0.0001 to
+keep $\Phi$ finite for zero-Oracle baseline sessions. We surface $\Phi$
+on the dashboard as a single diagnostic, but we recommend that the
+primary research story be told with the constituent metrics above
+plotted on a (cost, QoE) Pareto plane. Composite scores can compress
+genuinely informative trade-offs into a single number that obscures
+which mechanism is actually contributing.
+
+\subsection{What we will measure}
+We do not present empirical results in this paper. The current dataset
+contains only GenABR-enabled sessions; without the corresponding
+GenABR-disabled sessions on the same routes, no $\Delta$ can be
+computed and no claim about the system's behaviour can be supported.
+The next phase of work is paired A/B data collection: alternating the
+global GenABR enable flag across sessions on a fixed set of routes,
+across multiple devices and signal conditions, to populate the three
+segment $\times$ two-condition cells with statistically meaningful
+sample sizes (target: $n \geq 30$ per cell). Once collected, the
+intended primary finding is presented as a (cost, $\Delta$-stalls) and a
+(cost, $\Delta\sigma_{\text{VMAF-proxy}}$) Pareto comparison, segmented as
+above, alongside a tier-distribution table that characterises
+\emph{where} GenABR's cost was incurred.
+
+% ============================================================================
+\section{Discussion and Limitations}
+% ============================================================================
+
+We list the known limitations of the implementation explicitly so that
+the gap between the system as presented and the system as a fully
+publishable result is unambiguous.
+
+\textbf{VMAF-proxy, not VMAF.} The current quality metric is a fixed
+lookup from bitrate to a VMAF-equivalent. This is acceptable for
+internal comparison between configurations of the same player on the
+same content, but is not a substitute for per-frame SDK measurement and
+should not be reported as ``VMAF'' in any external publication. Real
+VMAF requires running the segment files through Netflix's VMAF SDK
+(libvmaf via FFmpeg) and persisting per-segment scores; this is a
+build-system change rather than a research one.
+
+\textbf{Fixed branch probabilities.} The cone probabilities $0.70 /
+0.15 / 0.15$ are hard-coded constants. Replacing them with a Markov
+model trained on OpenStreetMap road topology and historical GPS traces
+is straightforward in principle and would let the cone narrow on
+straight highways and widen at intersections; we have not done it.
+
+\textbf{Cold-start.} The system requires accumulated tile data to
+recommend prebuffering for previously unseen regions. A first-time
+traversal of a new route falls back to the default coverage of $0.6$
+and behaves indistinguishably from baseline ABR. The auto-promotion
+threshold of five samples per tile means most regions become
+predictable after two or three traversals.
+
+\textbf{Crowd-sourced layer.} The static layer is currently a
+placeholder; live ingestion of OpenSignal/OpenCellID grids is a
+deployment task, not a research one.
+
+\textbf{Data-plan-aware buffer cap.} The Implementation section's
+buffer cap is hard-coded at 300~s. A region-aware cap derived from
+local mobile-data-plan minima (e.g., the average daily allowance of
+the lower-tier providers in the deployment region) would tighten the
+``why not always max-buffer?'' answer; this is a configuration change.
+
+\textbf{Oracle latency tail.} The cloud LLM has a typical response
+window of 2--8~s. The shadow-buffer / in-flight-lock design absorbs
+this gracefully: the user is never blocked on the LLM. Sustained API
+slowness, however, would degrade the 90-second look-ahead guarantee
+and is best mitigated by self-hosted inference for the Student tier.
+
+\textbf{Sample size in this paper.} Empirical claims require the
+paired-baseline data described in Section~\ref{sec:eval}; we do not
+attempt to make any here.
+
+\textbf{Scope.} The system targets web-based HLS playback. Native iOS
+and Android applications using AVPlayer / ExoPlayer would require
+re-implementation of the buffer-target override mechanism, though the
+backend inference engine would be reusable.
+
+% ============================================================================
+\section{Future Work}
+% ============================================================================
+
+In priority order:
+
+\begin{enumerate}
+  \item \textbf{Paired A/B data collection.} Alternate the
+        \texttt{genabr\_active} flag across sessions on a fixed route
+        set; target $n \geq 30$ per segment per condition.
+  \item \textbf{Real VMAF.} Replace the bitrate-lookup proxy with
+        per-segment libvmaf SDK output, reported to the database
+        alongside the existing fields.
+  \item \textbf{Trained branch probabilities.} Replace the fixed
+        cone weights with a Markov model trained on OSM topology and
+        historical traces.
+  \item \textbf{Battery measurement.} Conduct a controlled
+        device-side power measurement comparing GenABR-on, GenABR-off,
+        and GenABR-on-with-high-accuracy-GPS.
+  \item \textbf{Differential-privacy radio-map federation.} Extend
+        the snap-to-tile measure with per-update noise and aggregation
+        across users to support privacy-preserving cross-user map
+        improvement.
+  \item \textbf{Static layer ingestion.} Wire the OpenSignal /
+        OpenCellID feed into the radio-map cache as the default for
+        unmapped tiles.
+  \item \textbf{Self-hosted Student model.} Replace the present
+        statistical Student with a small distilled model trained on
+        the accumulating \texttt{StudentDecision} corpus, removing the
+        backend round-trip and lowering tail latency.
+  \item \textbf{Native player support.} Port the buffer-target
+        override to iOS AVPlayer and Android ExoPlayer.
+\end{enumerate}
+
+% ============================================================================
+\section{Conclusion}
+% ============================================================================
+
+We have described GenABR, an end-to-end implemented ABR intelligence
+layer that aims to convert the high-mobility QoE failure mode of
+reactive controllers from a measurement problem into a spatial-prediction
+problem. The system combines a probabilistic cone, a continuously
+updated radio map, and a three-tier inference stack with a generative
+model as the high-uncertainty escalation layer; it logs every decision
+for analysis; and it incorporates explicit privacy and battery
+mitigations at the implementation layer rather than as deployment
+afterthoughts. We have not, in this paper, claimed empirical superiority
+over any reactive baseline: that comparison requires paired sessions on
+identical routes and is the explicit subject of follow-up work. The
+contribution presented here is the system, the evaluation harness, and
+the three-segment framework within which the eventual comparison can be
+made cleanly.
+
+% ── References ──────────────────────────────────────────────────────────────
+\begin{thebibliography}{00}
+\bibitem{hls} R. Pantos and W. May, ``HTTP Live Streaming,'' IETF RFC 8216, 2017.
+\bibitem{dash} ISO/IEC 23009-1, ``Dynamic adaptive streaming over HTTP (DASH),'' 2014.
+\bibitem{vmaf} Z. Li, A. Aaron, I. Katsavounidis, A. Moorthy, and M. Manohara, ``Toward a practical perceptual video quality metric,'' Netflix Tech Blog, 2016.
+\bibitem{bola} K. Spiteri, R. Urgaonkar, and R. K. Sitaraman, ``BOLA: Near-optimal bitrate adaptation for online videos,'' in \textit{IEEE INFOCOM}, 2016.
+\bibitem{mpc} X. Yin, A. Jindal, V. Sekar, and B. Sinopoli, ``A control-theoretic approach for dynamic adaptive video streaming over HTTP,'' in \textit{ACM SIGCOMM}, 2015.
+\bibitem{pensieve} H. Mao, R. Netravali, and M. Alizadeh, ``Neural adaptive video streaming with Pensieve,'' in \textit{ACM SIGCOMM}, 2017.
+\bibitem{xia} F. Xia \textit{et al.}, ``A measurement study of cellular network performance,'' in \textit{Proc. ACM IMC}, 2014.
+\bibitem{stick} J. Stick \textit{et al.}, ``Mobility-aware bandwidth prediction for adaptive video streaming,'' in \textit{Proc. ACM MMSys}, 2016.
+\end{thebibliography}
+
+\end{document}

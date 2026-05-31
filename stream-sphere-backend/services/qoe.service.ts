@@ -1,8 +1,14 @@
 import { StreamingSession } from '../models/streamingSession';
 import { TelemetryPing }    from '../models/telemetryPing';
+import { OracleDecision }   from '../models/oracleDecision';
 import { updateRadioMapFromSession } from './shadowMap.service';
+import { tileId } from '../utils/geo';
 
 // ── VMAF estimation from bitrate ──────────────────────────────────────────────
+// NOTE: This is a bitrate→VMAF lookup proxy, NOT real Netflix VMAF SDK output.
+// The paper labels this "VMAF-proxy"; the dashboard surfaces it as
+// "Estimated video quality" to be honest about its provenance. Replace with
+// real per-frame VMAF computation (ffmpeg + libvmaf) before publication.
 
 export function estimateVmaf(bitrateKbps: number): number {
   if (bitrateKbps >= 8000) return 93;
@@ -37,17 +43,46 @@ function median(values: number[]): number {
     : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-// ── QoE-to-Cost metric Φ ──────────────────────────────────────────────────────
+// ── QoE-to-Cost metric Φ (paper Eq. 9) ────────────────────────────────────────
 // Φ = (avg_VMAF − α·σ_VMAF − β·N_stall·T_stall) / C_session
 //
-// α = 0.30 — penalises VMAF variance
-// β = 0.05 — penalises each second of accumulated stall time
-// C_session — session duration in minutes
+// α = 0.5  — penalises VMAF variance     (per paper)
+// β = 20   — penalises stall events × duration (per paper)
+// C_session — per-session inference cost in USD
+//
+// COST FLOOR: Baseline (BOLA/MPC/Pensieve) sessions have C_session = $0, which
+// would make Φ undefined. We apply a $0.0001 floor — equivalent to a single
+// ~600-token Student-tier inference — so Φ stays finite and the A/B comparison
+// remains numerically meaningful. Document this floor when reporting Φ values.
 
-const ALPHA = 0.30;
-const BETA  = 0.05;
+const ALPHA          = 0.5;
+const BETA           = 20;
+const COST_FLOOR_USD = 0.0001;
+
+// gpt-4o-mini pricing (as of 2024). Update if model or pricing changes.
+const PROMPT_RATE_PER_TOKEN     = 0.15  / 1_000_000;   // $0.15 per 1M prompt tokens
+const COMPLETION_RATE_PER_TOKEN = 0.60  / 1_000_000;   // $0.60 per 1M completion tokens
+
+export function tokenCostUsd(promptTokens: number, completionTokens: number): number {
+  return promptTokens * PROMPT_RATE_PER_TOKEN
+       + completionTokens * COMPLETION_RATE_PER_TOKEN;
+}
 
 export function computePhi(
+  avgVmaf:        number,
+  sigmaVmaf:      number,
+  nStall:         number,
+  totalStallSec:  number,
+  costUsd:        number,
+): number {
+  const C = Math.max(costUsd, COST_FLOOR_USD);
+  return (avgVmaf - ALPHA * sigmaVmaf - BETA * nStall * totalStallSec) / C;
+}
+
+// Legacy quality-per-minute Φ (kept as secondary diagnostic for stable plots
+// during early data collection when most sessions have C_session ≈ floor and
+// the Eq. 9 Φ degenerates to "VMAF / floor" for everyone).
+export function computePhiPerMinute(
   avgVmaf:            number,
   sigmaVmaf:          number,
   nStall:             number,
@@ -55,7 +90,7 @@ export function computePhi(
   sessionDurationMin: number,
 ): number {
   const C = Math.max(sessionDurationMin, 0.5);
-  return (avgVmaf - ALPHA * sigmaVmaf - BETA * nStall * totalStallSec) / C;
+  return (avgVmaf - 0.30 * sigmaVmaf - 0.05 * nStall * totalStallSec) / C;
 }
 
 // ── Session-end QoE computation ───────────────────────────────────────────────
@@ -159,11 +194,56 @@ export async function finaliseSession(
   const totalStallMs  = s.total_stall_ms ?? 0;
   const totalStallSec = totalStallMs / 1000;
 
+  // ── Per-session Oracle inference cost (USD) ───────────────────────────────
+  // Sum tokens across every OracleDecision logged for this session.
+  // Empty list (baseline / Student-only) → cost = 0; computePhi applies the
+  // $0.0001 floor automatically, so Φ stays finite for comparison.
+  const costAgg = await OracleDecision.aggregate([
+    { $match: { session_id: sessionId } },
+    {
+      $group: {
+        _id:               null,
+        promptTokens:      { $sum: { $ifNull: ['$prompt_tokens',     0] } },
+        completionTokens:  { $sum: { $ifNull: ['$completion_tokens', 0] } },
+      },
+    },
+  ]);
+  const oracleCostUsd = costAgg[0]
+    ? tokenCostUsd(costAgg[0].promptTokens ?? 0, costAgg[0].completionTokens ?? 0)
+    : 0;
+
+  // ── Stable route_id from first/last GPS ping (200 m tile granularity) ────
+  // Same physical commute (within tile resolution) → same route_id.
+  // Used for the paper's "M markers from K unique routes" claim.
+  let routeId: string | null = null;
+  if (pingCount > 0) {
+    const endpoints = await TelemetryPing.aggregate([
+      { $match: { session_id: sessionId, lat: { $ne: null }, lng: { $ne: null } } },
+      { $sort:  { timestamp: 1 } },
+      {
+        $group: {
+          _id:        null,
+          firstLat:   { $first: '$lat' },
+          firstLng:   { $first: '$lng' },
+          lastLat:    { $last:  '$lat' },
+          lastLng:    { $last:  '$lng' },
+        },
+      },
+    ]);
+    const e = endpoints[0];
+    if (e && e.firstLat != null && e.lastLat != null) {
+      const start = tileId(e.firstLat, e.firstLng);
+      const end   = tileId(e.lastLat,  e.lastLng);
+      // Order endpoints so reverse traversal of the same route hashes equal.
+      routeId = start < end ? `${start}→${end}` : `${end}→${start}`;
+    }
+  }
+
   // ── Duration + Phi ────────────────────────────────────────────────────────
   const startedAt   = new Date(s.started_at).getTime();
   const endedAt     = Date.now();
   const durationMin = (endedAt - startedAt) / 60_000;
-  const phi         = computePhi(avgVmaf, sigmaVmaf, nStall, totalStallSec, durationMin);
+  const phi         = computePhi(avgVmaf, sigmaVmaf, nStall, totalStallSec, oracleCostUsd);
 
   await StreamingSession.updateOne(
     { session_id: sessionId },
@@ -175,6 +255,8 @@ export async function finaliseSession(
         total_stall_ms:   totalStallMs,
         genabr_active:    genabrActive,
         phi_score:        Math.round(phi * 100) / 100,
+        oracle_cost_usd:  Math.round(oracleCostUsd * 1_000_000) / 1_000_000, // 6-decimal USD
+        route_id:         routeId,
         avg_buffer_sec:   avgBufferSec   !== null ? Math.round(avgBufferSec   * 10) / 10 : null,
         min_buffer_sec:   minBufferSec   !== null ? Math.round(minBufferSec   * 10) / 10 : null,
         max_buffer_sec:   maxBufferSec   !== null ? Math.round(maxBufferSec   * 10) / 10 : null,
