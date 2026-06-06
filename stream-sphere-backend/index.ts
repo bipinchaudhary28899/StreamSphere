@@ -34,31 +34,20 @@ app.use(cors(corsOptions));
 
 app.use(express.json({ limit: '10kb' }));
 app.use(globalLimiter);
-app.use('/api', centralRoute);
 
-redisService.connect();
+// ── Default cache policy ─────────────────────────────────────────────────────
+// Deny shared/edge caching by default so nothing user-specific can ever land in
+// Vercel's edge cache. Public read endpoints (feed, top-liked, search, single
+// video) explicitly override this with an s-maxage value in their controllers.
+app.use((_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  next();
+});
 
-// ── MongoDB connection with Vercel cold-start safety ─────────────────────────
-// bufferTimeoutMS raised to 30 s so cold-start containers don't time out on
-// the first request before the connection is ready.
-// The cached-connection pattern avoids re-connecting on every warm invocation.
-let mongoConnected = false;
-
-async function ensureMongoConnected(): Promise<void> {
-  if (mongoConnected || mongoose.connection.readyState === 1) return;
-  await mongoose.connect(process.env.MONGODB_URI!, {
-    serverSelectionTimeoutMS: 30_000,
-    socketTimeoutMS:          45_000,
-    bufferCommands:           true,
-  });
-  mongoConnected = true;
-  console.log('✅ MongoDB connected');
-}
-
-// Kick off connection immediately so it's ready before the first request
-ensureMongoConnected().catch((err) => console.error('❌ MongoDB connection error:', err));
-
-// Middleware: ensure DB is connected before any route runs
+// ── Ensure DB is connected BEFORE any route runs ─────────────────────────────
+// Express runs middleware in registration order, so this MUST be mounted ahead
+// of `/api`. (Previously it was registered after the routes and never ran for
+// API traffic — queries silently relied on Mongoose command buffering.)
 app.use(async (_req: Request, _res: Response, next: NextFunction) => {
   try {
     await ensureMongoConnected();
@@ -67,6 +56,40 @@ app.use(async (_req: Request, _res: Response, next: NextFunction) => {
     next(err);
   }
 });
+
+app.use('/api', centralRoute);
+
+redisService.connect();
+
+// ── MongoDB connection with Vercel cold-start safety ─────────────────────────
+// Cache the connection *promise* (not just a boolean) so that concurrent
+// cold-start requests share a single mongoose.connect() instead of racing.
+// On failure we reset the promise so the next request retries cleanly.
+let connPromise: Promise<typeof mongoose> | null = null;
+
+function ensureMongoConnected(): Promise<typeof mongoose> {
+  if (mongoose.connection.readyState === 1) return Promise.resolve(mongoose);
+  if (!connPromise) {
+    connPromise = mongoose
+      .connect(process.env.MONGODB_URI!, {
+        serverSelectionTimeoutMS: 30_000,
+        socketTimeoutMS:          45_000,
+        bufferCommands:           true,
+      })
+      .then((m) => {
+        console.log('✅ MongoDB connected');
+        return m;
+      })
+      .catch((err) => {
+        connPromise = null; // allow the next request to retry
+        throw err;
+      });
+  }
+  return connPromise;
+}
+
+// Kick off connection immediately so it's ready before the first request
+ensureMongoConnected().catch((err) => console.error('❌ MongoDB connection error:', err));
 
 // ── Global error handler (must have 4 params for Express to recognise it) ────
 // Catches any unhandled async errors thrown in route handlers (Express 5).

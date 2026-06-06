@@ -81,7 +81,9 @@ export class VideoService {
     const videos = await populateUserImages(rawVideos);
     const page: FeedPage = { videos, nextCursor, hasMore };
 
-    await redisService.set(cacheKey, page, TTL.feed);
+    // Fire-and-forget: populating the cache must never add latency to the
+    // response (a slow-but-connected Redis would otherwise block here).
+    void redisService.set(cacheKey, page, TTL.feed).catch(() => {});
 
     return page;
   }
@@ -115,7 +117,7 @@ export class VideoService {
       .exec();
 
     const populated = await populateUserImages(results);
-    await redisService.set(cacheKey, populated, TTL.search);
+    void redisService.set(cacheKey, populated, TTL.search).catch(() => {});
     return populated;
   }
 
@@ -126,7 +128,7 @@ export class VideoService {
 
     const raw = await Video.find({}).sort({ likes: -1 }).limit(3).lean().exec();
     const videos = await populateUserImages(raw);
-    await redisService.set(CK.topLiked(), videos, TTL.topLiked);
+    void redisService.set(CK.topLiked(), videos, TTL.topLiked).catch(() => {});
     return videos;
   }
 
@@ -136,7 +138,7 @@ export class VideoService {
     if (cached) return cached;
 
     const video = await Video.findById(id).lean().exec();
-    if (video) await redisService.set(CK.singleVideo(id), video, TTL.video);
+    if (video) void redisService.set(CK.singleVideo(id), video, TTL.video).catch(() => {});
     return video;
   }
 

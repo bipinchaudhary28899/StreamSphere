@@ -56,10 +56,23 @@ async function downloadFromS3(bucket, key, localPath) {
 
 /**
  * Upload a local file to S3 with the given content-type.
+ *
+ * All processed assets (HLS segments/playlists, preview.mp4, thumbnail.jpg) are
+ * write-once and UUID-keyed — they never change after upload — so they are
+ * served immutable with a 1-year cache lifetime. This lets the browser reuse
+ * them from disk cache instead of re-downloading (e.g. the hero carousel
+ * looping through its previews was re-fetching the same 500KB–1MB MP4s on every
+ * cycle because no Cache-Control was set).
  */
 async function uploadToS3(localPath, bucket, key, contentType) {
   const body = fs.readFileSync(localPath);
-  await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: contentType }));
+  await s3.send(new PutObjectCommand({
+    Bucket:       bucket,
+    Key:          key,
+    Body:         body,
+    ContentType:  contentType,
+    CacheControl: 'public, max-age=31536000, immutable',
+  }));
 }
 
 /**

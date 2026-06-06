@@ -205,6 +205,46 @@ CSS flip cards (front = player + metadata, back = description + delete) with `st
 
 **CloudFront CDN** — all video files served from edge locations, lowering start latency and S3 egress cost, with automatic HTTPS and high edge cache hit rates on immutable HLS segments.
 
+### Reducing TTFB (Time To First Byte)
+
+The home page fires `feed`, `top-liked`, and `mine` concurrently on load. On Vercel's serverless runtime the dominant cost was **per-invocation connection setup on cold containers** (Mongo Atlas TLS handshake + Redis connect), surfacing as ~3.5–4s `Waiting for server response` while content download stayed ~7ms — i.e. the slowness was never payload size. The following changes target that first-byte latency:
+
+**Edge caching on public reads** — `feed`, `feed/search`, `top-liked`, and single-video endpoints set `Cache-Control: s-maxage=60, stale-while-revalidate=300`, so Vercel's edge serves repeat requests in well under 100ms without ever invoking Node/Mongo. A global default of `Cache-Control: private, no-store` is applied to every response first, and only public read endpoints override it on their success path — so nothing user-specific (mine, liked/disliked, reactions, history, admin) can ever land in the shared edge cache.
+
+**Reused MongoDB connection** — the connection is cached as a shared *promise* (not a boolean), so concurrent cold-start requests reuse a single `mongoose.connect()` instead of racing, and a failed connect resets cleanly for the next retry. The connection guard is registered **before** the API routes so it actually runs for `/api` traffic (previously it was mounted after the routes and never executed, leaving queries to rely on Mongoose command buffering).
+
+**Non-blocking cache writes** — cache-population `redis.set(...)` calls on read paths are fire-and-forget, so a slow-but-connected Redis can never add latency before the response is sent. Cache *reads* already fail open (return `null` if Redis isn't `ready`) and fall through to MongoDB, so Redis only ever speeds requests up — it never blocks them.
+
+**CloudFront + Redis layers** (above) — keep the steady-state, warm-path TTFB low even when the edge cache misses.
+
+### Reducing TBT (Total Blocking Time)
+
+TBT is driven by main-thread work and request contention during load. With ~46 of 71 requests firing on the home page, the browser's 6-connections-per-host limit queued API XHRs behind media (~2.4s `Queueing` observed). These measures keep the main thread and the request queue clear:
+
+**Deferred media fetching** — card preview videos use `preload="none"` and only inject their `<source>` after a 1s hover delay; thumbnails render as static JPEG covers so the initial load issues zero card-video requests. The hero carousel uses `preload="metadata"` (~60–80KB) rather than full downloads.
+
+**Immutable asset caching** — every processed asset (HLS segments/playlists, `preview.mp4`, `thumbnail.jpg`) is uploaded from the Lambda pipeline with `Cache-Control: public, max-age=31536000, immutable`. These objects are write-once and UUID-keyed, so the browser reuses them from disk cache instead of re-fetching. This fixed a bandwidth sink where the hero carousel, looping through its 3 slides, re-downloaded the same 500KB–1MB preview MP4s on every cycle (the network trace showed identical files fetched repeatedly as `206` range requests). The CloudFront `/Videos/hls/*` behavior uses **Managed-CachingOptimized**, which honors and forwards the origin `Cache-Control`, so the header reaches the viewer; previously, with no origin header, CloudFront edge-cached but emitted no viewer `Cache-Control`, leaving the browser to re-fetch.
+
+**Route-level code splitting** — Angular lazy-loads every route via `loadComponent`, so the first-visit bundle ships only home-page code, reducing parse/compile/execute time on the main thread.
+
+**Debounced search** — `debounceTime(350)` + `distinctUntilChanged()` prevent a burst of keystroke-triggered work and network calls.
+
+**Stale-while-revalidate UI** — refreshes keep existing cards interactive while new data loads silently, avoiding layout-thrash skeletons after the first cold load.
+
+### Measured Impact
+
+TTFB numbers below are measured from Chrome DevTools (Network → Timing) before and after the edge-cache + connection-reuse changes, on the same home-page load (`feed`, `top-liked`, `mine` firing concurrently):
+
+| Endpoint | TTFB before | TTFB after | TTFB reduction | End-to-end before | End-to-end after | E2E reduction |
+|---|---|---|---|---|---|---|
+| `feed` | 3.44 s | 68 ms | **−98.0%** (≈51× faster) | 5.86 s | 68 ms | **−98.8%** |
+| `top-liked` | 3.91 s | 61 ms | **−98.4%** (≈64× faster) | 6.33 s | 61 ms | **−99.0%** |
+| `mine` | ~3.45 s | 71 ms | **≈−97.9%** | — | 71 ms | — |
+
+*"TTFB" = DevTools "Waiting for server response"; "End-to-end" = `Queued`→finish (includes ~2.4s of browser request-queueing that disappears once the API calls aren't stuck behind media). Content download was ~7ms throughout — confirming the bottleneck was never payload size.*
+
+**Immutable asset caching (projected — pending Lambda redeploy + CloudFront invalidation of existing objects):** the home page transferred 36.9 MB across 127 requests, dominated by `preview.mp4` files re-fetched on every carousel loop (same files appearing 2×+ in the trace). With immutable caching, repeat fetches of an already-seen asset cost **0 network bytes** (served from disk cache), so steady-state carousel bandwidth drops from N×(previews-per-loop) to a single fetch per asset per session. Exact post-fix MB will be re-measured after the metadata backfill + invalidation land.
+
 ---
 
 ## Architecture Tradeoffs
