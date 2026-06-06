@@ -3,6 +3,12 @@ import { VideoService } from '../services/getVideo.service';
 
 const videoService = new VideoService();
 
+// Shared edge-cache policy for PUBLIC, non-personalized read endpoints only.
+// Served from Vercel's edge for 60s; stale copies served up to 5 min more while
+// a fresh one is fetched in the background. Applied only on success responses —
+// errors/404s keep the default `private, no-store` set in index.ts.
+const PUBLIC_CACHE = 's-maxage=60, stale-while-revalidate=300';
+
 export class VideoController {
   static async getFeed(req: Request, res: Response) {
     try {
@@ -11,6 +17,7 @@ export class VideoController {
       const rawLimit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
       const limit    = rawLimit ? Math.min(Math.max(rawLimit, 1), 40) : undefined;
       const page     = await videoService.getPaginatedFeed(cursor, category, limit);
+      res.setHeader('Cache-Control', PUBLIC_CACHE);
       res.json(page);
     } catch (error: any) {
       if (error.message === 'Invalid cursor') return res.status(400).json({ message: 'Invalid cursor value' });
@@ -25,6 +32,7 @@ export class VideoController {
       if (!term || term.length < 2)  return res.status(400).json({ message: 'Search term must be at least 2 characters' });
       if (term.length > 100)         return res.status(400).json({ message: 'Search term too long' });
       const videos = await videoService.searchVideos(term, category);
+      res.setHeader('Cache-Control', PUBLIC_CACHE);
       res.json({ videos });
     } catch (error: any) {
       res.status(500).json({ message: 'Search failed', error: error.message });
@@ -34,6 +42,7 @@ export class VideoController {
   static async getTopLikedVideos(req: Request, res: Response) {
     try {
       const videos = await videoService.getTopLikedVideos();
+      res.setHeader('Cache-Control', PUBLIC_CACHE);
       res.json(videos);
     } catch (error) {
       res.status(500).json({ message: 'Failed to get top liked videos', error });
@@ -44,6 +53,7 @@ export class VideoController {
     try {
       const video = await videoService.getVideoById(req.params.videoId);
       if (!video) return res.status(404).json({ message: 'Video not found' });
+      res.setHeader('Cache-Control', PUBLIC_CACHE);
       res.json(video);
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch video', error });
