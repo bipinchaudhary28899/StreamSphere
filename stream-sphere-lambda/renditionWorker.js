@@ -80,6 +80,14 @@ exports.handler = async (event) => {
           `-maxrate ${rendition.videoBitrate}`,        // never exceed original budget
           `-bufsize ${bufsize}`,                       // rate-control buffer = 2× maxrate
           '-start_number 0',
+          // Pin the GOP to the segment length. Without this x264 picks keyframes
+          // adaptively and ffmpeg can only cut at those, so -hls_time 6 was only
+          // a hint: real output drifted to TARGETDURATION 13 with an 8.5s opening
+          // segment — the largest chunk of the file sitting directly in front of
+          // the first frame. Fixed 6s GOPs make every segment ~6s and keep the
+          // rungs keyframe-aligned so ABR switches splice cleanly.
+          '-force_key_frames expr:gte(t,n_forced*6)',
+          '-sc_threshold 0',
           '-hls_time 6',
           '-hls_list_size 0',
           '-hls_playlist_type vod',

@@ -198,6 +198,12 @@ exports.handler = async (event) => {
     Key:         `${hlsPrefix}master.m3u8`,
     Body:        masterContent,
     ContentType: 'application/vnd.apple.mpegurl',
+    // This upload bypasses uploadToS3() in shared.js, so it missed the
+    // CacheControl added there — leaving the very first request of every
+    // playback session uncacheable. Shorter TTL than the segments: the master
+    // is immutable in practice but cheap to revalidate if a rendition is ever
+    // backfilled.
+    CacheControl: 'public, max-age=3600',
   }));
 
   console.log(`[ORCH] Uploaded master.m3u8 (${successfulRenditions.length} rendition(s))`);

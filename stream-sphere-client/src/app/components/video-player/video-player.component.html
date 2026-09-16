@@ -261,7 +261,9 @@
     </div><!-- /vp-panel -->
 
     <!-- ── Comments ───────────────────────────────────────────────────── -->
-    <app-comment-section [videoId]="video._id"></app-comment-section>
+    <!-- Mounted only once the player can paint a frame; the comment fetch used
+         to race the manifest and first segment for bandwidth. -->
+    <app-comment-section *ngIf="commentsReady" [videoId]="video._id"></app-comment-section>
 
   </div><!-- /vp-content -->
 </div>

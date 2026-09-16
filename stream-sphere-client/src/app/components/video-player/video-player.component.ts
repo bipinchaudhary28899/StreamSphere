@@ -43,6 +43,18 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   isLiking = false;
   isDisliking = false;
 
+  /** True once HLS has been attached for the current hlsUrl, so the background
+   *  API refresh does not tear down and restart a player that is already going. */
+  private hlsStartedFor: string | null = null;
+  /** Guards the deferred side-effect block so it runs exactly once per view. */
+  private sideEffectsDone = false;
+  /** Fallback timer that fires the side effects even if `canplay` never does
+   *  (autoplay blocked, decode error, offline) — views must still be recorded. */
+  private sideEffectsTimer: any = null;
+  /** Gates <app-comment-section> so its API call cannot compete with the
+   *  manifest and first segment for bandwidth. */
+  commentsReady = false;
+
   private hls: Hls | null = null;
   hlsLevels: Array<{ name: string; index: number }> = [];
   hlsCurrentLevel = -1;
@@ -94,17 +106,35 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const videoId = this.route.snapshot.paramMap.get('id');
-    if (videoId) {
-      this.loadVideo(videoId);
-    } else {
+    if (!videoId) {
       this.error = 'Video ID not found';
       this.loading = false;
+      return;
     }
+
+    // When we arrived from a feed card the whole video object — hlsUrl included
+    // — was handed over in router state. Start playback off that immediately;
+    // waiting for getVideoById() costs a full round trip (measured at 1.2s on a
+    // cold serverless start) before the first manifest byte is even requested.
+    const handed = history.state?.video;
+    if (handed?._id === videoId && handed.hlsUrl && handed.status === 'ready') {
+      this.video = handed;
+      this.loading = false;
+      this.applyOwnership();
+      this.cdr.detectChanges();          // render <video> before HLS attaches
+      setTimeout(() => this.initHlsPlayer(), 0);
+    }
+
+    // Always refetch: router state can be stale, and it is absent entirely on a
+    // deep link or reload. This only replaces metadata — if HLS is already
+    // running on the same URL it is left untouched.
+    this.loadVideo(videoId);
   }
 
   ngOnDestroy(): void {
     this.destroyHls();
     clearTimeout(this.controlsTimer);
+    clearTimeout(this.sideEffectsTimer);
     clearTimeout(this._badgeHideTimer);
     this.predictionSub?.unsubscribe();
     this.telemetry.stopSession();
@@ -123,33 +153,85 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
 
   loadVideo(videoId: string): void {
-    this.loading = true;
+    // Only show the spinner when nothing is on screen yet. If router state
+    // already gave us a video, this refresh happens silently underneath.
+    if (!this.video) this.loading = true;
     this.error = null;
 
     this.videoService.getVideoById(videoId).subscribe({
       next: (video: any) => {
-        this.video = video;
-        if (this.video) {
-          this.checkUserAuthentication();
-          this.loading = false;
-          this.recordWatchHistory(videoId);
-          this.doRecordView(videoId);
-          // Force Angular to render the *ngIf="video.status === 'ready'" block
-          // so <video #videoElement> is in the DOM before HLS.js attaches.
-          this.cdr.detectChanges();
-          setTimeout(() => this.initHlsPlayer(), 0);
-          this.telemetry.startSession(videoId);
-        } else {
-          this.error = 'Video not found';
-          this.loading = false;
+        if (!video) {
+          if (!this.video) { this.error = 'Video not found'; this.loading = false; }
+          return;
         }
+        this.video = video;
+        this.loading = false;
+        this.applyOwnership();
+        // Force Angular to render the *ngIf="video.status === 'ready'" block
+        // so <video #videoElement> is in the DOM before HLS.js attaches.
+        this.cdr.detectChanges();
+        // No-op when ngOnInit already started this exact stream.
+        setTimeout(() => this.initHlsPlayer(), 0);
+        this.armSideEffects(videoId);
       },
       error: (err: any) => {
         console.error('Error loading video:', err);
-        this.error = 'Error loading video';
-        this.loading = false;
+        // A failed refresh must not kill a stream that is already playing.
+        if (!this.video) {
+          this.error = 'Error loading video';
+          this.loading = false;
+        }
       },
     });
+  }
+
+
+  /**
+   * Fire the non-critical requests only once the player has enough data to
+   * paint a frame. Previously /history, /view, /reaction, /telemetry and the
+   * comment section all launched in the same tick as the manifest fetch and
+   * competed with it for connections and bandwidth — measured at 522–840ms
+   * each, right through the window that decides time-to-first-frame.
+   *
+   * `canplay` is the trigger rather than `playing` because it fires even when
+   * autoplay is blocked. The timer is a backstop so a video that never becomes
+   * playable still records its view.
+   */
+  private armSideEffects(videoId: string): void {
+    if (this.sideEffectsDone || this.sideEffectsTimer) return;
+
+    const run = () => {
+      if (this.sideEffectsDone) return;
+      this.sideEffectsDone = true;
+      clearTimeout(this.sideEffectsTimer);
+      this.sideEffectsTimer = null;
+
+      this.recordWatchHistory(videoId);
+      this.doRecordView(videoId);
+      this.telemetry.startSession(videoId);
+      if (this.currentUserId) this.getUserReaction();
+      this.commentsReady = true;
+      this.cdr.detectChanges();
+    };
+
+    this.videoRef?.nativeElement.addEventListener('canplay', run, { once: true });
+    this.sideEffectsTimer = setTimeout(run, 3000);
+  }
+
+
+  /** Ownership/identity from localStorage only — no network call, so it is safe
+   *  to run on the critical path. The /reaction fetch is deferred separately. */
+  private applyOwnership(): void {
+    const userData = localStorage.getItem('user');
+    if (!userData) { this.currentUserId = null; this.isOwner = false; return; }
+    try {
+      const user = JSON.parse(userData);
+      this.currentUserId = user.userId || user._id || null;
+      this.isOwner = this.video?.user_id === this.currentUserId;
+    } catch {
+      this.currentUserId = null;
+      this.isOwner = false;
+    }
   }
 
 
@@ -157,12 +239,29 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     const videoEl = this.videoRef?.nativeElement;
     if (!videoEl || !this.video?.hlsUrl) return;
 
+    // Idempotent: ngOnInit may have already started this exact stream from
+    // router state, and the background refresh must not restart it.
+    if (this.hlsStartedFor === this.video.hlsUrl) return;
+    this.hlsStartedFor = this.video.hlsUrl;
+
     this.destroyHls();
 
     if (Hls.isSupported()) {
       this.hls = new Hls({
         startLevel:          -1,    // ABR auto-selects quality based on bandwidth
         capLevelToPlayerSize: true, // never fetch higher quality than player dimensions
+
+        // Skip the bandwidth-probe fragment. With this on (the default) hls.js
+        // downloads fragment 0 at the lowest level purely to measure the link,
+        // then immediately refetches the SAME fragment at the level it settles
+        // on — measured here as 360p_000.ts (1.1MB) followed by 1080p_000.ts
+        // (3.6MB) for one segment of playback, all on the critical path.
+        testBandwidth: false,
+        // With the probe gone the first level is picked from this estimate, so
+        // the stock 500kbps is too pessimistic. 1Mbps sits between the 360p
+        // (896kbps) and 720p (2.9Mbps) rungs: start at 360p for a fast first
+        // frame, then let ABR climb from segment 1 on real measurements.
+        abrEwmaDefaultEstimate: 1_000_000,
 
         // Buffer tuning — HLS.js default is 30s which fires ~5 segment requests
         // upfront. 10s is enough for smooth VOD playback while halving CDN load.
@@ -432,24 +531,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       next: (res) => { if (res.views > 0) this.video.views = res.views; },
       error: () => {},
     });
-  }
-
-  checkUserAuthentication(): void {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        const user = JSON.parse(userData);
-        this.currentUserId = user.userId || user._id || null;
-        this.isOwner = this.video.user_id === this.currentUserId;
-        if (this.currentUserId) this.getUserReaction();
-      } catch {
-        this.currentUserId = null;
-        this.isOwner = false;
-      }
-    } else {
-      this.currentUserId = null;
-      this.isOwner = false;
-    }
   }
 
   getUserReaction(): void {
