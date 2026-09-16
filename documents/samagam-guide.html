@@ -1,0 +1,1642 @@
+<title>Samagam Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+:root{
+  --bg:#F6F5F8;
+  --surface:#FFFFFF;
+  --surface-2:#EDEBF2;
+  --ink:#221D33;
+  --ink-2:#575269;
+  --ink-3:#847E96;
+  --line:#DEDBE6;
+  --line-2:#C4BFD2;
+  --gold:#A96A0D;
+  --gold-soft:#F8EFE0;
+  --deep:#3A3454;
+  --deep-soft:#EAE7F2;
+  --good:#1D5A49;
+  --good-soft:#E1EFEA;
+  --bad:#A03830;
+  --bad-soft:#F8E8E6;
+
+  --f-display:"Zilla Slab", Rockwell, Georgia, serif;
+  --f-body:"Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+  --measure:68ch;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141220;
+    --surface:#1D1A2B;
+    --surface-2:#262236;
+    --ink:#E9E6F1;
+    --ink-2:#AAA3BE;
+    --ink-3:#877FA0;
+    --line:#2F2B41;
+    --line-2:#413B58;
+    --gold:#E2A44C;
+    --gold-soft:#2B2113;
+    --deep:#A9A1D2;
+    --deep-soft:#231F35;
+    --good:#63BFA3;
+    --good-soft:#132A23;
+    --bad:#E58A7F;
+    --bad-soft:#2E1A18;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141220;--surface:#1D1A2B;--surface-2:#262236;--ink:#E9E6F1;--ink-2:#AAA3BE;
+  --ink-3:#877FA0;--line:#2F2B41;--line-2:#413B58;--gold:#E2A44C;--gold-soft:#2B2113;
+  --deep:#A9A1D2;--deep-soft:#231F35;--good:#63BFA3;--good-soft:#132A23;--bad:#E58A7F;--bad-soft:#2E1A18;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);
+  font-size:16px;line-height:1.68;-webkit-font-smoothing:antialiased}
+
+.wrap{max-width:1200px;margin:0 auto;padding-inline:20px;padding-block:0 100px;
+  display:grid;grid-template-columns:210px minmax(0,1fr);gap:0 56px;align-items:start}
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 18px);padding-block:26px;
+  font-size:13px;line-height:1.45}
+.rail ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
+.rail a{display:grid;grid-template-columns:20px 1fr;gap:8px;color:var(--ink-3);
+  text-decoration:none;padding:4px 6px 4px 10px;border-left:2px solid transparent}
+.rail a:hover{color:var(--gold);border-left-color:var(--gold)}
+.rail a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.rail .n{font-family:var(--f-mono);font-size:11px;color:var(--line-2)}
+.rail-head{font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);padding-left:12px;margin-bottom:12px}
+.rail .part{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--gold);padding:14px 0 4px 12px}
+main{min-width:0}
+
+/* masthead */
+.masthead{grid-column:1/-1;border-bottom:2px solid var(--ink);padding-block:48px 28px;margin-bottom:6px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--gold);margin:0 0 14px}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(38px,6.2vw,60px);line-height:1.02;
+  letter-spacing:-.02em;margin:0 0 18px;text-wrap:balance;max-width:14ch}
+.standfirst{font-size:19px;line-height:1.5;color:var(--ink-2);max-width:56ch;margin:0}
+
+/* chapters */
+section{padding-block:46px 10px;scroll-margin-top:22px}
+section+section{border-top:1px solid var(--line)}
+.part-label{font-family:var(--f-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--gold);margin:0 0 30px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.ch{display:flex;gap:16px;align-items:flex-start;margin-bottom:14px}
+.ch-n{font-family:var(--f-display);font-weight:700;font-size:38px;line-height:.9;color:var(--line-2);
+  flex:0 0 auto;font-variant-numeric:tabular-nums;padding-top:2px}
+h2{font-family:var(--f-display);font-weight:600;font-size:clamp(25px,3.2vw,33px);line-height:1.15;
+  letter-spacing:-.01em;margin:0;text-wrap:balance}
+h3{font-family:var(--f-body);font-weight:700;font-size:17px;margin:32px 0 8px}
+h4{font-family:var(--f-mono);font-weight:500;font-size:11px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);margin:26px 0 8px}
+p{margin:0 0 16px;max-width:var(--measure)}
+ul,ol{margin:0 0 16px;padding-left:22px;max-width:var(--measure)}
+li{margin-bottom:7px}
+li::marker{color:var(--line-2)}
+a{color:var(--gold)}
+code{font-family:var(--f-mono);font-size:.85em;background:var(--surface-2);padding:1px 5px;
+  border-radius:3px;white-space:nowrap}
+
+/* one-sentence box */
+.gist{background:var(--deep-soft);border-left:4px solid var(--deep);padding:14px 18px;
+  margin:0 0 24px;max-width:var(--measure);border-radius:0 3px 3px 0}
+.gist p{margin:0;font-size:17px;font-family:var(--f-display);font-weight:500;line-height:1.45}
+.gist span{display:block;font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:6px;font-weight:400}
+
+/* jargon */
+.jargon{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:16px 18px;
+  margin:24px 0;max-width:var(--measure)}
+.jargon h4{margin:0 0 10px;color:var(--gold)}
+.jargon dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:7px 16px;font-size:14.5px}
+.jargon dt{font-family:var(--f-mono);font-size:12.5px;color:var(--ink);white-space:nowrap}
+.jargon dd{margin:0;color:var(--ink-2);line-height:1.5}
+
+.note{border-left:3px solid var(--line-2);padding:2px 0 2px 16px;margin:24px 0;max-width:var(--measure)}
+.note.warn{border-left-color:var(--gold)}
+.note.bad{border-left-color:var(--bad)}
+.note.good{border-left-color:var(--good)}
+.note p:last-child{margin-bottom:0}
+.note .tag{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  display:block;margin-bottom:5px;color:var(--ink-3)}
+.note.warn .tag{color:var(--gold)}
+.note.bad .tag{color:var(--bad)}
+.note.good .tag{color:var(--good)}
+
+/* figures */
+figure{margin:28px 0 30px}
+.figbox{background:var(--surface);border:1px solid var(--line);border-radius:4px;
+  padding:20px 18px 14px;overflow-x:auto}
+figure svg{display:block;width:100%;height:auto;min-width:640px;color:var(--ink)}
+figcaption{margin-top:12px;font-size:13.5px;line-height:1.5;color:var(--ink-3);max-width:62ch}
+figcaption b{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--gold);font-weight:500;display:block;margin-bottom:3px}
+
+/* tables */
+.tbl{overflow-x:auto;margin:22px 0 28px;border:1px solid var(--line);border-radius:4px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:600px;font-size:14px}
+th{text-align:left;font-family:var(--f-mono);font-weight:500;font-size:10px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--ink-3);padding:11px 14px;border-bottom:1px solid var(--line-2);
+  background:var(--surface-2);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.5}
+tr:last-child td{border-bottom:0}
+td code{background:transparent;padding:0;color:var(--deep)}
+
+/* decision cards */
+.dec{border:1px solid var(--line);border-radius:4px;background:var(--surface);
+  padding:18px 20px;margin:0 0 14px;max-width:var(--measure)}
+.dec h3{margin:0 0 10px;font-size:16px;display:flex;gap:10px;align-items:baseline}
+.dec h3 .d-n{font-family:var(--f-mono);font-size:11px;color:var(--gold);flex:0 0 auto}
+.dec dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14.5px}
+.dec dt{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);padding-top:4px;white-space:nowrap}
+.dec dd{margin:0;color:var(--ink-2);line-height:1.5}
+.dec dd.why{color:var(--ink)}
+
+/* step list */
+.steps{list-style:none;padding:0;margin:20px 0 26px;max-width:var(--measure);counter-reset:s}
+.steps li{counter-increment:s;position:relative;padding-left:40px;margin-bottom:15px}
+.steps li::before{content:counter(s);position:absolute;left:0;top:2px;font-family:var(--f-mono);
+  font-size:11px;color:var(--gold);width:26px;height:22px;display:grid;place-items:center;
+  border:1px solid var(--line-2);border-radius:3px}
+.steps b{display:block;font-weight:700;margin-bottom:1px}
+.steps span{color:var(--ink-2);font-size:15px}
+
+/* svg helpers */
+.bx{fill:var(--surface);stroke:currentColor;stroke-width:1.1}
+.bx2{fill:var(--surface-2);stroke:var(--line-2);stroke-width:1.1}
+.bxg{fill:var(--gold-soft);stroke:var(--gold);stroke-width:1.1}
+.bxd{fill:var(--deep-soft);stroke:var(--deep);stroke-width:1.1}
+.bxok{fill:var(--good-soft);stroke:var(--good);stroke-width:1.1}
+.bxno{fill:var(--bad-soft);stroke:var(--bad);stroke-width:1.1}
+.t{font-family:var(--f-body);font-size:13px;fill:currentColor}
+.tb{font-family:var(--f-body);font-size:13px;font-weight:700;fill:currentColor}
+.ts{font-family:var(--f-body);font-size:11px;fill:var(--ink-3)}
+.tm{font-family:var(--f-mono);font-size:10px;fill:var(--ink-3)}
+.tg{font-family:var(--f-body);font-size:11px;font-weight:600;fill:var(--gold)}
+.tk{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.12em;fill:var(--ink-3)}
+.ln{stroke:currentColor;stroke-width:1.3;fill:none}
+.lnd{stroke:currentColor;stroke-width:1.3;fill:none;stroke-dasharray:4 3;opacity:.55}
+.lng{stroke:var(--gold);stroke-width:1.6;fill:none}
+.lf{stroke:var(--line-2);stroke-width:1;stroke-dasharray:3 4;fill:none}
+
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;gap:0}
+  .rail{position:static;padding-block:16px 8px;border-bottom:1px solid var(--line)}
+  .rail ol{flex-direction:row;flex-wrap:wrap;gap:3px}
+  .rail a{border-left:0;border-bottom:2px solid transparent;padding:3px 8px}
+  .rail a:hover{border-left:0;border-bottom-color:var(--gold)}
+  .rail .part{display:none}
+  h1{max-width:none}
+  .ch-n{font-size:30px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">Samagam v2 · a guide for someone who just joined</p>
+  <h1>Samagam Field Guide</h1>
+  <p class="standfirst">Everything from the browser to the database, explained in plain words — plus every big decision the team made, and why. No prior knowledge assumed.</p>
+</header>
+
+<nav class="rail" aria-label="Chapters">
+  <p class="rail-head">Chapters</p>
+  <ol>
+    <li class="part">Part 1 · The basics</li>
+    <li><a href="#c1"><span class="n">1</span><span>What this app is</span></a></li>
+    <li><a href="#c2"><span class="n">2</span><span>One database each</span></a></li>
+    <li><a href="#c3"><span class="n">3</span><span>The cast</span></a></li>
+    <li class="part">Part 2 · A request</li>
+    <li><a href="#c4"><span class="n">4</span><span>Opening a page</span></a></li>
+    <li><a href="#c5"><span class="n">5</span><span>Fetching data</span></a></li>
+    <li><a href="#c6"><span class="n">6</span><span>The headers</span></a></li>
+    <li><a href="#c7"><span class="n">7</span><span>How routing works</span></a></li>
+    <li class="part">Part 3 · Who are you</li>
+    <li><a href="#c8"><span class="n">8</span><span>Logging in</span></a></li>
+    <li><a href="#c9"><span class="n">9</span><span>The cookies</span></a></li>
+    <li><a href="#c10"><span class="n">10</span><span>Are you allowed?</span></a></li>
+    <li><a href="#c11"><span class="n">11</span><span>Postings</span></a></li>
+    <li><a href="#c12"><span class="n">12</span><span>Permissions</span></a></li>
+    <li class="part">Part 4 · Control plane</li>
+    <li><a href="#c13"><span class="n">13</span><span>What it is</span></a></li>
+    <li><a href="#c14"><span class="n">14</span><span>Creating a school</span></a></li>
+    <li><a href="#c15"><span class="n">15</span><span>Lifecycle</span></a></li>
+    <li class="part">Part 5 · The code</li>
+    <li><a href="#c16"><span class="n">16</span><span>Folder map</span></a></li>
+    <li><a href="#c17"><span class="n">17</span><span>Inside a service</span></a></li>
+    <li><a href="#c18"><span class="n">18</span><span>If X goes down</span></a></li>
+    <li class="part">Part 6 · Why</li>
+    <li><a href="#c19"><span class="n">19</span><span>The decisions</span></a></li>
+    <li><a href="#c20"><span class="n">20</span><span>Known gaps</span></a></li>
+  </ol>
+</nav>
+
+<main>
+
+<p class="part-label">Part 1 — The basics</p>
+
+<!-- 1 -->
+<section id="c1">
+  <div class="ch"><span class="ch-n">1</span><h2>What this app actually is</h2></div>
+
+  <div class="gist"><span>In one sentence</span><p>One piece of software, used by about 1,350 different schools and offices, where each one gets its own separate database.</p></div>
+
+  <p>Samagam is built for Kendriya Vidyalaya Sangathan. Think of KVS as a big organisation with a head office, regional offices, and lots of schools under them. About 55,000 employees in total.</p>
+
+  <p>Each organisation gets its own web address — a subdomain. Something like:</p>
+  <ul>
+    <li><code>kvs.samagam.gov.in</code></li>
+    <li><code>dps.samagam.gov.in</code></li>
+  </ul>
+
+  <p>Same code running behind both. Different data. The web address is how the system knows which one you mean. This matters more than it sounds — it's why you can log in with just your Employee ID and a password. You never pick your school from a dropdown, because the address already said it.</p>
+
+  <div class="jargon">
+    <h4>Words you'll hear a lot</h4>
+    <dl>
+      <dt>tenant</dt><dd>One organisation. One school or office. The word comes from "multi-tenant software" — many customers sharing one app.</dd>
+      <dt>organisation / org</dt><dd>Same thing as tenant. The code uses both.</dd>
+      <dt>slug</dt><dd>The short name of an organisation, like <code>kvs</code>. It becomes the subdomain and the database name.</dd>
+      <dt>the platform</dt><dd>The shared parts everyone uses: gateway, login, screens.</dd>
+      <dt>a service</dt><dd>One backend program that handles one area — helpdesk, students, staff records.</dd>
+      <dt>the shell</dt><dd>The Next.js app that serves the screens. "Shell" because it's the outer frame everything else sits in.</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- 2 -->
+<section id="c2">
+  <div class="ch"><span class="ch-n">2</span><h2>Why each school gets its own database</h2></div>
+
+  <div class="gist"><span>In one sentence</span><p>Instead of putting a school ID column on every table and hoping nobody forgets it, each school gets a whole separate database — so forgetting is impossible.</p></div>
+
+  <p>This is the single most important idea in the whole system. If you understand nothing else, understand this.</p>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 920 360" role="img" aria-label="Comparison: the common approach puts a tenant_id column on shared tables so a forgotten WHERE clause leaks data between schools, while Samagam gives each school its own database so there is no query that can reach another school's rows.">
+        <defs><marker id="g2a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+
+        <text class="tk" x="20" y="20">WHAT MOST APPS DO</text>
+        <rect class="bx2" x="20" y="34" width="400" height="200" rx="4"/>
+        <text class="tb" x="38" y="60">One big database</text>
+        <text class="tm" x="38" y="80">employees</text>
+        <line class="lf" x1="38" y1="88" x2="400" y2="88"/>
+        <text class="tm" x="38" y="106">school_id   name          salary</text>
+        <text class="tm" x="38" y="124">1           A. Sharma     52000</text>
+        <text class="tm" x="38" y="142">1           R. Verma      48000</text>
+        <text class="tm" x="38" y="160">2           M. Iqbal      61000</text>
+        <text class="tm" x="38" y="178">2           S. Rao        55000</text>
+        <line class="lf" x1="38" y1="192" x2="400" y2="192"/>
+        <text class="ts" x="38" y="212">Every query must remember: WHERE school_id = ?</text>
+
+        <rect class="bxno" x="20" y="252" width="400" height="86" rx="4"/>
+        <text class="tb" x="38" y="276">The risk</text>
+        <text class="ts" x="38" y="296">One developer forgets one WHERE clause, and</text>
+        <text class="ts" x="38" y="314">school 1 can see school 2's salaries. There is</text>
+        <text class="ts" x="38" y="332">nothing stopping it except everyone being careful.</text>
+
+        <text class="tk" x="500" y="20">WHAT SAMAGAM DOES</text>
+        <rect class="bx" x="500" y="34" width="190" height="90" rx="4"/>
+        <text class="tb" x="516" y="58">t_kvs</text>
+        <text class="tm" x="516" y="78">employees</text>
+        <text class="tm" x="516" y="94">A. Sharma   52000</text>
+        <text class="tm" x="516" y="110">R. Verma    48000</text>
+
+        <rect class="bx" x="710" y="34" width="190" height="90" rx="4"/>
+        <text class="tb" x="726" y="58">t_dps</text>
+        <text class="tm" x="726" y="78">employees</text>
+        <text class="tm" x="726" y="94">M. Iqbal    61000</text>
+        <text class="tm" x="726" y="110">S. Rao      55000</text>
+
+        <text class="ts" x="500" y="150">No school_id column anywhere. It doesn't exist.</text>
+        <text class="ts" x="500" y="170">There is no query you could write, correct or not,</text>
+        <text class="ts" x="500" y="190">that reaches the other school's rows.</text>
+
+        <rect class="bxok" x="500" y="212" width="400" height="126" rx="4"/>
+        <text class="tb" x="518" y="236">Three locks, not one</text>
+        <text class="ts" x="518" y="258">1. The gateway works out which school from the web address</text>
+        <text class="ts" x="518" y="278">2. The app opens that school's database and no other</text>
+        <text class="ts" x="518" y="298">3. The database itself is asked "who are you?" before any</text>
+        <text class="ts" x="534" y="316">query runs — if the answer is wrong, it refuses</text>
+        <text class="tg" x="518" y="334">Lock 3 is the one that makes a mistake impossible, not just unlikely.</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 1 — why separate databases</b>The usual approach makes safety a thing every developer has to remember. This approach makes it a thing the database enforces.</figcaption>
+  </figure>
+
+  <p>That third lock is worth a closer look. Every time the code opens a connection to a school's database, the very first thing it does — before any of your queries — is ask the database a question:</p>
+
+  <p><code>SELECT tenant_key FROM authz.tenant_meta</code></p>
+
+  <p>The database answers with its own name, for example <code>kvs</code>. The code compares that to the school it <em>thinks</em> it's serving. If they don't match, it throws an error and nothing runs. So even if something upstream got confused, a wrong connection cannot serve wrong data.</p>
+
+  <div class="note warn">
+    <span class="tag">The trade-off</span>
+    <p>1,350 databases is 1,350 things to migrate, back up and monitor. That's a real cost, and it's why there's a whole worker program (chapter 14) just for managing them. The team decided that cost is worth paying so that a leak between schools is structurally impossible rather than merely unlikely.</p>
+  </div>
+</section>
+
+<!-- 3 -->
+<section id="c3">
+  <div class="ch"><span class="ch-n">3</span><h2>The cast — what actually runs</h2></div>
+
+  <div class="gist"><span>In one sentence</span><p>Nine programs. Only three of them are involved in a normal request.</p></div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 920 500" role="img" aria-label="Overview diagram: the browser talks only to the gateway, which sends requests to the Next.js shell, the Auth service, or a domain service. Services ask Auth for permission. Auth and the services read the school's database. The control plane console and worker manage the registry database and create school databases.">
+        <defs><marker id="g3a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+        <marker id="g3g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--gold)"/></marker></defs>
+
+        <rect class="bx" x="340" y="16" width="240" height="50" rx="4"/>
+        <text class="tb" x="460" y="38" text-anchor="middle">Your browser</text>
+        <text class="ts" x="460" y="55" text-anchor="middle">kvs.samagam.gov.in</text>
+
+        <rect class="bxg" x="240" y="108" width="440" height="58" rx="4"/>
+        <text class="tb" x="460" y="132" text-anchor="middle">Gateway — the front door</text>
+        <text class="ts" x="460" y="151" text-anchor="middle">port 8080 · works out which school, then passes the request on</text>
+
+        <rect class="bx" x="60" y="208" width="180" height="66" rx="4"/>
+        <text class="tb" x="150" y="232" text-anchor="middle">Screens</text>
+        <text class="ts" x="150" y="250" text-anchor="middle">Next.js · port 3000</text>
+        <text class="ts" x="150" y="266" text-anchor="middle">no database at all</text>
+
+        <rect class="bxd" x="280" y="208" width="180" height="66" rx="4"/>
+        <text class="tb" x="370" y="232" text-anchor="middle">Auth service</text>
+        <text class="ts" x="370" y="250" text-anchor="middle">port 3110</text>
+        <text class="ts" x="370" y="266" text-anchor="middle">who you are, what you may do</text>
+
+        <rect class="bx" x="500" y="208" width="180" height="66" rx="4"/>
+        <text class="tb" x="590" y="232" text-anchor="middle">Feature services</text>
+        <text class="ts" x="590" y="250" text-anchor="middle">3101 helpdesk · 3102 sis</text>
+        <text class="ts" x="590" y="266" text-anchor="middle">3103 pis · 3120 org setup</text>
+
+        <rect class="bx2" x="720" y="108" width="180" height="166" rx="4"/>
+        <text class="tb" x="810" y="134" text-anchor="middle">Control plane</text>
+        <text class="ts" x="810" y="154" text-anchor="middle">a separate admin tool</text>
+        <text class="ts" x="810" y="178" text-anchor="middle">Console · port 4000</text>
+        <text class="ts" x="810" y="196" text-anchor="middle">creates schools</text>
+        <text class="ts" x="810" y="222" text-anchor="middle">Worker · no port</text>
+        <text class="ts" x="810" y="240" text-anchor="middle">builds their databases</text>
+        <text class="ts" x="810" y="262" text-anchor="middle">(never seen by employees)</text>
+
+        <rect class="bx2" x="60" y="390" width="600" height="60" rx="4"/>
+        <text class="tb" x="80" y="414">One PostgreSQL database per school</text>
+        <text class="ts" x="80" y="434">t_kvs · t_dps · t_… — about 1,350 of them</text>
+
+        <rect class="bx2" x="700" y="390" width="200" height="60" rx="4"/>
+        <text class="tb" x="720" y="414">samagam_control</text>
+        <text class="ts" x="720" y="434">the list of schools</text>
+
+        <line class="ln" x1="460" y1="66" x2="460" y2="104" marker-end="url(#g3a)"/>
+        <text class="ts" x="470" y="92">everything goes here first</text>
+
+        <line class="ln" x1="150" y1="166" x2="150" y2="204" marker-end="url(#g3a)"/>
+        <line class="ln" x1="370" y1="166" x2="370" y2="204" marker-end="url(#g3a)"/>
+        <line class="ln" x1="590" y1="166" x2="590" y2="204" marker-end="url(#g3a)"/>
+
+        <line class="lng" x1="680" y1="136" x2="716" y2="136" marker-end="url(#g3g)"/>
+        <text class="tg" x="612" y="102">"which school</text>
+        <text class="tg" x="612" y="116">is this?"</text>
+
+        <polyline class="ln" points="545,274 545,316 400,316 400,278" marker-end="url(#g3a)"/>
+        <text class="ts" x="472" y="336" text-anchor="middle">"may this person do it?" — every time, no guessing</text>
+
+        <line class="ln" x1="320" y1="274" x2="320" y2="386" marker-end="url(#g3a)"/>
+        <line class="ln" x1="635" y1="274" x2="635" y2="386" marker-end="url(#g3a)"/>
+        <text class="ts" x="643" y="360">reads and writes</text>
+
+        <line class="ln" x1="810" y1="274" x2="810" y2="386" marker-end="url(#g3a)"/>
+        <polyline class="lnd" points="740,274 690,274 690,420 664,420" marker-end="url(#g3a)"/>
+        <text class="ts" x="700" y="298">creates them,</text>
+        <text class="ts" x="700" y="314">then leaves</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 2 — the whole system on one page</b>Follow the solid arrows from the top and you have a normal request. Everything on the right is the admin side, which employees never touch.</figcaption>
+  </figure>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Program</th><th>Port</th><th>What it does, in one line</th></tr></thead>
+      <tbody>
+        <tr><td><b>Gateway</b></td><td>8080</td><td>Looks at the web address, works out the school, and forwards the request to the right place.</td></tr>
+        <tr><td><b>Shell</b> (Next.js)</td><td>3000</td><td>Serves the HTML and JavaScript for the screens. Holds no password, no database, no secret.</td></tr>
+        <tr><td><b>Auth / IAM</b></td><td>3110</td><td>Login, logout, sessions, and the one and only answer to "is this person allowed?"</td></tr>
+        <tr><td><b>Org Setup</b></td><td>3120</td><td>The structure of the organisation — offices, levels, designations, uploads.</td></tr>
+        <tr><td><b>Feature services</b></td><td>3101+</td><td>Helpdesk, students (SIS), staff records (PIS), master data. One program per area, built by its own team.</td></tr>
+        <tr><td><b>CP Console</b></td><td>4000</td><td>The screen an operator uses to create a new school. Also holds an internal API the gateway calls.</td></tr>
+        <tr><td><b>CP Worker</b></td><td>—</td><td>Picks jobs off a queue and does the dangerous work: creating databases, running migrations, taking backups.</td></tr>
+        <tr><td><b>PostgreSQL</b></td><td>5433</td><td>All the databases. <code>samagam_control</code> plus one per school.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<p class="part-label">Part 2 — How a request travels</p>
+
+<!-- 4 -->
+<section id="c4">
+  <div class="ch"><span class="ch-n">4</span><h2>What happens when you open a page</h2></div>
+
+  <div class="gist"><span>In one sentence</span><p>Your browser asks the gateway, the gateway checks the school is allowed to be served, then hands the request to the Next.js shell, which sends back HTML and JavaScript.</p></div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 900 290" role="img" aria-label="Flow for opening a page: the browser requests a URL, the gateway looks up the hostname in the registry, checks the school's status, and forwards to the Next.js shell, which returns the page.">
+        <defs><marker id="g4a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+
+        <rect class="bx" x="20" y="40" width="150" height="60" rx="4"/>
+        <text class="tb" x="95" y="66" text-anchor="middle">Browser</text>
+        <text class="ts" x="95" y="84" text-anchor="middle">you type the URL</text>
+
+        <rect class="bxg" x="260" y="40" width="200" height="60" rx="4"/>
+        <text class="tb" x="360" y="66" text-anchor="middle">Gateway</text>
+        <text class="ts" x="360" y="84" text-anchor="middle">two questions, in order</text>
+
+        <rect class="bx" x="560" y="40" width="160" height="60" rx="4"/>
+        <text class="tb" x="640" y="66" text-anchor="middle">Shell</text>
+        <text class="ts" x="640" y="84" text-anchor="middle">Next.js, port 3000</text>
+
+        <line class="ln" x1="170" y1="70" x2="256" y2="70" marker-end="url(#g4a)"/>
+        <text class="tm" x="176" y="34">GET /helpdesk</text>
+
+        <line class="ln" x1="460" y1="70" x2="556" y2="70" marker-end="url(#g4a)"/>
+        <text class="tm" x="466" y="34">same URL, forwarded</text>
+
+        <line class="lnd" x1="556" y1="118" x2="174" y2="118" marker-end="url(#g4a)"/>
+        <text class="tm" x="300" y="136">HTML + JavaScript comes back</text>
+
+        <rect class="bx2" x="180" y="168" width="360" height="106" rx="4"/>
+        <text class="tb" x="198" y="192">The gateway's two questions</text>
+        <text class="ts" x="198" y="214">1. Which school is kvs.samagam.gov.in?</text>
+        <text class="ts" x="214" y="232">— it asks the registry, and remembers for 60 seconds</text>
+        <text class="ts" x="198" y="252">2. Is that school allowed to be served right now?</text>
+        <text class="ts" x="214" y="270">— active means yes. Anything else gets refused here.</text>
+
+        <rect class="bx2" x="570" y="168" width="310" height="106" rx="4"/>
+        <text class="tb" x="588" y="192">What the shell does NOT do</text>
+        <text class="ts" x="588" y="214">It does not open a database.</text>
+        <text class="ts" x="588" y="232">It does not hold a password or a signing key.</text>
+        <text class="ts" x="588" y="252">It does not call the feature services for you.</text>
+        <text class="tg" x="588" y="270">It only sends the page. The browser does the rest.</text>
+
+        <line class="lnd" x1="360" y1="100" x2="360" y2="164"/>
+        <line class="lnd" x1="640" y1="100" x2="640" y2="164"/>
+      </svg>
+    </div>
+    <figcaption><b>Figure 3 — opening a page</b>The shell is deliberately dumb. That's a design decision, and chapter 19 explains why.</figcaption>
+  </figure>
+
+  <p>If the school isn't ready, you don't get a page — you get a clear message from the gateway instead:</p>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th>School status</th><th>What you see</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><code>active</code></td><td>The page</td><td>Normal.</td></tr>
+        <tr><td><code>provisioning</code><br><code>awaiting_handover</code></td><td>503 — "being set up, not open yet"</td><td>It's coming. Try later. (One exception: the handover link still works, or nobody could ever get in.)</td></tr>
+        <tr><td><code>suspended</code></td><td>403 — "not available, contact your administrator"</td><td>Not 404, because the people who work there know it exists and need to know who to ask.</td></tr>
+        <tr><td><code>draft</code>, <code>purged</code>,<br>or anything unknown</td><td>404 — "no organisation at this address"</td><td>Looks exactly like a typo. That's on purpose — the internet shouldn't be able to discover which schools exist.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 5 -->
+<section id="c5">
+  <div class="ch"><span class="ch-n">5</span><h2>What happens when a screen fetches data</h2></div>
+
+  <div class="gist"><span>In one sentence</span><p>The browser calls <code>/api/helpdesk/tickets</code> on the same address it's already on, the gateway sends it to the helpdesk service, and that service asks Auth whether you're allowed before it does anything.</p></div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 920 420" role="img" aria-label="Flow for fetching data: browser calls an API path on its own origin, the gateway routes it to the helpdesk service, the service asks Auth for permission, Auth checks the cookie and the grants in the school database, then the service runs its query and returns data.">
+        <defs><marker id="g5a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+
+        <rect class="bx" x="20" y="30" width="140" height="56" rx="4"/>
+        <text class="tb" x="90" y="54" text-anchor="middle">Browser</text>
+        <text class="ts" x="90" y="72" text-anchor="middle">a React screen</text>
+
+        <rect class="bxg" x="230" y="30" width="140" height="56" rx="4"/>
+        <text class="tb" x="300" y="54" text-anchor="middle">Gateway</text>
+        <text class="ts" x="300" y="72" text-anchor="middle">:8080</text>
+
+        <rect class="bx" x="440" y="30" width="150" height="56" rx="4"/>
+        <text class="tb" x="515" y="54" text-anchor="middle">Helpdesk</text>
+        <text class="ts" x="515" y="72" text-anchor="middle">:3101</text>
+
+        <rect class="bxd" x="660" y="30" width="150" height="56" rx="4"/>
+        <text class="tb" x="735" y="54" text-anchor="middle">Auth</text>
+        <text class="ts" x="735" y="72" text-anchor="middle">:3110</text>
+
+        <rect class="bx2" x="440" y="330" width="370" height="56" rx="4"/>
+        <text class="tb" x="460" y="354">t_kvs — this school's database</text>
+        <text class="ts" x="460" y="374">Auth reads the session and the permissions; helpdesk reads tickets</text>
+
+        <line class="ln" x1="160" y1="58" x2="226" y2="58" marker-end="url(#g5a)"/>
+        <text class="tm" x="162" y="24">GET /api/helpdesk/tickets</text>
+
+        <line class="ln" x1="370" y1="58" x2="436" y2="58" marker-end="url(#g5a)"/>
+        <text class="tm" x="372" y="24">path starts /api/helpdesk</text>
+
+        <line class="ln" x1="590" y1="58" x2="656" y2="58" marker-end="url(#g5a)"/>
+        <text class="tm" x="574" y="24">"may they?"</text>
+
+        <line class="ln" x1="735" y1="86" x2="735" y2="326" marker-end="url(#g5a)"/>
+        <text class="ts" x="745" y="150">Auth checks:</text>
+        <text class="ts" x="745" y="168">· is the cookie real?</text>
+        <text class="ts" x="745" y="186">· is the session still alive?</text>
+        <text class="ts" x="745" y="204">· which chair are they sitting in?</text>
+        <text class="ts" x="745" y="222">· does that chair hold this permission?</text>
+        <text class="ts" x="745" y="240">· write it down in the audit log</text>
+
+        <line class="lnd" x1="656" y1="110" x2="594" y2="110" marker-end="url(#g5a)"/>
+        <text class="tm" x="480" y="106">yes / no + details</text>
+
+        <line class="ln" x1="515" y1="86" x2="515" y2="326" marker-end="url(#g5a)"/>
+        <text class="ts" x="400" y="200" text-anchor="end">only if the</text>
+        <text class="ts" x="400" y="218" text-anchor="end">answer was yes,</text>
+        <text class="ts" x="400" y="236" text-anchor="end">helpdesk runs</text>
+        <text class="ts" x="400" y="254" text-anchor="end">its own query</text>
+
+        <line class="lnd" x1="436" y1="138" x2="234" y2="138" marker-end="url(#g5a)"/>
+        <line class="lnd" x1="226" y1="138" x2="164" y2="138" marker-end="url(#g5a)"/>
+        <text class="tm" x="180" y="134">the tickets, as JSON</text>
+
+        <rect class="bxg" x="20" y="200" width="330" height="110" rx="4"/>
+        <text class="tb" x="38" y="224">The important bit</text>
+        <text class="ts" x="38" y="246">The helpdesk service does not decide anything</text>
+        <text class="ts" x="38" y="264">about permissions. It cannot. It asks Auth every</text>
+        <text class="ts" x="38" y="282">single time and shows whatever Auth says.</text>
+        <text class="ts" x="38" y="302">There is no cached "yes" anywhere.</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 4 — fetching data</b>Notice the browser talks only to its own address. It never calls port 3101 directly — it couldn't, and the service would refuse it anyway.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="tag">Why not let the service decide?</span>
+    <p>Because then there would be two copies of the permission rules, and one day they'd disagree. When that happens you get a bug nobody can reproduce, in the part of the system where being wrong matters most. So: one place decides, everyone else asks.</p>
+  </div>
+</section>
+
+<!-- 6 -->
+<section id="c6">
+  <div class="ch"><span class="ch-n">6</span><h2>The headers that travel with a request</h2></div>
+
+  <div class="gist"><span>In one sentence</span><p>The gateway adds a few headers that say "I checked this, and here's proof" — and every service downstream refuses to work without that proof.</p></div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 900 340" role="img" aria-label="Diagram showing headers accumulating as a request passes from the browser through the gateway to a service and on to Auth: the browser sends only a cookie and origin, the gateway adds the forwarded host, gateway token and request id, and the service sends its own internal token onward.">
+        <defs><marker id="g6a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+
+        <rect class="bx" x="20" y="34" width="250" height="140" rx="4"/>
+        <text class="tk" x="36" y="26">WHAT THE BROWSER SENDS</text>
+        <text class="tb" x="36" y="58">Browser → Gateway</text>
+        <text class="tm" x="36" y="84">Host: kvs.samagam.gov.in</text>
+        <text class="tm" x="36" y="104">Cookie: __Host-samagam_session</text>
+        <text class="tm" x="36" y="124">Origin: https://kvs.samagam.gov.in</text>
+        <text class="ts" x="36" y="154">That's it. No secrets. A browser</text>
+        <text class="ts" x="36" y="170">can't be trusted with one.</text>
+
+        <rect class="bxg" x="322" y="34" width="250" height="140" rx="4"/>
+        <text class="tk" x="338" y="26">WHAT THE GATEWAY ADDS</text>
+        <text class="tb" x="338" y="58">Gateway → Service</text>
+        <text class="tm" x="338" y="84">x-forwarded-host: kvs.samagam…</text>
+        <text class="tm" x="338" y="104">x-gateway-token: &lt;shared secret&gt;</text>
+        <text class="tm" x="338" y="124">x-request-id: 8f2c-…</text>
+        <text class="ts" x="338" y="154">Everything the browser sent is</text>
+        <text class="ts" x="338" y="170">passed through untouched too.</text>
+
+        <rect class="bxd" x="624" y="34" width="250" height="140" rx="4"/>
+        <text class="tk" x="640" y="26">WHAT THE SERVICE SENDS ON</text>
+        <text class="tb" x="640" y="58">Service → Auth</text>
+        <text class="tm" x="640" y="84">x-internal-token: &lt;its own&gt;</text>
+        <text class="tm" x="640" y="104">x-gateway-token: &lt;its own&gt;</text>
+        <text class="tm" x="640" y="124">the session cookie, whole</text>
+        <text class="ts" x="640" y="154">It sends its OWN secret, never</text>
+        <text class="ts" x="640" y="170">the one that arrived.</text>
+
+        <line class="ln" x1="274" y1="104" x2="318" y2="104" marker-end="url(#g6a)"/>
+        <line class="ln" x1="576" y1="104" x2="620" y2="104" marker-end="url(#g6a)"/>
+
+        <rect class="bx2" x="20" y="212" width="854" height="110" rx="4"/>
+        <text class="tb" x="38" y="238">Why two headers say the same thing</text>
+        <text class="ts" x="38" y="262">The name of the school is in <tspan class="tm">x-forwarded-host</tspan>. But a header is just text — anything that could reach a service directly could</text>
+        <text class="ts" x="38" y="282">claim to be any school it liked, and that header decides which customer's database gets opened. So a service believes it</text>
+        <text class="ts" x="38" y="302">ONLY when <tspan class="tm">x-gateway-token</tspan> is also present and correct. No token, no school, and the answer is a plain 404.</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 5 — headers, and what each one is for</b>The pattern is: the browser is never trusted, the gateway is the only thing that can vouch, and each hop presents its own credential rather than passing one along.</figcaption>
+  </figure>
+
+  <div class="jargon">
+    <h4>Header cheat sheet</h4>
+    <dl>
+      <dt>Host</dt><dd>The address the browser typed. This is what decides the school — but only after the registry confirms it.</dd>
+      <dt>x-forwarded-host</dt><dd>The gateway repeating the Host, so it survives Next.js re-rendering a page internally.</dd>
+      <dt>x-gateway-token</dt><dd>The proof. Means "the gateway really did set the line above."</dd>
+      <dt>x-internal-token</dt><dd>Means "I'm allowed to call this internal endpoint at all." Without it you get 404, not 401.</dd>
+      <dt>x-request-id</dt><dd>One ID for the whole request, minted at the gateway. It goes in the audit rows, so when someone says "it told me no", you can find the exact row that explains why.</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- 7 -->
+<section id="c7">
+  <div class="ch"><span class="ch-n">7</span><h2>How the gateway decides where to send things</h2></div>
+
+  <div class="gist"><span>In one sentence</span><p>It looks at the start of the path. <code>/api/helpdesk/…</code> goes to the helpdesk service. Anything it doesn't recognise goes to the shell.</p></div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 900 330" role="img" aria-label="Routing diagram: the gateway matches the first path segment after slash api against a list of service keys from one environment variable, sending matches to that service and everything else to the Next.js shell.">
+        <defs><marker id="g7a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+
+        <rect class="bxg" x="300" y="20" width="300" height="64" rx="4"/>
+        <text class="tb" x="450" y="44" text-anchor="middle">Gateway looks at the path</text>
+        <text class="tm" x="450" y="64" text-anchor="middle">does it start with /api/&lt;something-I-know&gt; ?</text>
+
+        <text class="tb" x="140" y="128">YES →</text>
+        <text class="tb" x="640" y="128">NO →</text>
+
+        <rect class="bx" x="20" y="146" width="380" height="150" rx="4"/>
+        <text class="tm" x="38" y="172">/api/auth/login</text>      <text class="ts" x="230" y="172">→ Auth, port 3110</text>
+        <text class="tm" x="38" y="196">/api/helpdesk/tickets</text><text class="ts" x="230" y="196">→ Helpdesk, 3101</text>
+        <text class="tm" x="38" y="220">/api/sis/students</text>    <text class="ts" x="230" y="220">→ SIS, 3102</text>
+        <text class="tm" x="38" y="244">/api/orgsetup/units</text>  <text class="ts" x="230" y="244">→ Org Setup, 3120</text>
+        <line class="lf" x1="38" y1="258" x2="382" y2="258"/>
+        <text class="ts" x="38" y="280">Same URL. No rewriting. Same cookies, same headers.</text>
+
+        <rect class="bx" x="500" y="146" width="380" height="150" rx="4"/>
+        <text class="tm" x="518" y="172">/helpdesk</text>      <text class="ts" x="690" y="172">→ Shell, port 3000</text>
+        <text class="tm" x="518" y="196">/login</text>          <text class="ts" x="690" y="196">→ Shell</text>
+        <text class="tm" x="518" y="220">/_next/static/…</text> <text class="ts" x="690" y="220">→ Shell</text>
+        <text class="tm" x="518" y="244">/api/newthing/…</text> <text class="ts" x="690" y="244">→ Shell (not listed yet)</text>
+        <line class="lf" x1="518" y1="258" x2="862" y2="258"/>
+        <text class="ts" x="518" y="280">That last one is the trick — it's how you move one service at a time.</text>
+
+        <line class="ln" x1="380" y1="84" x2="200" y2="142" marker-end="url(#g7a)"/>
+        <line class="ln" x1="520" y1="84" x2="700" y2="142" marker-end="url(#g7a)"/>
+
+        <text class="ts" x="20" y="320">The whole routing table is ONE environment variable: SERVICE_ORIGINS=auth=http://127.0.0.1:3110,helpdesk=http://127.0.0.1:3101,…</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 6 — routing by path prefix</b>Adding a new service to a deployment is one entry in one environment variable. No code change, and no file that every team has to edit.</figcaption>
+  </figure>
+
+  <div class="note good">
+    <span class="tag">Why this is clever</span>
+    <p>Because a prefix that isn't listed falls through to the shell, you can move one feature out of the shell into its own service <em>gradually</em>. Before the new SIS service exists, <code>/api/sis/*</code> goes to the shell like it always did. The day you deploy it, you add one entry and it starts going to the new service. Nothing else changes, and the browser can't tell the difference.</p>
+  </div>
+
+  <div class="note warn">
+    <span class="tag">One path the gateway refuses on purpose</span>
+    <p><code>/internal/authorize</code> — the endpoint services use to ask "may they?" — is <strong>not</strong> under <code>/api/</code>. The gateway only forwards <code>/api/&lt;key&gt;/*</code>, so there is no way for a browser to reach it, no matter how the request is shaped. That's not a rule someone has to remember; it's just how the routing works.</p>
+  </div>
+</section>
+
+<p class="part-label">Part 3 — Who you are and what you may do</p>
+
+<!-- 8 -->
+<section id="c8">
+  <div class="ch"><span class="ch-n">8</span><h2>Logging in, step by step</h2></div>
+
+  <div class="gist"><span>In one sentence</span><p>You type an Employee ID and a password; the system checks them carefully and slowly on purpose, then gives your browser two cookies.</p></div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 900 480" role="img" aria-label="Login sequence: the browser posts credentials, the gateway forwards to Auth, Auth spends two rate limit buckets, verifies the password with argon2 through a concurrency gate, writes a session row and an audit row, and returns two cookies.">
+        <defs><marker id="g8a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+
+        <rect class="bx" x="20" y="16" width="130" height="40" rx="4"/><text class="tb" x="85" y="41" text-anchor="middle">Browser</text>
+        <rect class="bxg" x="230" y="16" width="130" height="40" rx="4"/><text class="tb" x="295" y="41" text-anchor="middle">Gateway</text>
+        <rect class="bxd" x="440" y="16" width="130" height="40" rx="4"/><text class="tb" x="505" y="41" text-anchor="middle">Auth</text>
+        <rect class="bx2" x="700" y="16" width="160" height="40" rx="4"/><text class="tb" x="780" y="41" text-anchor="middle">t_kvs database</text>
+
+        <line class="lf" x1="85" y1="56" x2="85" y2="450"/>
+        <line class="lf" x1="295" y1="56" x2="295" y2="450"/>
+        <line class="lf" x1="505" y1="56" x2="505" y2="450"/>
+        <line class="lf" x1="780" y1="56" x2="780" y2="450"/>
+
+        <text class="tm" x="92" y="86">POST /api/auth/login  { loginId, password }</text>
+        <line class="ln" x1="85" y1="96" x2="291" y2="96" marker-end="url(#g8a)"/>
+
+        <text class="tm" x="302" y="126">forwarded, with the proof headers</text>
+        <line class="ln" x1="295" y1="136" x2="501" y2="136" marker-end="url(#g8a)"/>
+
+        <polyline class="ln" points="505,158 565,158 565,180 509,180" marker-end="url(#g8a)"/>
+        <text class="ts" x="575" y="168">1. Spend two rate limits — one for this IP address,</text>
+        <text class="ts" x="575" y="184">one for this Employee ID. Before anything expensive.</text>
+
+        <text class="tm" x="512" y="212">look up the Employee ID</text>
+        <line class="ln" x1="505" y1="222" x2="776" y2="222" marker-end="url(#g8a)"/>
+
+        <polyline class="ln" points="505,244 565,244 565,266 509,266" marker-end="url(#g8a)"/>
+        <text class="ts" x="575" y="254">2. Check the password with argon2 — slow on purpose.</text>
+        <text class="ts" x="575" y="270">If the ID doesn't exist, check a fake password anyway,</text>
+        <text class="ts" x="575" y="286">so a wrong ID takes exactly as long as a wrong password.</text>
+
+        <text class="tm" x="512" y="316">write the session row + the login audit row</text>
+        <line class="ln" x1="505" y1="326" x2="776" y2="326" marker-end="url(#g8a)"/>
+
+        <polyline class="ln" points="505,348 565,348 565,370 509,370" marker-end="url(#g8a)"/>
+        <text class="ts" x="575" y="364">3. Build the two cookies (next chapter)</text>
+
+        <line class="lnd" x1="501" y1="400" x2="299" y2="400" marker-end="url(#g8a)"/>
+        <line class="lnd" x1="291" y1="400" x2="89" y2="400" marker-end="url(#g8a)"/>
+        <text class="tm" x="95" y="396">200 + Set-Cookie × 2 + who you are</text>
+
+        <text class="ts" x="20" y="440">If the password is wrong, the failure count and the account lock happen in ONE database statement — see decision 22.</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 7 — signing in</b>Three things here exist only to stop attacks: the two rate limits, the fake password check, and the single-statement lock counter.</figcaption>
+  </figure>
+
+  <h3>Why the fake password check?</h3>
+  <p>Imagine the system replied instantly for an ID that doesn't exist, and took 300ms for one that does. An attacker could then find out which Employee IDs are real just by timing the responses — without ever guessing a password. So when the ID isn't found, the code verifies the given password against a throwaway hash anyway. Same work, same time, same answer. Nothing leaks.</p>
+
+  <h3>How long does a session last?</h3>
+  <p>Two numbers, and whichever runs out first wins:</p>
+  <ul>
+    <li><strong>12 hours absolute.</strong> A school day is long, but not endless.</li>
+    <li><strong>90 minutes idle.</strong> Every request you make pushes this back. Walk away from a staffroom computer for two hours and you're signed out, even though the 12 hours hasn't passed.</li>
+  </ul>
+  <p>The frontend gets both numbers so it can work out the real expiry itself: <code>min(absoluteExpiresAt, lastRequest + 90 min)</code>.</p>
+</section>
+
+<!-- 9 -->
+<section id="c9">
+  <div class="ch"><span class="ch-n">9</span><h2>The two cookies, taken apart</h2></div>
+
+  <div class="gist"><span>In one sentence</span><p>One cookie proves who you are and is checked against the database every time; the other is a short-lived copy of what you're allowed to do, purely to save queries.</p></div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 900 400" role="img" aria-label="Anatomy of the two cookies: the session cookie is a session id, a key id and an HMAC signature; the access token is a signed ten-minute snapshot of the user's grants.">
+        <text class="tk" x="20" y="20">COOKIE 1 — WHO YOU ARE</text>
+        <rect class="bx" x="20" y="34" width="860" height="140" rx="4"/>
+        <text class="tm" x="40" y="60">__Host-samagam_session</text>
+
+        <rect class="bxd" x="40" y="74" width="200" height="42" rx="3"/>
+        <text class="tb" x="140" y="100" text-anchor="middle">sid</text>
+        <text class="ts" x="140" y="132" text-anchor="middle">the session row's id</text>
+        <text class="ts" x="140" y="148" text-anchor="middle">not a secret by itself</text>
+
+        <text class="tb" x="252" y="102" text-anchor="middle">.</text>
+
+        <rect class="bxd" x="264" y="74" width="200" height="42" rx="3"/>
+        <text class="tb" x="364" y="100" text-anchor="middle">keyId</text>
+        <text class="ts" x="364" y="132" text-anchor="middle">which school signed it</text>
+        <text class="ts" x="364" y="148" text-anchor="middle">so one school's cookie</text>
+        <text class="ts" x="364" y="164" text-anchor="middle">can't work at another</text>
+
+        <text class="tb" x="476" y="102" text-anchor="middle">.</text>
+
+        <rect class="bxg" x="488" y="74" width="200" height="42" rx="3"/>
+        <text class="tb" x="588" y="100" text-anchor="middle">hmac</text>
+        <text class="ts" x="588" y="132" text-anchor="middle">a signature, made with a</text>
+        <text class="ts" x="588" y="148" text-anchor="middle">key that lives in the app's</text>
+        <text class="ts" x="588" y="164" text-anchor="middle">environment, NOT the database</text>
+
+        <rect class="bxok" x="710" y="74" width="150" height="90" rx="3"/>
+        <text class="tb" x="785" y="98" text-anchor="middle">Why it matters</text>
+        <text class="ts" x="785" y="118" text-anchor="middle">Steal the whole</text>
+        <text class="ts" x="785" y="134" text-anchor="middle">database and you get</text>
+        <text class="ts" x="785" y="150" text-anchor="middle">session ids you still</text>
+        <text class="ts" x="785" y="166" text-anchor="middle">cannot sign.</text>
+
+        <text class="tk" x="20" y="212">COOKIE 2 — WHAT YOU MAY DO</text>
+        <rect class="bx" x="20" y="226" width="860" height="106" rx="4"/>
+        <text class="tm" x="40" y="252">__Host-samagam_at</text>
+        <text class="ts" x="40" y="274">A signed token holding: the school, your employee code, your session id, which chair you're sitting in,</text>
+        <text class="ts" x="40" y="292">where that chair sits in the tree, and the full list of permissions it holds.</text>
+        <text class="ts" x="40" y="314">Lives 10 minutes. Made fresh at login and whenever you switch chairs. Never the final word — just a shortcut.</text>
+
+        <rect class="bx2" x="20" y="348" width="860" height="42" rx="4"/>
+        <text class="ts" x="40" y="374">Both cookies: HttpOnly · Secure · SameSite=Lax · Path=/ · and NO Domain — that last one is what stops one school's cookie reaching another's subdomain.</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 8 — the two cookies</b>The session cookie is the anchor and is checked live every request. The access token is a ten-minute cache. Losing the token costs a query; losing the session cookie signs you out.</figcaption>
+  </figure>
+
+  <h3>What <code>__Host-</code> actually does</h3>
+  <p>It's not decoration. When a cookie name starts with <code>__Host-</code>, the browser <strong>refuses to accept it</strong> unless it's marked Secure, scoped to path <code>/</code>, and has no <code>Domain</code> attribute.</p>
+  <p>That last part is the whole game. Every school is a subdomain of the same parent. If a cookie set by <code>kvs.samagam.gov.in</code> carried <code>Domain=samagam.gov.in</code>, the browser would send it to <em>every</em> school. The prefix makes that impossible — not by convention, but at the browser level, where no developer can accidentally undo it.</p>
+</section>
+
+<!-- 10 -->
+<section id="c10">
+  <div class="ch"><span class="ch-n">10</span><h2>"Is this person allowed?" — how that gets answered</h2></div>
+
+  <div class="gist"><span>In one sentence</span><p>The service forwards your cookie to Auth and asks about one specific thing; Auth checks five things in order and sends back a full answer.</p></div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 900 460" role="img" aria-label="The five checks Auth runs for every authorization: verify the cookie signature, load the live session, confirm the caller is in a posting, confirm the claimed posting matches, and run the live permission query, then record the decision.">
+        <defs><marker id="g10a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+
+        <rect class="bx" x="270" y="16" width="360" height="52" rx="4"/>
+        <text class="tb" x="450" y="40" text-anchor="middle">POST /internal/authorize</text>
+        <text class="tm" x="450" y="58" text-anchor="middle">{ sessionCookie, node: "helpdesk:tickets.read" }</text>
+
+        <rect class="bx" x="270" y="92" width="360" height="46" rx="4"/>
+        <text class="t" x="290" y="112">1 · Is the cookie's signature real,</text>
+        <text class="ts" x="290" y="130">and was it signed for THIS school?</text>
+        <rect class="bxno" x="650" y="92" width="230" height="46" rx="4"/>
+        <text class="ts" x="666" y="120">no → 401 "not signed in"</text>
+
+        <rect class="bx" x="270" y="152" width="360" height="46" rx="4"/>
+        <text class="t" x="290" y="172">2 · Is the session row still alive?</text>
+        <text class="ts" x="290" y="190">not expired, not revoked, not idle out</text>
+        <rect class="bxno" x="650" y="152" width="230" height="46" rx="4"/>
+        <text class="ts" x="666" y="180">no → 401 "not signed in"</text>
+
+        <rect class="bx" x="270" y="212" width="360" height="46" rx="4"/>
+        <text class="t" x="290" y="232">3 · Are they sitting in a chair?</text>
+        <text class="ts" x="290" y="250">an active posting, not personal scope</text>
+        <rect class="bxno" x="650" y="212" width="230" height="46" rx="4"/>
+        <text class="ts" x="666" y="240">no → 403 "not posted anywhere"</text>
+
+        <rect class="bx" x="270" y="272" width="360" height="46" rx="4"/>
+        <text class="t" x="290" y="292">4 · If the caller named a chair,</text>
+        <text class="ts" x="290" y="310">is it actually the one they're in?</text>
+        <rect class="bxno" x="650" y="272" width="230" height="46" rx="4"/>
+        <text class="ts" x="666" y="300">no → 403 "wrong posting"</text>
+
+        <rect class="bxd" x="270" y="332" width="360" height="46" rx="4"/>
+        <text class="t" x="290" y="352">5 · Does that chair hold this exact</text>
+        <text class="ts" x="290" y="370">permission, right now, live from the DB?</text>
+
+        <rect class="bxok" x="270" y="392" width="610" height="52" rx="4"/>
+        <text class="tb" x="290" y="414">Answer: 200, with the full verdict — allowed or not, why, and what it covers</text>
+        <text class="ts" x="290" y="434">…and the decision is written into the audit log either way. 200 even for "no", because the QUESTION was answered.</text>
+
+        <line class="ln" x1="450" y1="68" x2="450" y2="88" marker-end="url(#g10a)"/>
+        <line class="ln" x1="450" y1="138" x2="450" y2="148" marker-end="url(#g10a)"/>
+        <line class="ln" x1="450" y1="198" x2="450" y2="208" marker-end="url(#g10a)"/>
+        <line class="ln" x1="450" y1="258" x2="450" y2="268" marker-end="url(#g10a)"/>
+        <line class="ln" x1="450" y1="318" x2="450" y2="328" marker-end="url(#g10a)"/>
+        <line class="ln" x1="450" y1="378" x2="450" y2="388" marker-end="url(#g10a)"/>
+
+        <line class="lnd" x1="630" y1="115" x2="646" y2="115" marker-end="url(#g10a)"/>
+        <line class="lnd" x1="630" y1="175" x2="646" y2="175" marker-end="url(#g10a)"/>
+        <line class="lnd" x1="630" y1="235" x2="646" y2="235" marker-end="url(#g10a)"/>
+        <line class="lnd" x1="630" y1="295" x2="646" y2="295" marker-end="url(#g10a)"/>
+
+        <rect class="bx2" x="20" y="92" width="230" height="130" rx="4"/>
+        <text class="tb" x="38" y="116">What's a "node"?</text>
+        <text class="ts" x="38" y="138">A permission name. It looks like</text>
+        <text class="tm" x="38" y="158">helpdesk:tickets.read</text>
+        <text class="ts" x="38" y="180">The part before the colon is the</text>
+        <text class="ts" x="38" y="198">service. The rest is the action.</text>
+        <text class="ts" x="38" y="216">Every route declares the one it needs.</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 9 — the five checks</b>Step 2 is the one that costs a database read on every single request, and it's kept that way on purpose: it's what makes "remove someone's posting and they lose access immediately" true, instead of "true in ten minutes".</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="tag">Why 200 for a refusal?</span>
+    <p>Because a refusal is a successful answer to a question. If Auth returned 403 here, the calling service couldn't tell "you may not" apart from "I couldn't ask". Those need different handling — one is shown to the user, the other is a dependency outage.</p>
+  </div>
+</section>
+
+<!-- 11 -->
+<section id="c11">
+  <div class="ch"><span class="ch-n">11</span><h2>Postings — the part that surprises everyone</h2></div>
+
+  <div class="gist"><span>In one sentence</span><p>Your permissions don't come from who you are. They come from which chair you're currently sitting in.</p></div>
+
+  <p>This trips up every new developer, so it's worth going slowly.</p>
+
+  <p>One person can hold several posts at once. A teacher might be a PGT at one school <em>and</em> hold additional charge at a regional office. Those are two completely different levels of authority. The system never adds them together.</p>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 900 400" role="img" aria-label="Diagram showing one employee holding three postings, only one of which is active at a time, with permissions coming from the active posting alone and never from the union of all postings.">
+        <defs><marker id="g11a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+
+        <rect class="bx" x="20" y="150" width="170" height="70" rx="4"/>
+        <text class="tb" x="105" y="178" text-anchor="middle">A. Sharma</text>
+        <text class="ts" x="105" y="196" text-anchor="middle">one person</text>
+        <text class="tm" x="105" y="212" text-anchor="middle">EP.10112</text>
+
+        <rect class="bxd" x="280" y="40" width="240" height="66" rx="4"/>
+        <text class="tb" x="300" y="64">Principal, KV No.1 Bhopal</text>
+        <text class="ts" x="300" y="82">substantive · heads this unit</text>
+        <text class="tg" x="300" y="98">← ACTIVE right now</text>
+
+        <rect class="bx" x="280" y="152" width="240" height="66" rx="4"/>
+        <text class="tb" x="300" y="176">PGT, KV No.2 Bhopal</text>
+        <text class="ts" x="300" y="194">additional charge</text>
+        <text class="ts" x="300" y="210">held, but not active</text>
+
+        <rect class="bx" x="280" y="264" width="240" height="66" rx="4"/>
+        <text class="tb" x="300" y="288">Officer, Regional Office</text>
+        <text class="ts" x="300" y="306">officiating</text>
+        <text class="ts" x="300" y="322">held, but not active</text>
+
+        <line class="ln" x1="190" y1="172" x2="276" y2="78" marker-end="url(#g11a)"/>
+        <line class="ln" x1="190" y1="185" x2="276" y2="185" marker-end="url(#g11a)"/>
+        <line class="ln" x1="190" y1="198" x2="276" y2="292" marker-end="url(#g11a)"/>
+
+        <rect class="bxok" x="590" y="40" width="290" height="110" rx="4"/>
+        <text class="tb" x="610" y="64">What Auth uses</text>
+        <text class="ts" x="610" y="86">ONLY the active posting.</text>
+        <text class="ts" x="610" y="106">Right now, A. Sharma has exactly the</text>
+        <text class="ts" x="610" y="124">authority of a Principal at KV No.1,</text>
+        <text class="ts" x="610" y="142">and nothing from the other two.</text>
+
+        <rect class="bxno" x="590" y="172" width="290" height="88" rx="4"/>
+        <text class="tb" x="610" y="196">What it never does</text>
+        <text class="ts" x="610" y="218">Add all three together. The same human</text>
+        <text class="ts" x="610" y="236">at a school and at a regional office is</text>
+        <text class="ts" x="610" y="254">a different authority.</text>
+
+        <rect class="bx2" x="590" y="282" width="290" height="98" rx="4"/>
+        <text class="tb" x="610" y="306">Switching chairs</text>
+        <text class="ts" x="610" y="328">POST /api/auth/switch-posting</text>
+        <text class="ts" x="610" y="346">The cookie does NOT change — a row in the</text>
+        <text class="ts" x="610" y="364">database moves. Everything you fetched</text>
+        <text class="ts" x="610" y="378">before is now stale. Re-fetch it.</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 10 — one person, several chairs, one active</b>After a switch, throw away every permission answer you were holding. Don't try to reconcile them — the whole point of switching is that the authority changed.</figcaption>
+  </figure>
+
+  <h3>"Personal scope" is a place, not an error</h3>
+  <p>Someone can be signed in and hold <em>no</em> active posting. The code calls this <code>scope: 'self'</code>. It doesn't mean "broken" or "logged out" — it means they have their own account and their own record, and nothing that comes from a chair, because they aren't sitting in one.</p>
+  <p>Write your screens for it as a real destination with things in it, not as a failure state.</p>
+
+  <div class="note bad">
+    <span class="tag">Mistakes you will be tempted to make</span>
+    <p><code>if (designationCode === 'PRINCIPAL')</code> — no. A job title is not a permission. The permission is a thing an administrator ticked on a dashboard, and only Auth knows whether they did.</p>
+    <p>Filtering rows by <code>unitCode</code> from the session — no. Which rows someone may see comes from the <em>coverage</em> on the verdict Auth sends back, worked out server-side.</p>
+    <p>Treating <code>isHead: true</code> as a grant — no. Heading a unit is a fact about a post, not a permission.</p>
+    <p>The rule underneath all three: <strong>nothing the browser holds is proof of anything.</strong> A screen uses it to decide what to <em>draw</em>. The service decides what actually <em>happens</em>.</p>
+  </div>
+</section>
+
+<!-- 12 -->
+<section id="c12">
+  <div class="ch"><span class="ch-n">12</span><h2>Where permissions actually come from</h2></div>
+
+  <div class="gist"><span>In one sentence</span><p>An administrator builds a dashboard, ticks some permissions onto it, and assigns it to a designation or a specific post — and that's the only way anyone gets authority.</p></div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 900 380" role="img" aria-label="How a permission reaches a person: the module declares available nodes, an administrator ticks some onto a dashboard, the dashboard is assigned to a designation or a posting, and the posting a person sits in therefore holds those grants.">
+        <defs><marker id="g12a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+
+        <rect class="bx" x="20" y="40" width="190" height="86" rx="4"/>
+        <text class="tb" x="38" y="66">1 · The module declares</text>
+        <text class="ts" x="38" y="86">"here is everything that</text>
+        <text class="ts" x="38" y="104">can be granted in helpdesk"</text>
+        <text class="tm" x="38" y="122">authz.module_node</text>
+
+        <rect class="bx" x="250" y="40" width="190" height="86" rx="4"/>
+        <text class="tb" x="268" y="66">2 · An admin ticks</text>
+        <text class="ts" x="268" y="86">a few of them onto a</text>
+        <text class="ts" x="268" y="104">named dashboard</text>
+        <text class="tm" x="268" y="122">authz.dashboard_template</text>
+
+        <rect class="bx" x="480" y="40" width="190" height="86" rx="4"/>
+        <text class="tb" x="498" y="66">3 · The dashboard is</text>
+        <text class="ts" x="498" y="86">assigned — to a designation,</text>
+        <text class="ts" x="498" y="104">or to one specific post</text>
+
+        <rect class="bxd" x="710" y="40" width="170" height="86" rx="4"/>
+        <text class="tb" x="728" y="66">4 · The person</text>
+        <text class="ts" x="728" y="86">sitting in that post</text>
+        <text class="ts" x="728" y="104">now holds those</text>
+        <text class="ts" x="728" y="120">permissions</text>
+
+        <line class="ln" x1="210" y1="83" x2="246" y2="83" marker-end="url(#g12a)"/>
+        <line class="ln" x1="440" y1="83" x2="476" y2="83" marker-end="url(#g12a)"/>
+        <line class="ln" x1="670" y1="83" x2="706" y2="83" marker-end="url(#g12a)"/>
+
+        <rect class="bx2" x="20" y="170" width="420" height="180" rx="4"/>
+        <text class="tb" x="38" y="196">What a grant looks like</text>
+        <text class="tm" x="38" y="222">sis:exam.marks.enter@class_section_subject</text>
+        <line class="lf" x1="38" y1="236" x2="420" y2="236"/>
+        <text class="ts" x="38" y="258"><tspan class="tm">sis</tspan> — which service</text>
+        <text class="ts" x="38" y="280"><tspan class="tm">exam.marks.enter</tspan> — what may be done</text>
+        <text class="ts" x="38" y="302"><tspan class="tm">@class_section_subject</tspan> — WHICH rows it covers</text>
+        <text class="ts" x="38" y="330">No <tspan class="tm">@</tspan> suffix means the whole subtree beneath them.</text>
+
+        <rect class="bxg" x="470" y="170" width="410" height="180" rx="4"/>
+        <text class="tb" x="488" y="196">The one exception, and it closes itself</text>
+        <text class="ts" x="488" y="220">A brand-new school has no dashboards yet, so nobody</text>
+        <text class="ts" x="488" y="238">would hold anything and nobody could set it up.</text>
+        <text class="ts" x="488" y="262">So there's a bootstrap: the organisation administrator's</text>
+        <text class="ts" x="488" y="280">own post can do a few specific things — but ONLY while</text>
+        <text class="ts" x="488" y="298">the school has never published a dashboard.</text>
+        <text class="ts" x="488" y="322">Publish one, and the exception closes forever.</text>
+        <text class="ts" x="488" y="340">Every use of it is written into the audit log.</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 11 — from module to person</b>Permissions are data an administrator ticked, not code a developer wrote. That's why no service is allowed to have its own opinion about them.</figcaption>
+  </figure>
+
+  <h3>Two different questions</h3>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Question</th><th>Ask</th><th>Used for</th></tr></thead>
+      <tbody>
+        <tr><td>"May they do this one thing?"</td><td><code>may()</code>, via <code>/internal/authorize</code></td><td>Gating an action. One node, one answer. Asked by the service doing the work.</td></tr>
+        <tr><td>"What do they hold at all?"</td><td><code>GET /api/auth/navigation</code></td><td>Drawing the menu. Returns <code>held[]</code>, a list of action keys. <strong>A drawing hint, not proof.</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>These two can legitimately disagree. If a grant is revoked after your page loaded, the menu still shows a button and the service refuses it. That's normal. Your screen should render the 403 as a sentence, not crash.</p>
+</section>
+
+<p class="part-label">Part 4 — The control plane</p>
+
+<!-- 13 -->
+<section id="c13">
+  <div class="ch"><span class="ch-n">13</span><h2>What the control plane is, and why it's separate</h2></div>
+
+  <div class="gist"><span>In one sentence</span><p>It's the admin tool that creates schools — a completely separate product with its own database, its own login, and no access to anybody's personal data.</p></div>
+
+  <p>There is <strong>one</strong> platform operator account for the whole system. That single fact drives the entire design of this part. The question the team asked was: <em>if that one account gets breached, how far can the damage go?</em></p>
+
+  <p>The answer they engineered for: <strong>it stops at the registry.</strong> The attacker learns which schools exist. They do not learn who works there.</p>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 900 400" role="img" aria-label="The control plane's two database roles: the console can write the registry and enqueue jobs but cannot read secrets or create roles, while the worker can do the dangerous work but cannot read operator credentials. The job queue is the only channel between them.">
+        <defs><marker id="g13a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+
+        <rect class="bx" x="20" y="30" width="270" height="180" rx="4"/>
+        <text class="tb" x="40" y="58">Console — port 4000</text>
+        <text class="ts" x="40" y="78">connects as <tspan class="tm">cp_console</tspan></text>
+        <text class="tg" x="40" y="104">CAN</text>
+        <text class="ts" x="40" y="124">· write the list of schools</text>
+        <text class="ts" x="40" y="142">· put a job on the queue</text>
+        <text class="ts" x="40" y="160">· write audit rows (append only)</text>
+        <text class="ts" x="40" y="186">It is the most internet-exposed</text>
+        <text class="ts" x="40" y="202">part, so it holds the least.</text>
+
+        <rect class="bxno" x="20" y="222" width="270" height="140" rx="4"/>
+        <text class="tb" x="40" y="248">CANNOT</text>
+        <text class="ts" x="40" y="270">· read a school's database password</text>
+        <text class="ts" x="40" y="288">· create a database or a role</text>
+        <text class="ts" x="40" y="306">· touch any school's data at all</text>
+        <text class="ts" x="40" y="324">· rewrite its own audit trail</text>
+        <text class="ts" x="40" y="348">29 automated checks prove each of these.</text>
+
+        <rect class="bxg" x="330" y="120" width="220" height="130" rx="4"/>
+        <text class="tb" x="440" y="148" text-anchor="middle">cp.job — the queue</text>
+        <text class="ts" x="440" y="172" text-anchor="middle">The ONLY channel between them.</text>
+        <text class="ts" x="440" y="194" text-anchor="middle">A job says WHAT, from a fixed list.</text>
+        <text class="ts" x="440" y="212" text-anchor="middle">It never says HOW, and it never</text>
+        <text class="ts" x="440" y="230" text-anchor="middle">names a database or a role.</text>
+
+        <rect class="bx" x="590" y="30" width="290" height="180" rx="4"/>
+        <text class="tb" x="610" y="58">Worker — no port at all</text>
+        <text class="ts" x="610" y="78">connects as <tspan class="tm">cp_worker</tspan> + the DDL account</text>
+        <text class="tg" x="610" y="104">CAN</text>
+        <text class="ts" x="610" y="124">· create databases and roles</text>
+        <text class="ts" x="610" y="142">· apply the schema, run migrations</text>
+        <text class="ts" x="610" y="160">· take backups</text>
+        <text class="ts" x="610" y="186">Unreachable from any browser.</text>
+        <text class="ts" x="610" y="202">Its only input is the queue.</text>
+
+        <rect class="bxno" x="590" y="222" width="290" height="140" rx="4"/>
+        <text class="tb" x="610" y="248">CANNOT</text>
+        <text class="ts" x="610" y="270">· read an operator's credentials</text>
+        <text class="ts" x="610" y="288">· be told what to do by anything</text>
+        <text class="ts" x="610" y="306">  except a job it validates itself</text>
+        <text class="ts" x="610" y="330">Whatever a job claims, the worker re-reads</text>
+        <text class="ts" x="610" y="348">the truth from the registry before acting.</text>
+
+        <line class="ln" x1="290" y1="160" x2="326" y2="160" marker-end="url(#g13a)"/>
+        <text class="tm" x="292" y="150">enqueue</text>
+        <line class="ln" x1="550" y1="200" x2="586" y2="200" marker-end="url(#g13a)"/>
+        <text class="tm" x="552" y="190">claim</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 12 — two roles, one queue</b>The split isn't tidiness. It means a breach of the browser-facing half cannot create a role, read a password, or reach a school's data — because that half was never given the ability.</figcaption>
+  </figure>
+
+  <h3>What the control plane database holds</h3>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Table</th><th>What's in it</th></tr></thead>
+      <tbody>
+        <tr><td><code>cp.tenant</code></td><td>The list of schools. Slug, display name, status, and the shape of their office hierarchy.</td></tr>
+        <tr><td><code>cp.tenant_domain</code></td><td>Web address → school. This is the row the gateway looks up on every request.</td></tr>
+        <tr><td><code>cp.tenant_database</code></td><td>Which database holds which school, which schema version it's on, and a <em>pointer</em> to where the password is kept — never the password.</td></tr>
+        <tr><td><code>cp.job</code></td><td>The queue. Kind, school, payload, status.</td></tr>
+        <tr><td><code>cp.provisioning_run</code> / <code>_step</code></td><td>Setting up a school, step by step, so a run that dies at step 4 resumes at step 4 instead of starting over.</td></tr>
+        <tr><td><code>cp.platform_admin</code></td><td>The one operator account. Password + TOTP.</td></tr>
+        <tr><td><code>cp.audit_event</code></td><td>Everything that happened. Intent written <em>before</em> the act.</td></tr>
+        <tr><td><code>cp.worker_heartbeat</code></td><td>Proof the worker is alive, so "stopped on purpose" looks different from "died".</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note good">
+    <span class="tag">The rule that holds it all together</span>
+    <p><strong>No tenant personal data. Ever.</strong> Not a name, not an email, not a mobile number, not a date of birth. The control plane knows a school exists and which database holds it. It does not know who works there.</p>
+  </div>
+</section>
+
+<!-- 14 -->
+<section id="c14">
+  <div class="ch"><span class="ch-n">14</span><h2>How a new school gets created</h2></div>
+
+  <div class="gist"><span>In one sentence</span><p>An operator fills a form, which writes a row and drops a job on a queue; the worker picks it up and builds the database step by step; then a one-time link hands the school to its first administrator, and the door locks behind them.</p></div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 900 500" role="img" aria-label="Provisioning sequence: the operator creates a school in the console, which writes the registry row and enqueues a job; the worker claims it, creates the database and role, applies the schema, seeds the structure and records the schema version; a handover link is issued; the first administrator sets a password; and the organisation is sealed.">
+        <defs><marker id="g14a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+
+        <rect class="bx" x="20" y="16" width="120" height="40" rx="4"/><text class="tb" x="80" y="41" text-anchor="middle">Operator</text>
+        <rect class="bx" x="200" y="16" width="120" height="40" rx="4"/><text class="tb" x="260" y="41" text-anchor="middle">Console</text>
+        <rect class="bxg" x="380" y="16" width="120" height="40" rx="4"/><text class="tb" x="440" y="41" text-anchor="middle">Queue</text>
+        <rect class="bx" x="560" y="16" width="120" height="40" rx="4"/><text class="tb" x="620" y="41" text-anchor="middle">Worker</text>
+        <rect class="bx2" x="740" y="16" width="140" height="40" rx="4"/><text class="tb" x="810" y="41" text-anchor="middle">new database</text>
+
+        <line class="lf" x1="80" y1="56" x2="80" y2="470"/>
+        <line class="lf" x1="260" y1="56" x2="260" y2="470"/>
+        <line class="lf" x1="440" y1="56" x2="440" y2="470"/>
+        <line class="lf" x1="620" y1="56" x2="620" y2="470"/>
+        <line class="lf" x1="810" y1="56" x2="810" y2="470"/>
+
+        <text class="tm" x="88" y="84">fills the form: name, slug, hostname, office levels</text>
+        <line class="ln" x1="80" y1="94" x2="256" y2="94" marker-end="url(#g14a)"/>
+
+        <text class="tm" x="268" y="122">writes cp.tenant (status = draft) + cp.tenant_domain</text>
+        <line class="ln" x1="260" y1="132" x2="436" y2="132" marker-end="url(#g14a)"/>
+        <text class="tm" x="268" y="152">then enqueues: { kind: "provision_tenant", slug }</text>
+
+        <text class="tm" x="448" y="182">worker claims it — FOR UPDATE SKIP LOCKED</text>
+        <line class="ln" x1="440" y1="192" x2="616" y2="192" marker-end="url(#g14a)"/>
+
+        <text class="tm" x="628" y="222">CREATE DATABASE t_kvs + CREATE ROLE t_kvs_owner</text>
+        <line class="ln" x1="620" y1="232" x2="806" y2="232" marker-end="url(#g14a)"/>
+        <text class="tm" x="628" y="252">apply the schema · seed offices, designations, the admin</text>
+        <line class="ln" x1="620" y1="262" x2="806" y2="262" marker-end="url(#g14a)"/>
+        <text class="tm" x="628" y="282">record schema_version back in the registry</text>
+        <line class="lnd" x1="616" y1="292" x2="444" y2="292" marker-end="url(#g14a)"/>
+
+        <text class="ts" x="20" y="330">status → awaiting_handover.  The school now answers ONE url: its claim link. Everything else is 503.</text>
+        <line class="lf" x1="20" y1="344" x2="880" y2="344"/>
+
+        <text class="tm" x="88" y="372">operator sends the one-time link to the school</text>
+        <line class="ln" x1="80" y1="382" x2="256" y2="382" marker-end="url(#g14a)"/>
+
+        <text class="ts" x="20" y="410">The first administrator opens it and sets their own password. Only the link's hash was ever stored — nobody, including the operator, knew it.</text>
+
+        <text class="tm" x="88" y="440">status → active, and a "seal" job is queued</text>
+        <line class="ln" x1="260" y1="450" x2="436" y2="450" marker-end="url(#g14a)"/>
+        <line class="ln" x1="440" y1="450" x2="616" y2="450" marker-end="url(#g14a)"/>
+        <text class="tm" x="628" y="440">worker seals it</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 13 — creating a school, start to finish</b>Every step is recorded separately, so a run that fails halfway is fixed and resumed — not restarted, and never left half-built.</figcaption>
+  </figure>
+
+  <h3>What "sealing" means</h3>
+  <p>Once a school has a real administrator, the worker <strong>refuses routine jobs against it</strong>. You can't re-run provisioning. You can't re-issue a handover link. The platform can no longer walk back in through the front door.</p>
+  <p>Why this matters: normally you'd protect a dangerous operation by requiring two different administrators to approve it. With exactly one operator account, that isn't possible — and the team decided that pretending otherwise would be worse than not having it. So sealing plus an audit trail is what replaces it. Getting back in afterwards is deliberately loud, slow, and separately recorded.</p>
+
+  <div class="note warn">
+    <span class="tag">Notice where the seal is written</span>
+    <p>The console flips the status to <code>active</code>, but it does <strong>not</strong> write the seal — it holds no permission to. A permission that lets you <em>set</em> a seal also lets you <em>clear</em> it, and an unsealed school can have provisioning re-run over its administrator. So the one control that closes the door is deliberately not held by the process most exposed to the internet. The worker does it, through the queue.</p>
+  </div>
+</section>
+
+<!-- 15 -->
+<section id="c15">
+  <div class="ch"><span class="ch-n">15</span><h2>The life of an organisation</h2></div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 900 300" role="img" aria-label="State diagram of an organisation lifecycle: draft to provisioning to awaiting handover to active, with branches to provisioning failed, suspended, export pending, deletion scheduled and purged.">
+        <defs><marker id="g15a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+
+        <rect class="bx" x="20" y="80" width="110" height="46" rx="4"/><text class="t" x="75" y="102" text-anchor="middle">draft</text><text class="tm" x="75" y="118" text-anchor="middle">404</text>
+        <rect class="bx" x="170" y="80" width="130" height="46" rx="4"/><text class="t" x="235" y="102" text-anchor="middle">provisioning</text><text class="tm" x="235" y="118" text-anchor="middle">503</text>
+        <rect class="bx" x="340" y="80" width="150" height="46" rx="4"/><text class="t" x="415" y="102" text-anchor="middle">awaiting_handover</text><text class="tm" x="415" y="118" text-anchor="middle">503, claim link open</text>
+        <rect class="bxok" x="530" y="80" width="110" height="46" rx="4"/><text class="t" x="585" y="102" text-anchor="middle">active</text><text class="tm" x="585" y="118" text-anchor="middle">200 — serving</text>
+
+        <rect class="bxno" x="170" y="180" width="130" height="46" rx="4"/><text class="t" x="235" y="202" text-anchor="middle">provisioning_failed</text><text class="tm" x="235" y="218" text-anchor="middle">503</text>
+        <rect class="bxg" x="530" y="180" width="110" height="46" rx="4"/><text class="t" x="585" y="202" text-anchor="middle">suspended</text><text class="tm" x="585" y="218" text-anchor="middle">403</text>
+        <rect class="bx" x="680" y="180" width="110" height="46" rx="4"/><text class="t" x="735" y="202" text-anchor="middle">export_pending</text><text class="tm" x="735" y="218" text-anchor="middle">403</text>
+        <rect class="bx" x="680" y="80" width="200" height="46" rx="4"/><text class="t" x="780" y="102" text-anchor="middle">deletion_scheduled → purged</text><text class="tm" x="780" y="118" text-anchor="middle">403, then 404</text>
+
+        <line class="ln" x1="130" y1="103" x2="166" y2="103" marker-end="url(#g15a)"/>
+        <line class="ln" x1="300" y1="103" x2="336" y2="103" marker-end="url(#g15a)"/>
+        <line class="ln" x1="490" y1="103" x2="526" y2="103" marker-end="url(#g15a)"/>
+        <text class="tm" x="492" y="94">claimed</text>
+        <line class="ln" x1="640" y1="103" x2="676" y2="103" marker-end="url(#g15a)"/>
+        <line class="ln" x1="235" y1="126" x2="235" y2="176" marker-end="url(#g15a)"/>
+        <line class="lnd" x1="220" y1="176" x2="220" y2="130" marker-end="url(#g15a)"/>
+        <text class="tm" x="244" y="156">fix &amp; resume</text>
+        <line class="ln" x1="585" y1="126" x2="585" y2="176" marker-end="url(#g15a)"/>
+        <line class="lnd" x1="570" y1="176" x2="570" y2="130" marker-end="url(#g15a)"/>
+        <line class="ln" x1="640" y1="203" x2="676" y2="203" marker-end="url(#g15a)"/>
+
+        <text class="ts" x="20" y="268">Anything the gateway doesn't recognise — a typo, a status added later, a value from a newer control plane — becomes 404. Never "allow".</text>
+        <text class="ts" x="20" y="288">That default is deliberate: the failure mode of getting it backwards is serving a school's data during exactly the state that exists to stop that.</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 14 — the organisation lifecycle</b>Each status maps to one HTTP answer at the gateway. The mapping is the whole on/off mechanism.</figcaption>
+  </figure>
+
+  <div class="note bad">
+    <span class="tag">Heads up — this is half-built</span>
+    <p><code>suspended</code> works at the gateway, but there is <strong>no button anywhere to set it</strong>, no job kind for it, and no code that signs people out when a school is switched off. If you flip it by hand in SQL: traffic stops within 60 seconds, but everyone already logged in keeps their session for up to 12 hours. The companion document covers what to build.</p>
+  </div>
+</section>
+
+<p class="part-label">Part 5 — Finding your way around the code</p>
+
+<!-- 16 -->
+<section id="c16">
+  <div class="ch"><span class="ch-n">16</span><h2>The folder map</h2></div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 900 470" role="img" aria-label="Repository folder map showing frontend, backend with apps, services and libs, packages, and the separate control-plane directory.">
+        <text class="tm" x="20" y="28">frontend/</text><text class="ts" x="250" y="28">the Next.js app — one npm package, no database</text>
+        <text class="tm" x="44" y="50">src/api/</text><text class="ts" x="250" y="50">the browser's HTTP clients. One file per service</text>
+        <text class="tm" x="44" y="72">src/contexts/</text><text class="ts" x="250" y="72">who is signed in, and what this post may open</text>
+        <text class="tm" x="44" y="94">src/features/&lt;area&gt;/</text><text class="ts" x="250" y="94">the actual screens. This is where you'll spend your time</text>
+        <text class="tm" x="44" y="116">src/app/</text><text class="ts" x="250" y="116">the routes. Three lines each</text>
+
+        <line class="lf" x1="20" y1="134" x2="880" y2="134"/>
+
+        <text class="tm" x="20" y="160">backend/</text>
+        <text class="tm" x="44" y="182">apps/gateway/</text><text class="ts" x="250" y="182">the front door. Two files: tenant.ts and server.ts</text>
+        <text class="tm" x="44" y="204">services/</text><text class="ts" x="250" y="204">one folder per service, all with the same shape inside</text>
+        <text class="tm" x="68" y="226">_template/</text><text class="ts" x="250" y="226">copy this to start a new service</text>
+        <text class="tm" x="68" y="248">auth-service/</text><text class="ts" x="250" y="248">login, sessions, permissions</text>
+        <text class="tm" x="68" y="270">helpdesk-service/</text><text class="ts" x="250" y="270">a real worked example of a feature service</text>
+        <text class="tm" x="44" y="292">libs/contracts/</text><text class="ts" x="250" y="292">shared types and vocabulary. Zero dependencies</text>
+        <text class="tm" x="44" y="314">libs/platform/</text><text class="ts" x="250" y="314">sessions, permissions, the tenant database opener</text>
+        <text class="tm" x="44" y="336">libs/service-runtime/</text><text class="ts" x="250" y="336">what every service is built on — middleware, db, errors</text>
+        <text class="tm" x="44" y="358">packages/org-schema/</text><text class="ts" x="250" y="358">the SQL for a school's database, and the runner that applies it</text>
+
+        <line class="lf" x1="20" y1="380" x2="880" y2="380"/>
+
+        <text class="tm" x="20" y="406">control-plane/</text><text class="ts" x="250" y="406">a SEPARATE product. Own npm project, own database</text>
+        <text class="tm" x="44" y="428">apps/console/</text><text class="ts" x="250" y="428">the operator's screens + the internal registry API</text>
+        <text class="tm" x="44" y="450">apps/worker/</text><text class="ts" x="250" y="450">the provisioning program</text>
+
+        <rect class="bxg" x="560" y="146" width="320" height="80" rx="4"/>
+        <text class="tb" x="578" y="170">Start here on day one</text>
+        <text class="ts" x="578" y="192">Read helpdesk-service top to bottom. Every</text>
+        <text class="ts" x="578" y="210">other service has the same seven folders,</text>
+        <text class="ts" x="578" y="222">so knowing one is knowing all of them.</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 15 — where things live</b><code>control-plane/</code> isn't inside <code>backend/</code>, and the folder position says so on purpose: it's a different product with its own release cycle, and <code>npm install</code> at the root doesn't touch it.</figcaption>
+  </figure>
+</section>
+
+<!-- 17 -->
+<section id="c17">
+  <div class="ch"><span class="ch-n">17</span><h2>Inside one service — the same seven folders every time</h2></div>
+
+  <div class="gist"><span>In one sentence</span><p>Data flows one direction only: routes → controllers → services → repositories → database. A build check fails if you break the arrow.</p></div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 900 340" role="img" aria-label="Layer diagram of a service: routes call controllers call services call repositories which reach the database, with domain and mappers as side branches, and two enforced rules about what each layer may not see.">
+        <defs><marker id="g17a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+
+        <rect class="bx" x="20" y="40" width="150" height="54" rx="4"/>
+        <text class="tb" x="95" y="64" text-anchor="middle">routes/</text><text class="ts" x="95" y="82" text-anchor="middle">which URLs exist</text>
+
+        <rect class="bx" x="200" y="40" width="150" height="54" rx="4"/>
+        <text class="tb" x="275" y="64" text-anchor="middle">controllers/</text><text class="ts" x="275" y="82" text-anchor="middle">read request, pick status</text>
+
+        <rect class="bxd" x="380" y="40" width="150" height="54" rx="4"/>
+        <text class="tb" x="455" y="64" text-anchor="middle">services/</text><text class="ts" x="455" y="82" text-anchor="middle">the business rules</text>
+
+        <rect class="bx" x="560" y="40" width="150" height="54" rx="4"/>
+        <text class="tb" x="635" y="64" text-anchor="middle">repositories/</text><text class="ts" x="635" y="82" text-anchor="middle">every query, nothing else</text>
+
+        <rect class="bx2" x="740" y="40" width="140" height="54" rx="4"/>
+        <text class="tb" x="810" y="70" text-anchor="middle">the database</text>
+
+        <line class="ln" x1="170" y1="67" x2="196" y2="67" marker-end="url(#g17a)"/>
+        <line class="ln" x1="350" y1="67" x2="376" y2="67" marker-end="url(#g17a)"/>
+        <line class="ln" x1="530" y1="67" x2="556" y2="67" marker-end="url(#g17a)"/>
+        <line class="ln" x1="710" y1="67" x2="736" y2="67" marker-end="url(#g17a)"/>
+
+        <rect class="bx" x="380" y="140" width="150" height="54" rx="4"/>
+        <text class="tb" x="455" y="164" text-anchor="middle">domain/</text><text class="ts" x="455" y="182" text-anchor="middle">pure rules, no database</text>
+        <line class="ln" x1="455" y1="94" x2="455" y2="136" marker-end="url(#g17a)"/>
+
+        <rect class="bx" x="560" y="140" width="150" height="54" rx="4"/>
+        <text class="tb" x="635" y="164" text-anchor="middle">mappers/</text><text class="ts" x="635" y="182" text-anchor="middle">db row → what the browser sees</text>
+        <line class="ln" x1="635" y1="94" x2="635" y2="136" marker-end="url(#g17a)"/>
+
+        <rect class="bx" x="200" y="140" width="150" height="54" rx="4"/>
+        <text class="tb" x="275" y="164" text-anchor="middle">schemas/</text><text class="ts" x="275" y="182" text-anchor="middle">what a valid request looks like</text>
+        <line class="ln" x1="275" y1="94" x2="275" y2="136" marker-end="url(#g17a)"/>
+
+        <rect class="bxg" x="20" y="226" width="420" height="96" rx="4"/>
+        <text class="tb" x="38" y="250">Rule 1 — a service never sees a Request</text>
+        <text class="ts" x="38" y="272">So it can never read a header, so it can never decide</text>
+        <text class="ts" x="38" y="290">which school it's in. That stays the gateway's job.</text>
+        <text class="tm" x="38" y="312">enforced by: npm run verify:layers</text>
+
+        <rect class="bxg" x="460" y="226" width="420" height="96" rx="4"/>
+        <text class="tb" x="478" y="250">Rule 2 — a repository never sees a Verdict</text>
+        <text class="ts" x="478" y="272">So it can't decide which rows someone may see. It is</text>
+        <text class="ts" x="478" y="290">handed the answer and does what it's told.</text>
+        <text class="tm" x="478" y="312">enforced by: npm run verify:layers</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 16 — the seven folders</b>When you're debugging, start from the symptom: wrong data → <code>repositories/</code>; rule applied wrongly → <code>services/</code>; wrong field names → <code>mappers/</code>; an unexpected 403 → <code>routes/</code>.</figcaption>
+  </figure>
+
+  <h3>Checks that run in CI and will fail your build</h3>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Command</th><th>What it refuses</th></tr></thead>
+      <tbody>
+        <tr><td><code>verify:layers</code></td><td>The two rules above.</td></tr>
+        <tr><td><code>verify:no-raw-sql</code></td><td>Any <code>$queryRaw</code> or SQL string in the service runtime. Queries go through the ORM.</td></tr>
+        <tr><td><code>verify:platform</code></td><td>The frontend gaining a database URL, a signing key, or the gateway token.</td></tr>
+        <tr><td><code>verify:boundaries</code></td><td>Packages importing things they shouldn't.</td></tr>
+        <tr><td><code>verify:schema</code></td><td>The school schema applies cleanly, and applying it twice changes nothing.</td></tr>
+        <tr><td><code>cp:verify</code></td><td>29 checks proving the console genuinely cannot do what chapter 13 says it can't.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Run everything with <code>npm run verify:all</code>. Spin up the throwaway database first:</p>
+  <pre style="font-family:var(--f-mono);font-size:13px;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:14px 16px;overflow-x:auto;max-width:var(--measure)"><code style="background:none;padding:0;white-space:pre">bash backend/tools/verify/compose.sh up</code></pre>
+  <p>Never point a verification run at a shared database. The guards refuse, but the habit is what matters.</p>
+</section>
+
+<!-- 18 -->
+<section id="c18">
+  <div class="ch"><span class="ch-n">18</span><h2>What breaks if something goes down</h2></div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 900 320" role="img" aria-label="Grid showing the blast radius of each component failing: gateway or Auth or the control plane console take everything down, the shell takes down screens only, one feature service takes down one feature, and the worker affects nothing that is serving.">
+        <text class="tk" x="20" y="22">IF THIS STOPS…</text>
+        <text class="tk" x="330" y="22">…THIS BREAKS</text>
+
+        <rect class="bxno" x="20" y="34" width="280" height="42" rx="4"/>
+        <text class="tb" x="38" y="60">Gateway</text>
+        <rect class="bxno" x="330" y="34" width="550" height="42" rx="4"/>
+        <text class="t" x="348" y="60">Everything. Nothing else is reachable from a browser.</text>
+
+        <rect class="bxno" x="20" y="86" width="280" height="42" rx="4"/>
+        <text class="tb" x="38" y="112">Auth service</text>
+        <rect class="bxno" x="330" y="86" width="550" height="42" rx="4"/>
+        <text class="t" x="348" y="112">Everything. No login, and no service can check a permission.</text>
+
+        <rect class="bxno" x="20" y="138" width="280" height="42" rx="4"/>
+        <text class="tb" x="38" y="164">Control plane console</text>
+        <rect class="bxno" x="330" y="138" width="550" height="42" rx="4"/>
+        <text class="t" x="348" y="158">Everything, within one request. ← this one is a design problem</text>
+        <text class="ts" x="348" y="174">It should only break the admin tool. See the companion document.</text>
+
+        <rect class="bxg" x="20" y="190" width="280" height="36" rx="4"/>
+        <text class="tb" x="38" y="213">Next.js shell</text>
+        <rect class="bxg" x="330" y="190" width="550" height="36" rx="4"/>
+        <text class="t" x="348" y="213">Screens stop loading. APIs keep answering normally.</text>
+
+        <rect class="bxg" x="20" y="236" width="280" height="36" rx="4"/>
+        <text class="tb" x="38" y="259">One feature service</text>
+        <rect class="bxg" x="330" y="236" width="550" height="36" rx="4"/>
+        <text class="t" x="348" y="259">That one feature. Everything else is fine.</text>
+
+        <rect class="bxok" x="20" y="282" width="280" height="36" rx="4"/>
+        <text class="tb" x="38" y="305">Control plane worker</text>
+        <rect class="bxok" x="330" y="282" width="550" height="36" rx="4"/>
+        <text class="t" x="348" y="305">Nothing that's serving. No new schools, no migrations, no backups.</text>
+      </svg>
+    </div>
+    <figcaption><b>Figure 17 — blast radius</b>Five of these six are exactly what you'd want. The third one isn't, and it's the main thing worth fixing in this architecture.</figcaption>
+  </figure>
+
+  <p>The reason the console is on that list: the Auth service asks it "which school is this hostname?" on <strong>every single request</strong>, without caching the answer. The gateway asks the same question but remembers the answer for 60 seconds and keeps serving a stale one if the console is unreachable. Auth does neither.</p>
+  <p>The companion document works through why that second lookup is redundant and what to do about it.</p>
+</section>
+
+<p class="part-label">Part 6 — Why it was built this way</p>
+
+<!-- 19 -->
+<section id="c19">
+  <div class="ch"><span class="ch-n">19</span><h2>The decisions, and the reasoning behind each one</h2></div>
+
+  <p class="lede">Thirty decisions that shaped this system. Most of them cost something — that's what makes them decisions rather than defaults.</p>
+
+  <h4>About tenancy</h4>
+
+  <div class="dec"><h3><span class="d-n">01</span>One database per organisation, not a tenant_id column</h3><dl>
+    <dt>Why</dt><dd class="why">A shared table means every query must remember a filter. One forgotten <code>WHERE</code> leaks one school's salaries to another. Separate databases make that impossible rather than unlikely.</dd>
+    <dt>Costs</dt><dd>1,350 databases to migrate, back up and monitor. A whole worker program exists for this.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">02</span>The subdomain identifies the organisation</h3><dl>
+    <dt>Why</dt><dd class="why">The school is known before anybody types anything — which is what makes an Employee ID alone enough to sign in. 55,000 employees, most without email, don't need to also remember a school code.</dd>
+    <dt>Costs</dt><dd>Every organisation needs a hostname in DNS and in the registry.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">03</span>The hostname is resolved against a registry, never by splitting the string</h3><dl>
+    <dt>Why</dt><dd class="why">A hostname arrives from the internet and can be anything. A registry lookup can't be steered by an attacker; <code>host.split('.')[0]</code> can.</dd>
+    <dt>Costs</dt><dd>A lookup on the request path — which is where the problem in chapter 18 comes from.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">04</span>Every connection asks the database which organisation it is</h3><dl>
+    <dt>Why</dt><dd class="why">It's the last line of defence. If everything upstream got confused, this still fails closed. It's the check that turns "we're careful" into "it cannot happen".</dd>
+    <dt>Costs</dt><dd>One extra statement per connection. At four connections per authorization, that adds up — see the companion document.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">05</span>An unknown organisation status becomes 404, never "allow"</h3><dl>
+    <dt>Why</dt><dd class="why">A new status added to the registry, or a typo, must not accidentally start serving data. The failure mode of getting this backwards is serving a school during exactly the state that exists to stop that.</dd>
+    <dt>Costs</dt><dd>Adding a status means remembering to map it, or it silently 404s.</dd>
+  </dl></div>
+
+  <h4>About the frontend</h4>
+
+  <div class="dec"><h3><span class="d-n">06</span>The browser calls the services directly; the Next server does not</h3><dl>
+    <dt>Why</dt><dd class="why">The old way had the Next server forging six headers on every call — which meant it had to hold the shared secret. Now the browser calls <code>/api/…</code> on its own address and the gateway adds the proof. The frontend needs no secret at all.</dd>
+    <dt>Costs</dt><dd>Screens are client-rendered, so there's no server-side data fetching to lean on.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">07</span>The frontend holds no credential of any kind, and a build check enforces it</h3><dl>
+    <dt>Why</dt><dd class="why">It's the most exposed part of the system. A rule nobody enforces is a rule that erodes — so <code>verify:platform</code> fails the build if a database URL, signing key or gateway token reappears in <code>frontend/</code>.</dd>
+    <dt>Costs</dt><dd>Anything needing a secret must become a backend endpoint.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">08</span>Nothing in the session payload is proof of anything</h3><dl>
+    <dt>Why</dt><dd class="why">It's unsigned JSON a client can fake. If a service branched on <code>designationCode</code>, permissions would live in two places and one day disagree. A screen uses it to decide what to <em>draw</em>; the service decides what <em>happens</em>.</dd>
+    <dt>Costs</dt><dd>Screens must handle the case where they drew a button the service then refuses. That's normal, not a bug.</dd>
+  </dl></div>
+
+  <h4>About login and sessions</h4>
+
+  <div class="dec"><h3><span class="d-n">09</span>The session cookie is signed, and a session id alone is worthless</h3><dl>
+    <dt>Why</dt><dd class="why">The signing key lives in the app's environment, never in the school's database. Steal the entire database and you get live session ids you still can't turn into a working cookie.</dd>
+    <dt>Costs</dt><dd>The key must be managed and rotated outside the database.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">10</span>The cookie carries the school's own key id</h3><dl>
+    <dt>Why</dt><dd class="why">A cookie minted for one school doesn't verify at another. Origin separation already stops the browser sending it; this makes it useless if it ever is.</dd>
+    <dt>Costs</dt><dd>Verifying needs one read of the school's <code>signing_key_id</code> — which is a per-school constant nobody caches yet.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">11</span>The <code>__Host-</code> prefix, and never a Domain attribute</h3><dl>
+    <dt>Why</dt><dd class="why">Every school is a subdomain of the same parent. A Domain-scoped cookie set by one would be sent to all of them. The prefix makes that impossible at the browser, not by convention.</dd>
+    <dt>Costs</dt><dd>The cookie must be Secure — fine, because browsers treat <code>localhost</code> as secure in development too.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">12</span>SameSite=Lax, plus an explicit same-origin check on every mutation</h3><dl>
+    <dt>Why</dt><dd class="why">Strict would break arriving from an external link already signed in. Lax permits a top-level cross-site POST, so every unsafe method also gets a real same-origin check rather than trusting the cookie policy alone.</dd>
+    <dt>Costs</dt><dd>One more middleware on every write route.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">13</span>Two cookies: a live session, and a 10-minute permission cache</h3><dl>
+    <dt>Why</dt><dd class="why">The session is checked against the database every request, which makes "ending someone's posting ends their access" true <em>immediately</em>. The token is only a shortcut, so grant changes are stale for at most ten minutes and session revocation is instant.</dd>
+    <dt>Costs</dt><dd>Two things to keep in sync. And the token is currently ignored by the endpoint that would benefit from it most.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">14</span>Rate limits are spent before the password is checked</h3><dl>
+    <dt>Why</dt><dd class="why">Counting after the work is a limit an attacker never reaches, because failures are what they're producing. Two separate buckets — one per IP, one per Employee ID — because "one address, many accounts" and "many addresses, one account" are different attacks.</dd>
+    <dt>Costs</dt><dd>Two checks before every login, even legitimate ones.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">15</span>An unknown Employee ID is checked against a fake password anyway</h3><dl>
+    <dt>Why</dt><dd class="why">Otherwise response timing tells an attacker which IDs are real, without a single password guess.</dd>
+    <dt>Costs</dt><dd>Wasted CPU on every bad login. Worth it.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">16</span>The failure count and the account lock happen in one statement</h3><dl>
+    <dt>Why</dt><dd class="why">Read-then-write lets a few hundred parallel guesses all read "4 failures" and none of them trigger the lock.</dd>
+    <dt>Costs</dt><dd>A slightly harder SQL statement to read.</dd>
+  </dl></div>
+
+  <h4>About permissions</h4>
+
+  <div class="dec"><h3><span class="d-n">17</span>Only Auth answers "may they?", and no service caches the answer</h3><dl>
+    <dt>Why</dt><dd class="why">Two copies of the permission rules is two chances to disagree, in the part of the system where being wrong matters most.</dd>
+    <dt>Costs</dt><dd>An HTTP call on every gated request. This is the single biggest performance cost in the platform, and it's deliberate.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">18</span>Authority comes from the active posting only — never a union</h3><dl>
+    <dt>Why</dt><dd class="why">The same human at a school and at a regional office is a different authority. Combining them would silently grant regional powers inside a school.</dd>
+    <dt>Costs</dt><dd>Users must switch chairs explicitly, and everything cached must be re-fetched after they do.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">19</span>A grant carries what may be done AND which rows it covers</h3><dl>
+    <dt>Why</dt><dd class="why">Returning a plain yes/no threw away the second half. "May appoint at headquarters" and "may appoint anywhere" are not the same permission.</dd>
+    <dt>Costs</dt><dd>Callers must handle a list, not a boolean.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">20</span>The bootstrap exception closes itself</h3><dl>
+    <dt>Why</dt><dd class="why">A new school has no dashboards, so nobody could set it up. The organisation administrator's own post can do a few things — but only until the first dashboard is published, after which the exception is gone. Every use is audited.</dd>
+    <dt>Costs</dt><dd>One extra branch in the permission check, and a query when it's reached.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">21</span><code>/internal/authorize</code> returns 200 even for a refusal</h3><dl>
+    <dt>Why</dt><dd class="why">A refusal is a successful answer. A 403 here would leave the calling service unable to tell "you may not" from "I couldn't ask" — and those need completely different handling.</dd>
+    <dt>Costs</dt><dd>Callers must read the body, not just the status.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">22</span>An unauthorised internal caller gets 404, not 401</h3><dl>
+    <dt>Why</dt><dd class="why">401 confirms the endpoint exists. 404 means nobody can discover it by probing. The same trick is used for unknown organisations.</dd>
+    <dt>Costs</dt><dd>Harder to debug a misconfigured token — which is why the code logs a warning when it happens.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">23</span>Both allowed and refused decisions are written to the audit log</h3><dl>
+    <dt>Why</dt><dd class="why">A trail holding only refusals can't answer "who read this last month" — which is the question actually asked after an incident. But menu-drawing probes are <em>not</em> recorded, or millions of meaningless refusals would bury the real signal.</dd>
+    <dt>Costs</dt><dd>An insert on the critical path of every decision.</dd>
+  </dl></div>
+
+  <h4>About services</h4>
+
+  <div class="dec"><h3><span class="d-n">24</span>Each service logs into the database as itself</h3><dl>
+    <dt>Why</dt><dd class="why">The old way used one shared login that switched roles after connecting — so between connecting and switching, the connection held <em>every</em> module's permissions. One missed switch and helpdesk could read student records. Now the role is whatever PostgreSQL granted at login; there's no window and nothing to forget.</dd>
+    <dt>Costs</dt><dd>One database user and password per service to provision.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">25</span>The seven folders, with the arrow enforced by a build check</h3><dl>
+    <dt>Why</dt><dd class="why">Knowing one service means knowing all of them. Two rules fall out and both are checked: a service never sees a <code>Request</code> (so it can't read a header and pick a school), and a repository never sees a <code>Verdict</code> (so it can't decide which rows someone may see).</dd>
+    <dt>Costs</dt><dd>More files for small features.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">26</span>Routing by path prefix, from one environment variable</h3><dl>
+    <dt>Why</dt><dd class="why">A prefix that isn't listed falls through to the shell, so one feature can be extracted into its own service at a time. The browser can't tell the difference, and no shared file needs editing.</dd>
+    <dt>Costs</dt><dd>A typo in that variable looks exactly like a service that was never deployed — so a malformed entry refuses to boot.</dd>
+  </dl></div>
+
+  <h4>About the control plane</h4>
+
+  <div class="dec"><h3><span class="d-n">27</span>The control plane holds no tenant personal data, ever</h3><dl>
+    <dt>Why</dt><dd class="why">There is one operator account. If it's breached, the damage must stop at the registry. An attacker learns which schools exist, not who works there.</dd>
+    <dt>Costs</dt><dd>The operator console can't show anything useful about a school's people, even when that would be convenient.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">28</span>Two database roles, and the queue is the only channel</h3><dl>
+    <dt>Why</dt><dd class="why">The console is the internet-facing half, so it holds the least. It can enqueue a job kind from a fixed list with a simple payload — it never says <em>how</em>. The worker derives every database and role name itself and ignores what the job claims. A console that could name a role could grant that role access to a school's employee list.</dd>
+    <dt>Costs</dt><dd>Everything the operator does is asynchronous. No immediate feedback.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">29</span>Sealing replaces two-person approval</h3><dl>
+    <dt>Why</dt><dd class="why">With one operator, "two approvals from different administrators" isn't achievable — and claiming it would be worse than not having it. So once a school has a real administrator, routine jobs against it are refused. A database owner can't be <em>prevented</em> from acting, but re-entry becomes loud, slow and separately recorded.</dd>
+    <dt>Costs</dt><dd>Legitimate re-provisioning needs a deliberate break-glass path.</dd>
+  </dl></div>
+
+  <div class="dec"><h3><span class="d-n">30</span>Audit intent is written before the act, and provisioning is resumable</h3><dl>
+    <dt>Why</dt><dd class="why">An intent row with no outcome, or a success with no preceding intent, is itself the alarm. And a provisioning run that dies at step 4 of 7 resumes at step 4 — it doesn't start over, and it never leaves a half-built school nobody can see.</dd>
+    <dt>Costs</dt><dd>Two writes per operation, and every step has to be individually idempotent.</dd>
+  </dl></div>
+</section>
+
+<!-- 20 -->
+<section id="c20">
+  <div class="ch"><span class="ch-n">20</span><h2>Known gaps — things that are not finished</h2></div>
+
+  <p>Every project has these. Knowing them on day one saves you from assuming something works.</p>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Gap</th><th>What it means for you</th></tr></thead>
+      <tbody>
+        <tr><td><b>Auth calls the control plane on every request</b></td><td>The biggest architectural issue. It makes the admin tool a hard dependency of the whole platform. Covered fully in the companion document.</td></tr>
+        <tr><td><b>The on/off switch is half-built</b></td><td><code>suspended</code> works at the gateway; nothing sets it, and nobody gets signed out. Don't assume you can switch a school off.</td></tr>
+        <tr><td><b>No real secrets manager</b></td><td>The worker writes generated database passwords to files. <code>owner_secret_ref</code> is a pointer by design, but nothing resolves it yet.</td></tr>
+        <tr><td><b>The audit trail isn't shipped anywhere</b></td><td>It lives in the same database whose owner it's meant to hold accountable. Until it's shipped out, the append-only rule is a speed bump, not a guarantee.</td></tr>
+        <tr><td><b>PIS integration is a stand-in</b></td><td>What sits behind the personnel port today is a development placeholder. Ask before depending on staff data.</td></tr>
+        <tr><td><b>Nothing syncs Auth's copies</b></td><td>Auth keeps its own copies of the office hierarchy and designations. When the real ones change, nothing pushes the update.</td></tr>
+        <tr><td><b>Enrolment at scale is unsolved</b></td><td>55,000 employees, most with no password and effectively no email. Getting them all their first login is an open problem.</td></tr>
+        <tr><td><b>IP allowlisting and WebAuthn</b></td><td>Operator login is password + TOTP today. WebAuthn is the target and the schema has room for it.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Where to go next</h3>
+  <ul>
+    <li>Read <code>backend/services/helpdesk-service/</code> end to end. It's the worked example.</li>
+    <li>Read <code>backend/docs/READING_THE_CODE.md</code> — it follows three real requests through the whole stack, line by line.</li>
+    <li>Read <code>MS_SERVICE_GUIDE.md</code> if you're building a service, or <code>AUTH_SESSION_CONTRACT.md</code> if you're building screens.</li>
+    <li>Run <code>npm run verify:all</code> once, just to see what the build actually checks.</li>
+  </ul>
+</section>
+
+</main>
+</div>

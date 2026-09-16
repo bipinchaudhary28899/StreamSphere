@@ -1,0 +1,1095 @@
+<title>Samagam Platform Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+:root{
+  --bg:#F2F5F7;
+  --surface:#FFFFFF;
+  --surface-2:#E9EEF2;
+  --ink:#14202B;
+  --ink-2:#4B5A66;
+  --ink-3:#74838E;
+  --line:#D3DCE3;
+  --line-2:#BCC8D1;
+  --lapis:#1D4E77;
+  --lapis-soft:#E2EDF5;
+  --brass:#8A6420;
+  --brass-soft:#F4EDDF;
+  --bad:#A6352A;
+  --bad-soft:#F8E7E4;
+  --good:#1F6656;
+  --good-soft:#E0EFEA;
+  --shadow:0 1px 2px rgba(20,32,43,.06), 0 8px 24px -16px rgba(20,32,43,.28);
+
+  --f-display:"Spectral", Georgia, "Times New Roman", serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --measure:70ch;
+}
+
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D141A;
+    --surface:#151F28;
+    --surface-2:#1C2830;
+    --ink:#E3EAEF;
+    --ink-2:#9FAEBA;
+    --ink-3:#7A8996;
+    --line:#26343F;
+    --line-2:#33444F;
+    --lapis:#79B0DA;
+    --lapis-soft:#152A3B;
+    --brass:#D2A455;
+    --brass-soft:#2A2113;
+    --bad:#E08375;
+    --bad-soft:#331A17;
+    --good:#5FBCA4;
+    --good-soft:#12291F;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D141A;
+  --surface:#151F28;
+  --surface-2:#1C2830;
+  --ink:#E3EAEF;
+  --ink-2:#9FAEBA;
+  --ink-3:#7A8996;
+  --line:#26343F;
+  --line-2:#33444F;
+  --lapis:#79B0DA;
+  --lapis-soft:#152A3B;
+  --brass:#D2A455;
+  --brass-soft:#2A2113;
+  --bad:#E08375;
+  --bad-soft:#331A17;
+  --good:#5FBCA4;
+  --good-soft:#12291F;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:15px;
+  line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- shell ---------- */
+.wrap{
+  max-width:1180px;
+  margin:0 auto;
+  padding-inline:20px;
+  padding-block:0 96px;
+  display:grid;
+  grid-template-columns:200px minmax(0,1fr);
+  gap:0 52px;
+  align-items:start;
+}
+.rail{
+  position:sticky;
+  top:calc(env(safe-area-inset-top, 0px) + 20px);
+  padding-block:28px;
+  font-family:var(--f-mono);
+  font-size:11.5px;
+  line-height:1.5;
+}
+.rail ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.rail a{
+  display:grid;grid-template-columns:22px 1fr;gap:6px;
+  color:var(--ink-3);text-decoration:none;
+  padding:5px 8px 5px 0;border-left:2px solid transparent;padding-left:10px;
+}
+.rail a:hover{color:var(--lapis);border-left-color:var(--lapis)}
+.rail a:focus-visible{outline:2px solid var(--lapis);outline-offset:2px;border-radius:2px}
+.rail .n{color:var(--line-2)}
+.rail-head{
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);padding-left:12px;margin-bottom:12px;
+}
+main{min-width:0;padding-block:0 0}
+
+/* ---------- masthead ---------- */
+.masthead{
+  grid-column:1/-1;
+  border-bottom:1px solid var(--line);
+  padding-block:44px 30px;
+  margin-bottom:8px;
+}
+.eyebrow{
+  font-family:var(--f-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--brass);margin:0 0 14px;
+}
+h1{
+  font-family:var(--f-display);font-weight:600;
+  font-size:clamp(34px,5.4vw,52px);line-height:1.06;letter-spacing:-.015em;
+  margin:0 0 16px;text-wrap:balance;max-width:16ch;
+}
+.standfirst{
+  font-size:17px;line-height:1.55;color:var(--ink-2);max-width:60ch;margin:0 0 22px;
+}
+.facts{
+  display:flex;flex-wrap:wrap;gap:0;
+  border-top:1px solid var(--line);
+  margin-top:26px;
+}
+.fact{
+  flex:1 1 150px;min-width:130px;
+  padding:14px 18px 14px 0;
+  border-right:1px solid var(--line);
+}
+.fact:last-child{border-right:0}
+.fact dt{
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 5px;
+}
+.fact dd{
+  margin:0;font-family:var(--f-display);font-size:23px;font-weight:600;
+  letter-spacing:-.01em;font-variant-numeric:tabular-nums;
+}
+.fact dd small{font-family:var(--f-body);font-size:12px;font-weight:400;color:var(--ink-2);display:block;letter-spacing:0}
+
+/* ---------- sections ---------- */
+section{padding-block:40px 8px;scroll-margin-top:24px}
+section + section{border-top:1px solid var(--line)}
+.sec-head{display:flex;gap:14px;align-items:baseline;margin-bottom:6px}
+.sec-n{
+  font-family:var(--f-mono);font-size:11px;color:var(--brass);
+  letter-spacing:.08em;padding-top:2px;flex:0 0 auto;
+}
+h2{
+  font-family:var(--f-display);font-weight:600;font-size:clamp(23px,2.9vw,31px);
+  line-height:1.18;letter-spacing:-.012em;margin:0;text-wrap:balance;
+}
+h3{
+  font-family:var(--f-body);font-weight:600;font-size:15px;letter-spacing:.005em;
+  margin:32px 0 8px;color:var(--ink);
+}
+h4{
+  font-family:var(--f-mono);font-weight:500;font-size:11px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--ink-3);margin:26px 0 8px;
+}
+p{margin:0 0 15px;max-width:var(--measure)}
+ul,ol{margin:0 0 15px;padding-left:20px;max-width:var(--measure)}
+li{margin-bottom:6px}
+li::marker{color:var(--line-2)}
+strong{font-weight:600}
+a{color:var(--lapis)}
+code{
+  font-family:var(--f-mono);font-size:.875em;
+  background:var(--surface-2);padding:1px 4px;border-radius:2px;
+  color:var(--ink);white-space:nowrap;
+}
+.lede{font-size:16.5px;color:var(--ink-2);max-width:62ch;margin-bottom:22px}
+
+/* ---------- figures ---------- */
+figure{margin:28px 0 30px}
+.figbox{
+  background:var(--surface);border:1px solid var(--line);border-radius:3px;
+  padding:20px 18px 14px;overflow-x:auto;box-shadow:var(--shadow);
+}
+figure svg{display:block;width:100%;height:auto;min-width:660px;color:var(--ink)}
+figcaption{
+  margin-top:12px;font-size:12.5px;line-height:1.5;color:var(--ink-3);
+  max-width:64ch;
+}
+figcaption b{
+  font-family:var(--f-mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--brass);font-weight:500;display:block;margin-bottom:3px;
+}
+
+/* ---------- tables ---------- */
+.tbl{overflow-x:auto;margin:20px 0 26px;border:1px solid var(--line);border-radius:3px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:600px;font-size:13px}
+th{
+  text-align:left;font-family:var(--f-mono);font-weight:500;font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);
+  padding:11px 14px;border-bottom:1px solid var(--line-2);white-space:nowrap;
+  background:var(--surface-2);
+}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.48}
+tr:last-child td{border-bottom:0}
+td code{background:transparent;padding:0;color:var(--lapis)}
+.num{font-variant-numeric:tabular-nums;font-family:var(--f-mono);font-size:12px;white-space:nowrap}
+
+/* ---------- callouts ---------- */
+.note{
+  border-left:3px solid var(--line-2);padding:2px 0 2px 16px;margin:22px 0;
+  max-width:var(--measure);
+}
+.note.bad{border-left-color:var(--bad)}
+.note.good{border-left-color:var(--good)}
+.note.warn{border-left-color:var(--brass)}
+.note p:last-child{margin-bottom:0}
+.note .tag{
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.11em;text-transform:uppercase;
+  display:block;margin-bottom:5px;color:var(--ink-3);
+}
+.note.bad .tag{color:var(--bad)}
+.note.good .tag{color:var(--good)}
+.note.warn .tag{color:var(--brass)}
+
+/* ---------- cost tally ---------- */
+.tally{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  border:1px solid var(--line);border-radius:3px;margin:22px 0 26px;background:var(--surface);
+  overflow:hidden;
+}
+.tally div{padding:14px 16px;border-right:1px solid var(--line)}
+.tally div:last-child{border-right:0}
+.tally dt{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.tally dd{margin:0;font-family:var(--f-display);font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
+.tally dd span{font-family:var(--f-body);font-size:12px;font-weight:400;color:var(--ink-2);display:block;margin-top:4px;line-height:1.35}
+.tally .hot dd{color:var(--bad)}
+
+/* ---------- step list ---------- */
+.steps{list-style:none;padding:0;margin:20px 0 26px;max-width:var(--measure);counter-reset:s}
+.steps li{
+  counter-increment:s;position:relative;padding-left:38px;margin-bottom:14px;
+}
+.steps li::before{
+  content:counter(s);position:absolute;left:0;top:1px;
+  font-family:var(--f-mono);font-size:10.5px;color:var(--brass);
+  width:24px;height:20px;display:grid;place-items:center;
+  border:1px solid var(--line-2);border-radius:2px;
+}
+.steps b{display:block;font-weight:600;margin-bottom:1px}
+.steps span{color:var(--ink-2);font-size:13.5px}
+
+/* ---------- priority ---------- */
+.pri{display:inline-block;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;padding:2px 7px;border-radius:2px;white-space:nowrap}
+.pri.p1{background:var(--bad-soft);color:var(--bad)}
+.pri.p2{background:var(--brass-soft);color:var(--brass)}
+.pri.p3{background:var(--lapis-soft);color:var(--lapis)}
+.pri.ok{background:var(--good-soft);color:var(--good)}
+
+/* ---------- svg helpers ---------- */
+.bx{fill:var(--surface);stroke:currentColor;stroke-width:1;opacity:1}
+.bx-2{fill:var(--surface-2);stroke:var(--line-2);stroke-width:1}
+.t{font-family:var(--f-body);font-size:12px;fill:currentColor}
+.t-b{font-family:var(--f-body);font-size:12px;font-weight:600;fill:currentColor}
+.t-s{font-family:var(--f-body);font-size:10px;fill:var(--ink-3)}
+.t-m{font-family:var(--f-mono);font-size:9.5px;fill:var(--ink-3)}
+.t-mb{font-family:var(--f-mono);font-size:10px;fill:currentColor}
+.t-cap{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.11em;fill:var(--ink-3)}
+.ln{stroke:currentColor;stroke-width:1.2;fill:none}
+.ln-d{stroke:currentColor;stroke-width:1.2;fill:none;stroke-dasharray:4 3;opacity:.55}
+.ln-hot{stroke:var(--bad);stroke-width:2;fill:none}
+.ln-cool{stroke:var(--lapis);stroke-width:1.4;fill:none;stroke-dasharray:5 3}
+.bound{stroke:var(--line-2);stroke-width:1;stroke-dasharray:3 4;fill:none}
+.hot-t{fill:var(--bad);font-family:var(--f-mono);font-size:9.5px;font-weight:500}
+.cool-t{fill:var(--lapis);font-family:var(--f-mono);font-size:9.5px}
+
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;gap:0}
+  .rail{position:static;padding-block:18px 8px;border-bottom:1px solid var(--line)}
+  .rail ol{flex-direction:row;flex-wrap:wrap;gap:4px}
+  .rail a{border-left:0;border-bottom:2px solid transparent;padding:4px 8px}
+  .rail a:hover{border-left:0;border-bottom-color:var(--lapis)}
+  h1{max-width:none}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Samagam v2 · platform architecture &amp; optimisation review</p>
+    <h1>Samagam Platform Architecture</h1>
+    <p class="standfirst">One application, many organisations, one PostgreSQL database each. This is what runs, what talks to what, what has to stay alive — and the four changes that would let an organisation keep working when the control plane does not.</p>
+    <dl class="facts">
+      <div class="fact"><dt>Target scale</dt><dd>1,350<small>organisations, one DB each</small></dd></div>
+      <div class="fact"><dt>Processes to run</dt><dd>9<small>+ PostgreSQL</small></dd></div>
+      <div class="fact"><dt>Control-plane calls</dt><dd>1<small>per authorized request, uncached</small></dd></div>
+      <div class="fact"><dt>DB round trips</dt><dd>~9<small>per authorized request</small></dd></div>
+      <div class="fact"><dt>Org on/off switch</dt><dd>—<small>status exists, nothing sets it</small></dd></div>
+    </dl>
+  </header>
+
+  <nav class="rail" aria-label="Sections">
+    <p class="rail-head">Contents</p>
+    <ol>
+      <li><a href="#s1"><span class="n">01</span><span>What runs</span></a></li>
+      <li><a href="#s2"><span class="n">02</span><span>HLD</span></a></li>
+      <li><a href="#s3"><span class="n">03</span><span>LLD — one request</span></a></li>
+      <li><a href="#s4"><span class="n">04</span><span>Data flow</span></a></li>
+      <li><a href="#s5"><span class="n">05</span><span>Why the gateway</span></a></li>
+      <li><a href="#s6"><span class="n">06</span><span>Why the control plane</span></a></li>
+      <li><a href="#s7"><span class="n">07</span><span>Surviving a CP outage</span></a></li>
+      <li><a href="#s8"><span class="n">08</span><span>Gateway tuning</span></a></li>
+      <li><a href="#s9"><span class="n">09</span><span>The on/off switch</span></a></li>
+      <li><a href="#s10"><span class="n">10</span><span>Login &amp; tokens</span></a></li>
+      <li><a href="#s11"><span class="n">11</span><span>Authorization cost</span></a></li>
+      <li><a href="#s12"><span class="n">12</span><span>What to do first</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+  <!-- ══════════════ 1 ══════════════ -->
+  <section id="s1">
+    <div class="sec-head"><span class="sec-n">01</span><h2>What runs, and what you have to keep alive</h2></div>
+    <p class="lede">Nine processes and one database cluster. Only three of them are on the path of an ordinary request — but today a fourth can take the whole platform down.</p>
+
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Process</th><th>Port</th><th>Holds</th><th>Scaling</th><th>If it stops</th></tr></thead>
+        <tbody>
+          <tr><td><b>API Gateway</b><br><span class="t-s">Node <code>http</code>, no framework</span></td><td class="num">8080</td><td>A 60-second in-memory host cache. No DB, no token verification.</td><td>Stateless — run as many as you like</td><td><b>Everything stops.</b> Nothing else is reachable from a browser.</td></tr>
+          <tr><td><b>Next.js shell</b></td><td class="num">3000</td><td>Nothing. No database, no connection pool, no signing key, no gateway secret.</td><td>Stateless</td><td>Screens stop loading. APIs keep answering.</td></tr>
+          <tr><td><b>Auth / IAM</b></td><td class="num">3110</td><td>Pools into <em>every</em> organisation's database, as <code>auth_svc</code> and <code>identity_svc</code>.</td><td>Horizontal, but each instance opens pools per organisation</td><td><b>Nobody signs in, nothing authorizes.</b> Total stop.</td></tr>
+          <tr><td><b>Org Setup</b></td><td class="num">3120</td><td>Pool as <code>orgsetup_svc</code></td><td>Horizontal</td><td>Establishment screens stop.</td></tr>
+          <tr><td><b>Domain services</b><br><span class="t-s">Helpdesk, SIS, PIS, Master…</span></td><td class="num">3101–3104</td><td>Pool as <code>&lt;key&gt;_svc</code>, its own schema only</td><td>Horizontal, one at a time</td><td>That module stops. Everything else is fine.</td></tr>
+          <tr><td><b>CP Console</b><br><span class="t-s">Next.js — operator UI <em>and</em> the internal registry API</span></td><td class="num">4000</td><td><code>pg</code> pool as <code>cp_console</code>, <code>max: 10</code></td><td>Effectively single today</td><td><b>Total platform stop, within one request.</b> See §06.</td></tr>
+          <tr><td><b>CP Worker</b></td><td>none</td><td>Cluster DDL credential + <code>cp_worker</code>. Polls <code>cp.job</code> every 2 s.</td><td>Many — <code>FOR UPDATE SKIP LOCKED</code> makes it safe</td><td>Provisioning, migration, backups and sealing stop. <b>Serving is unaffected.</b></td></tr>
+          <tr><td><b>PostgreSQL 17</b></td><td class="num">5433</td><td><code>samagam_control</code> + one database per organisation</td><td>Primary + replicas</td><td>Everything stops.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note good">
+      <span class="tag">The good news</span>
+      <p>The worker — the piece with the most dangerous credential on the platform — is already off the request path entirely. It listens on no port and its only input is a job queue. You can stop it for a week and every school keeps working.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ 2 ══════════════ -->
+  <section id="s2">
+    <div class="sec-head"><span class="sec-n">02</span><h2>High-level design</h2></div>
+    <p class="lede">Every organisation is one hostname. That hostname is the only thing that says which organisation a request belongs to, and turning it into an answer is the gateway's whole job.</p>
+
+    <figure>
+      <div class="figbox">
+        <svg viewBox="0 0 1000 585" role="img" aria-label="High-level architecture: a browser reaches the API gateway, which resolves the hostname against the control plane console and routes by path prefix to the Next.js shell, the domain services, or Auth/IAM. Services call Auth directly. Auth calls the control plane on every request. The control plane worker provisions tenant databases.">
+          <!-- boundary -->
+          <line class="bound" x1="662" y1="8" x2="662" y2="540"/>
+          <text class="t-cap" x="672" y="574">CONTROL PLANE — SEPARATE PRODUCT, SEPARATE DB, SEPARATE RELEASE</text>
+          <text class="t-cap" x="30" y="574">THE PLATFORM</text>
+
+          <defs>
+            <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+            <marker id="a-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--bad)"/>
+            </marker>
+            <marker id="a-cool" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--lapis)"/>
+            </marker>
+          </defs>
+
+          <!-- browsers -->
+          <rect class="bx" x="30" y="18" width="290" height="48" rx="3"/>
+          <text class="t-b" x="44" y="40">Employee browser</text>
+          <text class="t-m" x="44" y="55">kvs.samagam.gov.in — every screen is React</text>
+
+          <rect class="bx" x="700" y="18" width="270" height="48" rx="3"/>
+          <text class="t-b" x="714" y="40">Operator browser</text>
+          <text class="t-m" x="714" y="55">cp.samagam.gov.in — 1 account</text>
+
+          <!-- gateway -->
+          <rect class="bx" x="30" y="108" width="590" height="58" rx="3"/>
+          <text class="t-b" x="44" y="132">API Gateway :8080</text>
+          <text class="t-m" x="44" y="150">Host → organisation · status → HTTP verdict · route by /api/&lt;key&gt; · mints x-request-id</text>
+
+          <!-- row 3 -->
+          <rect class="bx" x="30" y="214" width="170" height="68" rx="3"/>
+          <text class="t-b" x="44" y="238">Next.js shell</text>
+          <text class="t-m" x="44" y="253">:3000</text>
+          <text class="t-m" x="44" y="268">no DB, no secret</text>
+
+          <rect class="bx" x="222" y="214" width="180" height="68" rx="3"/>
+          <text class="t-b" x="236" y="238">Domain services</text>
+          <text class="t-m" x="236" y="253">:3101 :3102 :3103 :3120</text>
+          <text class="t-m" x="236" y="268">one schema each</text>
+
+          <rect class="bx" x="442" y="214" width="150" height="68" rx="3"/>
+          <text class="t-b" x="456" y="238">Auth / IAM</text>
+          <text class="t-m" x="456" y="253">:3110</text>
+          <text class="t-m" x="456" y="268">the only may()</text>
+
+          <!-- control plane -->
+          <rect class="bx" x="706" y="214" width="126" height="68" rx="3"/>
+          <text class="t-b" x="718" y="238">Console</text>
+          <text class="t-m" x="718" y="253">:4000</text>
+          <text class="t-m" x="718" y="268">UI + internal API</text>
+
+          <rect class="bx" x="844" y="214" width="126" height="68" rx="3"/>
+          <text class="t-b" x="856" y="238">Worker</text>
+          <text class="t-m" x="856" y="253">no port</text>
+          <text class="t-m" x="856" y="268">holds the DDL</text>
+
+          <!-- databases -->
+          <rect class="bx-2" x="30" y="430" width="590" height="58" rx="3"/>
+          <text class="t-b" x="44" y="454">t_kvs · t_dps · t_… — one PostgreSQL database per organisation</text>
+          <text class="t-m" x="44" y="472">no table carries a tenant column; the database that opens IS the boundary</text>
+
+          <rect class="bx-2" x="706" y="430" width="264" height="58" rx="3"/>
+          <text class="t-b" x="718" y="454">samagam_control</text>
+          <text class="t-m" x="718" y="472">registry · jobs · operator · audit</text>
+
+          <!-- arrows -->
+          <line class="ln" x1="175" y1="66" x2="175" y2="104" marker-end="url(#a1)"/>
+          <text class="t-m" x="185" y="90">every /api/* on its own origin</text>
+
+          <line class="ln" x1="835" y1="66" x2="835" y2="210" marker-end="url(#a1)"/>
+          <text class="t-m" x="845" y="128">separate origin,</text>
+          <text class="t-m" x="845" y="141">separate cookie</text>
+
+          <line class="ln" x1="115" y1="166" x2="115" y2="210" marker-end="url(#a1)"/>
+          <line class="ln" x1="312" y1="166" x2="312" y2="210" marker-end="url(#a1)"/>
+          <text class="t-m" x="320" y="194">/api/&lt;key&gt;/*</text>
+          <line class="ln" x1="517" y1="166" x2="517" y2="210" marker-end="url(#a1)"/>
+          <text class="t-m" x="525" y="194">/api/auth/*</text>
+
+          <!-- gateway to console -->
+          <polyline class="ln-cool" points="620,130 683,130 683,236 702,236" marker-end="url(#a-cool)"/>
+          <text class="cool-t" x="626" y="120">host → org · cached 60 s</text>
+
+          <!-- auth to console : the finding -->
+          <line class="ln-hot" x1="592" y1="264" x2="702" y2="264" marker-end="url(#a-hot)"/>
+          <text class="hot-t" x="647" y="252" text-anchor="middle">every call · no cache</text>
+
+          <!-- services to auth -->
+          <polyline class="ln" points="360,282 360,326 480,326 480,286" marker-end="url(#a1)"/>
+          <text class="t-m" x="420" y="344" text-anchor="middle">POST /internal/authorize — direct, never through the gateway</text>
+
+          <line class="ln" x1="260" y1="282" x2="260" y2="426" marker-end="url(#a1)"/>
+          <text class="t-m" x="268" y="380">as &lt;key&gt;_svc</text>
+
+          <line class="ln" x1="560" y1="282" x2="560" y2="426" marker-end="url(#a1)"/>
+          <text class="t-m" x="568" y="374">4 connections</text>
+          <text class="t-m" x="568" y="387">per decision</text>
+
+          <line class="ln" x1="769" y1="282" x2="769" y2="426" marker-end="url(#a1)"/>
+          <text class="t-m" x="777" y="336">writes registry,</text>
+          <text class="t-m" x="777" y="349">enqueues cp.job</text>
+
+          <line class="ln" x1="907" y1="282" x2="907" y2="426" marker-end="url(#a1)"/>
+          <text class="t-m" x="915" y="336">claims cp.job</text>
+          <text class="t-m" x="915" y="349">every 2 s</text>
+
+          <polyline class="ln-d" points="860,282 860,400 640,400 640,459 624,459" marker-end="url(#a1)"/>
+          <text class="t-m" x="676" y="392">CREATE DATABASE · apply schema · back up</text>
+        </svg>
+      </div>
+      <figcaption><b>Figure 1 — high-level design</b>Two arrows cross the product boundary at request time. The gateway's is cached for sixty seconds and falls back to a stale answer when the control plane is unreachable. Auth/IAM's is neither. The worker's dashed arrow is provisioning-time only.</figcaption>
+    </figure>
+
+    <h3>The three rules that follow from the picture</h3>
+    <ol>
+      <li><strong>The database is the tenant boundary.</strong> No table carries a tenant column. Which database opens is decided from what the gateway proved, and asserted again by the database itself before any query runs.</li>
+      <li><strong>Authority is answered in one place.</strong> A service asks Auth/IAM and renders the answer. There is no second copy of <code>may()</code>, and no service caches a verdict.</li>
+      <li><strong>The frontend holds no credential.</strong> Not a pool, not a signing key, not the gateway's secret. The <em>browser</em> calls the services on the organisation's own origin, and the gateway supplies the proof. A build check fails if that changes.</li>
+    </ol>
+  </section>
+
+  <!-- ══════════════ 3 ══════════════ -->
+  <section id="s3">
+    <div class="sec-head"><span class="sec-n">03</span><h2>Low-level design — one request, end to end</h2></div>
+    <p class="lede">A signed-in employee opens the helpdesk ticket list. This is every hop and every query that request costs today.</p>
+
+    <figure>
+      <div class="figbox">
+        <svg viewBox="0 0 1000 726" role="img" aria-label="Sequence diagram of one authorized API request through the browser, gateway, helpdesk service, Auth/IAM, control plane console and the organisation database, showing one uncached control plane call and four separate database connections per authorization.">
+          <defs>
+            <marker id="s-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+            <marker id="s-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--bad)"/>
+            </marker>
+            <marker id="s-cool" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--lapis)"/>
+            </marker>
+          </defs>
+
+          <!-- lifeline heads -->
+          <rect class="bx" x="14" y="14" width="112" height="38" rx="3"/><text class="t-b" x="70" y="38" text-anchor="middle">Browser</text>
+          <rect class="bx" x="164" y="14" width="112" height="38" rx="3"/><text class="t-b" x="220" y="33" text-anchor="middle">Gateway</text><text class="t-m" x="220" y="46" text-anchor="middle">:8080</text>
+          <rect class="bx" x="344" y="14" width="112" height="38" rx="3"/><text class="t-b" x="400" y="33" text-anchor="middle">Helpdesk</text><text class="t-m" x="400" y="46" text-anchor="middle">:3101</text>
+          <rect class="bx" x="524" y="14" width="112" height="38" rx="3"/><text class="t-b" x="580" y="33" text-anchor="middle">Auth/IAM</text><text class="t-m" x="580" y="46" text-anchor="middle">:3110</text>
+          <rect class="bx" x="704" y="14" width="112" height="38" rx="3"/><text class="t-b" x="760" y="33" text-anchor="middle">CP console</text><text class="t-m" x="760" y="46" text-anchor="middle">:4000</text>
+          <rect class="bx-2" x="874" y="14" width="112" height="38" rx="3"/><text class="t-b" x="930" y="33" text-anchor="middle">t_kvs</text><text class="t-m" x="930" y="46" text-anchor="middle">PostgreSQL</text>
+
+          <!-- lifelines -->
+          <line class="bound" x1="70" y1="52" x2="70" y2="700"/>
+          <line class="bound" x1="220" y1="52" x2="220" y2="700"/>
+          <line class="bound" x1="400" y1="52" x2="400" y2="700"/>
+          <line class="bound" x1="580" y1="52" x2="580" y2="700"/>
+          <line class="bound" x1="760" y1="52" x2="760" y2="700"/>
+          <line class="bound" x1="930" y1="52" x2="930" y2="700"/>
+
+          <!-- 1 -->
+          <text class="t-m" x="78" y="86">GET /api/helpdesk/tickets · cookie __Host-samagam_session</text>
+          <line class="ln" x1="70" y1="96" x2="216" y2="96" marker-end="url(#s-a)"/>
+
+          <!-- 2 -->
+          <text class="cool-t" x="228" y="128">resolve host — cache miss only, ≤ 1 per 60 s</text>
+          <line class="ln-cool" x1="220" y1="138" x2="756" y2="138" marker-end="url(#s-cool)"/>
+
+          <!-- 3 -->
+          <text class="t-m" x="228" y="170">+ x-forwarded-host  + x-gateway-token  + x-request-id</text>
+          <line class="ln" x1="220" y1="180" x2="396" y2="180" marker-end="url(#s-a)"/>
+
+          <!-- 4 self -->
+          <polyline class="ln" points="400,200 452,200 452,220 404,220" marker-end="url(#s-a)"/>
+          <text class="t-m" x="460" y="214">trustedTenant → sameOrigin → gate('helpdesk:tickets.read')</text>
+
+          <!-- 5 -->
+          <text class="t-m" x="408" y="250">POST /internal/authorize  { sessionCookie, node, route }</text>
+          <line class="ln" x1="400" y1="260" x2="576" y2="260" marker-end="url(#s-a)"/>
+
+          <!-- 6 -->
+          <text class="hot-t" x="588" y="292">GET by-host/kvs… — EVERY CALL, NO CACHE</text>
+          <line class="ln-hot" x1="580" y1="302" x2="756" y2="302" marker-end="url(#s-hot)"/>
+          <text class="t-m" x="588" y="318">→ 1 SQL on samagam_control (pool max 10)</text>
+
+          <!-- 7 -->
+          <text class="t-m" x="588" y="350">① SELECT signing_key_id FROM authz.tenant_meta</text>
+          <line class="ln" x1="580" y1="360" x2="926" y2="360" marker-end="url(#s-a)"/>
+
+          <!-- 8 self -->
+          <polyline class="ln" points="580,382 628,382 628,402 584,402" marker-end="url(#s-a)"/>
+          <text class="t-m" x="636" y="396">verify HMAC over  sid.keyId.mac</text>
+
+          <!-- 9 -->
+          <text class="t-m" x="588" y="432">② principalFor — session ⋈ credential ⋈ posting ⋈ unit ⋈ level</text>
+          <line class="ln" x1="580" y1="442" x2="926" y2="442" marker-end="url(#s-a)"/>
+
+          <!-- 10 -->
+          <text class="t-m" x="588" y="474">③ may() — the live grants this posting holds</text>
+          <line class="ln" x1="580" y1="484" x2="926" y2="484" marker-end="url(#s-a)"/>
+
+          <!-- 11 -->
+          <text class="t-m" x="588" y="516">④ INSERT platform.access_audit — awaited, on the critical path</text>
+          <line class="ln" x1="580" y1="526" x2="926" y2="526" marker-end="url(#s-a)"/>
+
+          <!-- 12 -->
+          <text class="t-m" x="408" y="558">200 { principal, verdict, tenant }  — 200 even when refused</text>
+          <line class="ln-d" x1="576" y1="568" x2="404" y2="568" marker-end="url(#s-a)"/>
+
+          <!-- 13 -->
+          <text class="t-m" x="408" y="600">the actual ticket query, as helpdesk_svc</text>
+          <line class="ln" x1="400" y1="610" x2="926" y2="610" marker-end="url(#s-a)"/>
+
+          <!-- 14 / 15 -->
+          <text class="t-m" x="228" y="642">200 JSON</text>
+          <line class="ln-d" x1="396" y1="652" x2="224" y2="652" marker-end="url(#s-a)"/>
+          <text class="t-m" x="78" y="682">200 JSON  + x-request-id</text>
+          <line class="ln-d" x1="216" y1="692" x2="74" y2="692" marker-end="url(#s-a)"/>
+        </svg>
+      </div>
+      <figcaption><b>Figure 2 — low-level design, one authorized request</b>Steps ① to ④ are four <em>separate</em> connection checkouts on the organisation's database. Each one runs <code>SELECT tenant_key FROM authz.tenant_meta</code> — the tenant assertion — before its own query, so one authorization is roughly nine statements.</figcaption>
+    </figure>
+
+    <dl class="tally">
+      <div><dt>Cross-process hops</dt><dd>3<span>gateway → service → auth → control plane</span></dd></div>
+      <div class="hot"><dt>Control-plane calls</dt><dd>1<span>HTTP + 1 SQL, uncached</span></dd></div>
+      <div class="hot"><dt>Org-DB checkouts</dt><dd>4<span>plus 1 for the service's own query</span></dd></div>
+      <div><dt>Org-DB statements</dt><dd>~9<span>4 tenant assertions + 4 reads + 1 audit insert</span></dd></div>
+      <div><dt>argon2 hashes</dt><dd>0<span>login only, gated at 4 concurrent</span></dd></div>
+    </dl>
+
+    <div class="note warn">
+      <span class="tag">Read this number twice</span>
+      <p>The control-plane hop is the one that is <em>architecturally</em> wrong. But the four connection checkouts are the one that will actually cost you throughput at 1,350 organisations. Both are fixed in §11, and the database one is cheaper to fix.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ 4 ══════════════ -->
+  <section id="s4">
+    <div class="sec-head"><span class="sec-n">04</span><h2>Data flow — what is stored where, and why</h2></div>
+    <p class="lede">Two kinds of database, and a deliberate rule about what may live in each. The control plane knows an organisation exists and which database holds it. It does not know who works there.</p>
+
+    <figure>
+      <div class="figbox">
+        <svg viewBox="0 0 1020 640" role="img" aria-label="Data flow diagram: the organisation database on the left holds identity, authorization, audit and module schemas; samagam_control on the right holds the registry, the job queue, the operator account and the audit trail. Five processes in the middle touch one or both stores.">
+          <defs>
+            <marker id="d-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+            <marker id="d-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--bad)"/>
+            </marker>
+            <marker id="d-cool" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--lapis)"/>
+            </marker>
+          </defs>
+
+          <!-- left store -->
+          <rect class="bx" x="14" y="66" width="352" height="524" rx="3"/>
+          <rect x="14" y="66" width="352" height="46" rx="3" fill="var(--surface-2)" stroke="none"/>
+          <text class="t-b" x="30" y="88">t_kvs  ·  t_dps  ·  t_…</text>
+          <text class="t-m" x="30" y="104">ONE DATABASE PER ORGANISATION — 1,350 of them</text>
+          <line class="ln" x1="14" y1="112" x2="366" y2="112" stroke="var(--line)"/>
+
+          <text class="t-mb" x="30" y="140">identity.credential</text><text class="t-m" x="30" y="154">login_id · employee_code · argon2 hash</text>
+          <text class="t-mb" x="30" y="180">identity.session</text><text class="t-m" x="30" y="194">sid · expires_at 12 h · last_activity · revoked_at</text>
+          <text class="t-mb" x="30" y="220">identity.posting</text><text class="t-m" x="30" y="234">who sits in which chair, and until when</text>
+          <text class="t-mb" x="30" y="260">identity.unit_ref · unit_level_ref</text><text class="t-m" x="30" y="274">the establishment tree, as a materialised path</text>
+          <text class="t-mb" x="30" y="300">authz.tenant_meta</text><text class="t-m" x="30" y="314">tenant_key · signing_key_id · org_admin_posting_id</text>
+          <text class="t-mb" x="30" y="340">authz.dashboard_template · module_node</text><text class="t-m" x="30" y="354">the grants an administrator ticked</text>
+          <text class="t-mb" x="30" y="380">platform.access_audit</text><text class="t-m" x="30" y="394">every decision, allowed and refused, partitioned monthly</text>
+          <text class="t-mb" x="30" y="420">pims.employee_current</text><text class="t-m" x="30" y="434">the personnel projection — names, contact, service status</text>
+          <text class="t-mb" x="30" y="460">helpdesk.* · sis.* · pis.* · master.*</text><text class="t-m" x="30" y="474">each module's own schema, reachable only by its own role</text>
+
+          <line class="ln-d" x1="30" y1="500" x2="350" y2="500"/>
+          <text class="t-m" x="30" y="522">No table carries a tenant column. The database that</text>
+          <text class="t-m" x="30" y="536">opens IS the boundary, and it asserts its own identity</text>
+          <text class="t-m" x="30" y="550">on the first statement of every connection.</text>
+          <text class="t-cap" x="30" y="576">ALL PERSONAL DATA LIVES HERE</text>
+
+          <!-- right store -->
+          <rect class="bx" x="654" y="66" width="352" height="524" rx="3"/>
+          <rect x="654" y="66" width="352" height="46" rx="3" fill="var(--surface-2)" stroke="none"/>
+          <text class="t-b" x="670" y="88">samagam_control</text>
+          <text class="t-m" x="670" y="104">ONE DATABASE, PLATFORM-WIDE</text>
+          <line class="ln" x1="654" y1="112" x2="1006" y2="112" stroke="var(--line)"/>
+
+          <text class="t-mb" x="670" y="140">cp.tenant</text><text class="t-m" x="670" y="154">slug · display_name · status · level_spec · enabled_modules</text>
+          <text class="t-mb" x="670" y="180">cp.tenant_domain</text><text class="t-m" x="670" y="194">host → tenant — the gateway's indexed lookup key</text>
+          <text class="t-mb" x="670" y="220">cp.tenant_database</text><text class="t-m" x="670" y="234">db_name · owner_role · owner_secret_ref · schema_version · sealed_at</text>
+          <text class="t-mb" x="670" y="260">cp.job</text><text class="t-m" x="670" y="274">kind · tenant_id · payload · status — the only channel to the worker</text>
+          <text class="t-mb" x="670" y="300">cp.provisioning_run · provisioning_step</text><text class="t-m" x="670" y="314">resumable: a run that dies at step 4 resumes at step 4</text>
+          <text class="t-mb" x="670" y="340">cp.platform_admin · platform_admin_session</text><text class="t-m" x="670" y="354">the one operator account, password + TOTP</text>
+          <text class="t-mb" x="670" y="380">cp.admin_enrolment_token</text><text class="t-m" x="670" y="394">single-use, hashed, burnable only through a function</text>
+          <text class="t-mb" x="670" y="420">cp.audit_event</text><text class="t-m" x="670" y="434">intent written BEFORE the act — a success with no intent is the signal</text>
+          <text class="t-mb" x="670" y="460">cp.worker_heartbeat</text><text class="t-m" x="670" y="474">liveness, so a stopped worker looks different from a dead one</text>
+
+          <line class="ln-d" x1="670" y1="500" x2="990" y2="500"/>
+          <text class="t-m" x="670" y="522">Not a name, not an email, not a mobile number, not a</text>
+          <text class="t-m" x="670" y="536">date of birth. Two database roles: the console cannot</text>
+          <text class="t-m" x="670" y="550">read owner_secret_ref, create a role, or rewrite audit.</text>
+          <text class="t-cap" x="670" y="576">NO TENANT PERSONAL DATA, EVER</text>
+
+          <!-- processes -->
+          <rect class="bx" x="396" y="122" width="228" height="56" rx="3"/>
+          <text class="t-b" x="410" y="143">API Gateway</text><text class="t-m" x="410" y="159">host → {publicId, slug, status,</text><text class="t-m" x="410" y="171">schemaVersion} · 60 s cache</text>
+
+          <rect class="bx" x="396" y="212" width="228" height="56" rx="3"/>
+          <text class="t-b" x="410" y="233">Auth / IAM</text><text class="t-m" x="410" y="249">4 reads + 1 audit write left;</text><text class="t-m" x="410" y="261">the same host lookup right, uncached</text>
+
+          <rect class="bx" x="396" y="302" width="228" height="56" rx="3"/>
+          <text class="t-b" x="410" y="323">Domain services</text><text class="t-m" x="410" y="339">their own schema only.</text><text class="t-m" x="410" y="351">They never touch the registry.</text>
+
+          <rect class="bx" x="396" y="392" width="228" height="56" rx="3"/>
+          <text class="t-b" x="410" y="413">CP Console</text><text class="t-m" x="410" y="429">writes cp.tenant, cp.tenant_domain,</text><text class="t-m" x="410" y="441">enqueues cp.job, writes audit</text>
+
+          <rect class="bx" x="396" y="482" width="228" height="56" rx="3"/>
+          <text class="t-b" x="410" y="503">CP Worker</text><text class="t-m" x="410" y="519">claims jobs · CREATE DATABASE ·</text><text class="t-m" x="410" y="531">apply schema · seed · pg_dump</text>
+
+          <!-- arrows -->
+          <line class="ln-cool" x1="624" y1="150" x2="650" y2="150" marker-end="url(#d-cool)"/>
+          <line class="ln-hot" x1="624" y1="240" x2="650" y2="240" marker-end="url(#d-hot)"/>
+          <line class="ln" x1="396" y1="240" x2="370" y2="240" marker-end="url(#d-a)"/>
+          <line class="ln" x1="396" y1="330" x2="370" y2="330" marker-end="url(#d-a)"/>
+          <line class="ln" x1="624" y1="420" x2="650" y2="420" marker-end="url(#d-a)"/>
+          <line class="ln" x1="624" y1="510" x2="650" y2="510" marker-end="url(#d-a)"/>
+          <line class="ln-d" x1="396" y1="510" x2="370" y2="510" marker-end="url(#d-a)"/>
+
+          <text class="t-cap" x="396" y="42">WHAT MOVES BETWEEN THEM: FIVE FIELDS, ONE DIRECTION, READ-ONLY</text>
+          <text class="t-m" x="396" y="60">Nothing flows store-to-store. The two databases have never met.</text>
+        </svg>
+      </div>
+      <figcaption><b>Figure 3 — data flow</b>Only two processes touch both stores. Auth reads five fields from the registry on every request; the worker writes tenant databases at provisioning time only. No personal data ever crosses left to right — that constraint, not tidiness, is why the control plane is a separate product.</figcaption>
+    </figure>
+
+    <h3>Why the split is drawn there</h3>
+    <p>There is one platform operator account. If it is breached, the damage has to stop at the registry. That single constraint produces everything above: no tenant personal data, two database roles rather than one, a job queue as the only channel from console to worker, and an audit row written <em>before</em> the act so a missing intent is itself a signal.</p>
+    <p>It also produces the thing worth protecting in any redesign: <strong>the control plane creates organisations and does not use them.</strong> The current request path quietly violates that sentence, which is the subject of the next two sections.</p>
+  </section>
+
+  <!-- ══════════════ 5 ══════════════ -->
+  <section id="s5">
+    <div class="sec-head"><span class="sec-n">05</span><h2>Why every request goes through the gateway — and why that is right</h2></div>
+
+    <p>The gateway is doing five jobs that genuinely cannot be done anywhere else:</p>
+    <ol class="steps">
+      <li><b>It is the only place a raw <code>Host</code> header meets the registry.</b><span>The hostname arrives from the internet and is attacker-influenceable. Resolving it against a registry — rather than splitting the subdomain — is what makes tenant selection something an attacker cannot steer.</span></li>
+      <li><b>It fails closed.</b><span>A status it does not recognise resolves to 404, never to "allow". A new lifecycle state added to the registry cannot accidentally start serving data.</span></li>
+      <li><b>It is the sole root of tenant trust.</b><span>Downstream, <code>x-forwarded-host</code> is believed only when it arrives with <code>x-gateway-token</code>. Nothing else on the platform can name an organisation.</span></li>
+      <li><b>It routes by path prefix, so services move one at a time.</b><span><code>SERVICE_ORIGINS=helpdesk=…,sis=…</code>. A prefix that is not listed falls through to the shell. Adding a service to a deployment is one environment entry and no code change.</span></li>
+      <li><b>It is why the frontend holds zero secrets.</b><span>The browser calls <code>/api/…</code> on the organisation's own origin and the gateway adds the proof. Before this, the Next server had to forge six headers on every call and therefore had to hold the shared secret.</span></li>
+    </ol>
+
+    <div class="note good">
+      <span class="tag">Verdict</span>
+      <p>Keep it. The pattern is right and the implementation is careful — the status map, the stale-on-error cache, the request-id sanitising and the <code>origin: null</code> handling are all things that get discovered the hard way. Four things are worth fixing, and none of them is the design (§08).</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ 6 ══════════════ -->
+  <section id="s6">
+    <div class="sec-head"><span class="sec-n">06</span><h2>Why every request also goes through the control plane — and why it shouldn't</h2></div>
+
+    <p>The gateway hop is legitimate. The <strong>second</strong> lookup, inside Auth/IAM, is the one you are paying for, and it buys nothing. Here is the argument the code itself makes for it:</p>
+
+    <blockquote style="margin:18px 0;padding-left:16px;border-left:3px solid var(--line-2);max-width:var(--measure);font-family:var(--f-display);font-size:17px;font-style:italic;color:var(--ink-2)">
+      “A hostname is attacker-influenceable; a registry lookup is not.”
+    </blockquote>
+
+    <p>True in general — but not at this hop. Look at what Auth resolves <em>from</em>:</p>
+
+    <figure>
+      <div class="figbox">
+        <svg viewBox="0 0 900 250" role="img" aria-label="Diagram showing that Auth's registry lookup takes as input a hostname the gateway has already proved and already resolved, so the second lookup re-derives what the first one established.">
+          <defs>
+            <marker id="r-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+            <marker id="r-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--bad)"/>
+            </marker>
+          </defs>
+
+          <rect class="bx" x="20" y="40" width="160" height="56" rx="3"/>
+          <text class="t-b" x="34" y="62">Gateway</text><text class="t-m" x="34" y="78">resolves host → slug</text>
+
+          <rect class="bx" x="300" y="40" width="180" height="56" rx="3"/>
+          <text class="t-b" x="314" y="62">Auth/IAM</text><text class="t-m" x="314" y="78">trustedTenant</text>
+
+          <rect class="bx" x="620" y="40" width="180" height="56" rx="3"/>
+          <text class="t-b" x="634" y="62">CP console</text><text class="t-m" x="634" y="78">resolves host → slug</text>
+
+          <line class="ln" x1="180" y1="68" x2="296" y2="68" marker-end="url(#r-a)"/>
+          <text class="t-m" x="186" y="34">x-forwarded-host</text>
+          <text class="t-m" x="186" y="47">+ x-gateway-token</text>
+          <text class="t-m" x="186" y="98">believed ONLY with the token</text>
+
+          <line class="ln-hot" x1="480" y1="68" x2="616" y2="68" marker-end="url(#r-hot)"/>
+          <text class="hot-t" x="486" y="47">the same host, asked again</text>
+
+          <line class="ln-d" x1="700" y1="96" x2="700" y2="130" marker-end="url(#r-a)"/>
+          <rect class="bx-2" x="600" y="130" width="220" height="42" rx="3"/>
+          <text class="t-m" x="614" y="147">the slug the gateway already had,</text>
+          <text class="t-m" x="614" y="162">returned one hop later</text>
+
+          <line class="ln-d" x1="100" y1="96" x2="100" y2="130" marker-end="url(#r-a)"/>
+          <rect class="bx-2" x="20" y="130" width="230" height="42" rx="3"/>
+          <text class="t-m" x="34" y="147">resolved thirty milliseconds</text>
+          <text class="t-m" x="34" y="162">earlier — and thrown away</text>
+
+          <line class="bound" x1="20" y1="200" x2="880" y2="200"/>
+          <text class="t-m" x="20" y="226">Anyone who could forge the input to the second lookup holds x-gateway-token — and would simply forge the host, which the registry resolves faithfully.</text>
+        </svg>
+      </div>
+      <figcaption><b>Figure 4 — the redundant hop</b>The second lookup's input is already gateway-vouched, so it does not defend against the threat it is framed as defending against. It re-derives, from the control plane, the answer the gateway obtained and discarded.</figcaption>
+    </figure>
+
+    <h3>Three more facts that settle it</h3>
+    <ul>
+      <li><code>organisation()</code> <strong>does not check status</strong> — only that the lookup succeeded, and the schema version. The gateway's verdict is the sole status gate, and a suspended organisation never reaches Auth. Removing the second call loses no check.</li>
+      <li><code>schemaVersion</code> is the <strong>only</strong> fact Auth uniquely consumes. The gateway already fetches it on the same call — and discards it.</li>
+      <li>There is a third defence underneath both: every connection asserts <code>tenant_key</code> against the slug before any query runs, and throws <code>TenantMismatch</code> otherwise. A forged slug fails closed there regardless.</li>
+    </ul>
+
+    <div class="note bad">
+      <span class="tag">What this costs you today</span>
+      <p>Every authorized API request, every login, every session check and every navigation fetch makes one HTTP round trip to a Next.js route on the operator console, which runs one SQL query on a <code>pg</code> pool capped at <code>max: 10</code>. At 1,350 organisations, that single process is the first thing on the platform that falls over — and when it does, the failure presents as “Auth is slow”, which has already cost one debugging session on this codebase.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ 7 ══════════════ -->
+  <section id="s7">
+    <div class="sec-head"><span class="sec-n">07</span><h2>Making an organisation survive a control-plane outage</h2></div>
+    <p class="lede">You asked for the property directly: if the control plane is off, organisations keep running. Here is what it takes, in three tiers — and why caching alone does not get you there.</p>
+
+    <h3>What happens today</h3>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Component</th><th>Control plane unreachable</th><th>…and the process restarts</th></tr></thead>
+        <tbody>
+          <tr><td>Gateway</td><td><span class="pri ok">survives</span> Serves the last known answer per host, indefinitely — “a stale answer beats an outage”.</td><td><span class="pri p1">dead</span> Empty cache → <code>503 REGISTRY_UNAVAILABLE</code> for every organisation.</td></tr>
+          <tr><td>Auth / IAM</td><td><span class="pri p1">dead</span> No cache at all. The next request is <code>503 UPSTREAM_UNAVAILABLE</code>. Nobody signs in, nothing authorizes.</td><td><span class="pri p1">dead</span></td></tr>
+          <tr><td>Domain services</td><td><span class="pri p1">dead</span> Not directly — but every gated route needs Auth, and Auth is down.</td><td><span class="pri p1">dead</span></td></tr>
+          <tr><td>Worker</td><td><span class="pri ok">n/a</span> Not on the request path.</td><td><span class="pri ok">n/a</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Tier 1 — cache in Auth the way the gateway already does <span class="pri p1">do this first</span></h3>
+    <p>Lift the TTL-plus-stale-on-error resolver out of the gateway and use it in Auth. Control-plane traffic drops from <em>per request</em> to roughly one call per minute per hostname, and Auth survives a restart of the console.</p>
+    <p><strong>Cost:</strong> about a day. <strong>Tradeoff:</strong> the one the gateway already accepted and documented — a suspended organisation keeps serving for up to one TTL, which is why suspension must revoke sessions too (§09).</p>
+
+    <h3>Tier 2 — the gateway forwards what it already resolved <span class="pri p2">the clean fix</span></h3>
+    <p>The gateway resolved the tenant and threw it away. Forward it under the same proof it already sends:</p>
+    <pre style="font-family:var(--f-mono);font-size:12px;background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:14px 16px;overflow-x:auto;max-width:var(--measure);line-height:1.6"><code style="background:none;padding:0;white-space:pre">'x-gateway-token':    INTERNAL_TOKEN,   // already sent
+'x-forwarded-host':   host,             // already sent
+'x-tenant-slug':      tenant.slug,      // new
+'x-tenant-public-id': tenant.publicId,  // new
+'x-tenant-status':    tenant.status,    // new
+'x-tenant-schema':    schemaVersion,    // new — keep it in the cache entry</code></pre>
+    <ol class="steps">
+      <li><b>Set them unconditionally.</b><span>They are spread after the inbound headers, so always-setting is what stops a client injecting its own.</span></li>
+      <li><b><code>trustedTenant</code> reads them into <code>req.ctx.tenant</code>.</b><span>Same function, same token check, one more field group.</span></li>
+      <li><b><code>authorizeViaAuth</code> passes them through.</b><span>This is the one that matters — the service→Auth hop is where the uncached call fires. Without it, Auth falls straight back to the control plane.</span></li>
+      <li><b><code>organisation()</code> uses them when present, resolves when absent.</b><span>Keep the fallback: tests and direct calls have no gateway in front.</span></li>
+    </ol>
+    <p><strong>Result:</strong> the control plane is touched roughly once a minute per hostname, by the gateway alone. Auth and every org API behind it never touch it.</p>
+
+    <h3>Tier 3 — the property you actually asked for <span class="pri p3">the end state</span></h3>
+    <p>Tiers 1 and 2 still leave one hole: a <strong>cold start during an outage</strong>. A gateway that restarts while the console is down has an empty cache and answers 503 for everyone. Caching cannot fix that, because a cache has nothing in it yet.</p>
+    <p>The registry is about 1,350 rows that change a few times a month. Treat it as <em>data you ship</em>, not a service you call:</p>
+
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Option</th><th>Survives a CP outage</th><th>Survives a cold start during one</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>HTTP + per-process cache <span class="t-s">(tiers 1–2)</span></td><td>Yes, while warm</td><td><b>No</b></td><td>Cheap, and worth doing regardless.</td></tr>
+          <tr><td><b>Signed tenant manifest</b><br><span class="t-s">CP publishes a signed JSON snapshot; the gateway loads it at boot and refreshes on a timer or a webhook</span></td><td>Yes, indefinitely</td><td><b>Yes</b></td><td><span class="pri ok">recommended</span> 1,350 rows is a small file. The CP can be down for days. Signature keeps the registry authoritative.</td></tr>
+          <tr><td>Read replica of <code>samagam_control</code></td><td>Yes</td><td>Yes</td><td>Makes the gateway a database client again — the thing this architecture spent effort removing.</td></tr>
+          <tr><td>Redis / shared cache</td><td>Yes</td><td>Yes</td><td>Adds a component that must itself be highly available. Solves the same problem as the manifest, with more moving parts.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>And split the internal API off the console</h3>
+    <p>Whatever you choose above, do this too. The two <code>/api/internal/*</code> routes are roughly 150 lines of SQL and a token check, sitting inside the operator UI. As long as they live there, <em>a console deploy is a production outage</em>. Moving them into a small separate process — or a second deployment of the same package — decouples operator-console availability from platform availability, and costs almost nothing.</p>
+  </section>
+
+  <!-- ══════════════ 8 ══════════════ -->
+  <section id="s8">
+    <div class="sec-head"><span class="sec-n">08</span><h2>Gateway tuning — four real issues</h2></div>
+
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Issue</th><th>Why it matters</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>One secret, three jobs</b><br><span class="t-s"><code>INTERNAL_API_TOKEN</code></span></td>
+            <td>The same static string authenticates gateway→control-plane, proves <code>x-forwarded-host</code> to every service, and authenticates service→Auth. One rotation touches every process simultaneously, and a leak anywhere is a leak everywhere.</td>
+            <td><span class="pri p2">medium</span> Split into three secrets with independent rotation. Longer term, mTLS on the internal hops — which the control plane's own code already names as the production target.</td>
+          </tr>
+          <tr>
+            <td><b><code>x-forwarded-proto</code> is hardcoded to <code>http</code></b></td>
+            <td>Correct today, wrong the moment TLS terminates in front of the gateway. Downstream redirect and cookie logic that reads it will build <code>http://</code> URLs on an HTTPS site.</td>
+            <td><span class="pri p1">quick</span> Derive it from the inbound <code>x-forwarded-proto</code> when a trusted proxy sets one, else from the socket.</td>
+          </tr>
+          <tr>
+            <td><b>The cache is per-process</b></td>
+            <td>With <em>N</em> gateway instances you get <em>N</em>× the control-plane load, and up to 60 s of disagreement between instances about whether an organisation is suspended.</td>
+            <td><span class="pri p3">design</span> Largely dissolved by the manifest in §07. Until then, accept it and keep the TTL short.</td>
+          </tr>
+          <tr>
+            <td><b>No invalidation hook</b></td>
+            <td><code>resolver.forget(hostname)</code> exists and is documented as “for a future invalidation hook”. Nothing calls it, so every registry change waits out the full TTL.</td>
+            <td><span class="pri p2">medium</span> Needed for a real on/off switch (§09). An authenticated <code>POST /internal/forget</code>, or a manifest version bump.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>What <strong>not</strong> to change: the status→HTTP map, the stale-on-error fallback, the request-id sanitising, the <code>origin: null</code> strip, and the decision to verify no tokens and open no database at the edge. Those are the parts that make the gateway safe to run at the perimeter.</p>
+  </section>
+
+  <!-- ══════════════ 9 ══════════════ -->
+  <section id="s9">
+    <div class="sec-head"><span class="sec-n">09</span><h2>The on/off switch — what exists, and what happens to people who are logged in</h2></div>
+    <p class="lede">You asked what happens when a customer says “we don't want your service any more” and someone flips the switch. The honest answer is that there is no switch yet — only the half of it that refuses traffic.</p>
+
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Piece</th><th>State</th></tr></thead>
+        <tbody>
+          <tr><td><code>cp.tenant.status = 'suspended'</code></td><td><span class="pri ok">exists</span> A valid value in the schema's CHECK constraint.</td></tr>
+          <tr><td>Gateway refuses a suspended organisation</td><td><span class="pri ok">exists</span> <code>403 TENANT_UNAVAILABLE</code> — deliberately not 404, because the people who work there need to know it exists and to ask an administrator. Tested.</td></tr>
+          <tr><td>A console action to set it</td><td><span class="pri p1">missing</span> No suspend or resume anywhere in the operator UI.</td></tr>
+          <tr><td>A <code>suspend_tenant</code> job kind</td><td><span class="pri p1">missing</span> The queue's CHECK constraint does not allow one.</td></tr>
+          <tr><td>Organisation-wide session revocation</td><td><span class="pri p1">missing</span> <code>revokeSession</code> is per-session only; its callers are logout and password change.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>What actually happens if you flip it by hand today</h3>
+
+    <figure>
+      <div class="figbox">
+        <svg viewBox="0 0 960 300" role="img" aria-label="Timeline showing that after an organisation is suspended, the gateway keeps serving from its sixty-second cache, then refuses all traffic, while database sessions are never revoked and stay live to their twelve-hour ceiling.">
+          <defs>
+            <marker id="t-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <text class="t-cap" x="20" y="24">TRACK 1 — TRAFFIC</text>
+          <line class="ln" x1="20" y1="76" x2="930" y2="76" marker-end="url(#t-a)"/>
+          <line class="ln" x1="150" y1="60" x2="150" y2="92"/>
+          <line class="ln" x1="420" y1="60" x2="420" y2="92"/>
+
+          <text class="t-mb" x="150" y="52" text-anchor="middle">T + 0</text>
+          <text class="t-m" x="24" y="110">UPDATE cp.tenant</text>
+          <text class="t-m" x="24" y="123">SET status='suspended'</text>
+          <text class="t-m" x="24" y="136">(by hand — there is no button)</text>
+
+          <text class="t-mb" x="420" y="52" text-anchor="middle">T + up to 60 s</text>
+          <text class="t-m" x="200" y="110">gateway still serving from cache —</text>
+          <text class="t-m" x="200" y="123">every employee keeps working normally</text>
+
+          <text class="t-m" x="440" y="110">cache expires → 403 TENANT_UNAVAILABLE</text>
+          <text class="t-m" x="440" y="123">on page loads and APIs alike, everywhere</text>
+          <text class="t-m" x="440" y="136">(the verdict is decided before routing)</text>
+
+          <line class="bound" x1="20" y1="166" x2="940" y2="166"/>
+
+          <text class="t-cap" x="20" y="196">TRACK 2 — SESSIONS</text>
+          <line class="ln-d" x1="20" y1="240" x2="930" y2="240" marker-end="url(#t-a)"/>
+          <line class="ln" x1="150" y1="226" x2="150" y2="254"/>
+          <text class="t-m" x="24" y="222">nothing happens here at all</text>
+          <text class="t-m" x="170" y="222">identity.session rows stay live — 12 h absolute ceiling, 90 min idle — because the gateway refuses the request before Auth ever sees it</text>
+          <text class="t-m" x="24" y="276">Un-suspend within the window and everyone is still signed in, mid-work, with no re-authentication. That is a usable “pause”, and it is not a cut-off.</text>
+        </svg>
+      </div>
+      <figcaption><b>Figure 5 — the off switch today</b>Traffic stops within one cache TTL; sessions are never touched. Whether that is correct depends entirely on which of the two operations you meant.</figcaption>
+    </figure>
+
+    <h3>They are two different operations — name them separately</h3>
+    <div class="tbl">
+      <table>
+        <thead><tr><th></th><th>Pause</th><th>Cut off</th></tr></thead>
+        <tbody>
+          <tr><td><b>Meaning</b></td><td>Non-payment, a dispute, a maintenance window. You expect to turn it back on.</td><td>Contract ended. Access should stop and not resume by accident.</td></tr>
+          <tr><td><b>Registry</b></td><td><code>status = 'suspended'</code></td><td><code>status = 'suspended'</code>, then <code>export_pending</code> → <code>deletion_scheduled</code></td></tr>
+          <tr><td><b>Sessions</b></td><td>Left alone. Resume is seamless.</td><td>All revoked — <code>revoked_reason = 'tenant_suspended'</code></td></tr>
+          <tr><td><b>Coming back</b></td><td>Flip the status; people carry on where they were.</td><td>Everyone signs in again.</td></tr>
+          <tr><td><b>Who does the write</b></td><td>Console (registry only)</td><td>Console writes the status; the <b>worker</b> revokes the sessions. The console holds no credential on a tenant database and must not.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>What to build</h3>
+    <ol class="steps">
+      <li><b>Two job kinds: <code>suspend_tenant</code> and <code>resume_tenant</code>.</b><span>Widen the <code>cp.job</code> CHECK constraint. The payload carries a slug and nothing else, as every other kind does.</span></li>
+      <li><b>A console action that writes the status and enqueues the job.</b><span>Audit intent before the act, as the console already does everywhere else.</span></li>
+      <li><b>A worker step that revokes, for the cut-off case only.</b><span><code>UPDATE identity.session SET revoked_at = now(), revoked_reason = 'tenant_suspended' WHERE revoked_at IS NULL</code>, inside the organisation's own database. One statement, one index.</span></li>
+      <li><b>Cache invalidation, or accept the 60 seconds.</b><span>For a pause, 60 s is fine. For a cut-off it is not — call <code>resolver.forget(host)</code> on every gateway, or bump the manifest version from §07.</span></li>
+      <li><b>Decide the in-flight policy and write it down.</b><span>Requests already proxied complete normally. That is almost certainly what you want; it should still be a decision rather than an accident.</span></li>
+    </ol>
+
+    <div class="note warn">
+      <span class="tag">One caveat the README already states</span>
+      <p>“Suspension is not a security control on its own and the sessions are revoked as well.” The first half is implemented; the second half is not. Until step 3 exists, a suspended organisation is a closed front door with everyone still inside.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ 10 ══════════════ -->
+  <section id="s10">
+    <div class="sec-head"><span class="sec-n">10</span><h2>Login and the token flow</h2></div>
+
+    <h3>Signing in</h3>
+    <ol class="steps">
+      <li><b>Browser POSTs <code>/api/auth/login</code> on the organisation's own origin.</b><span>No organisation is typed or chosen — the subdomain already says which one it is, which is what makes an Employee ID alone sufficient.</span></li>
+      <li><b>Gateway resolves the host, allows, and routes <code>/api/auth</code> → :3110.</b><span>Adds <code>x-forwarded-host</code>, <code>x-gateway-token</code>, <code>x-request-id</code>.</span></li>
+      <li><b>Auth: <code>trustedTenant</code> → <code>sameOrigin</code> → <code>organisation()</code>.</b><span>The last of those is the control-plane call from §06.</span></li>
+      <li><b>Two throttle buckets are spent before anything expensive.</b><span>Per-IP and per-login-id — one address against many accounts and many addresses against one account are different attacks, and either limit alone leaves the other unthrottled.</span></li>
+      <li><b>argon2 verification, through a gate of 4 concurrent hashes.</b><span>An unknown login id verifies against a decoy hash so it costs the same time. Telling somebody <em>which</em> half was wrong is telling them half the answer.</span></li>
+      <li><b>Failure count and lock happen in one statement.</b><span>Read-then-write would let hundreds of parallel guesses all read “4 failures” and none of them lock.</span></li>
+      <li><b>A session row is written, and two cookies are set.</b><span>Absolute ceiling 12 hours; idle window 90 minutes, bumped by every authenticated call.</span></li>
+    </ol>
+
+    <h3>The two cookies</h3>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Cookie</th><th>Shape</th><th>Life</th><th>What it is for</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>__Host-samagam_session</code></td>
+            <td><code>sid . keyId . hmac</code><br><span class="t-s"><code>sid</code> is <code>identity.session.id</code> — the payload, not the secret. <code>keyId</code> is that organisation's <code>signing_key_id</code>. The HMAC key lives in the application environment and never in the organisation's database.</span></td>
+            <td>12 h</td>
+            <td>The anchor. Checked against the database on <em>every</em> request, which is what makes “ending a posting ends the session” true at once rather than at expiry. A stolen copy of the database yields live session ids that cannot be turned into a working cookie.</td>
+          </tr>
+          <tr>
+            <td><code>__Host-samagam_at</code></td>
+            <td>Signed token carrying <code>tenantKey</code>, <code>tenantKeyId</code>, <code>employeeCode</code>, <code>sessionId</code>, <code>postingId</code>, <code>unitPath</code>, <code>reach</code> and the full <code>grants[]</code>. Capped at 3,500 bytes; not issued if it would overflow.</td>
+            <td>10 min</td>
+            <td>A cache of what the session <em>may</em> do. Minted at login and at posting switch — where authority changes — and nowhere else. Never authoritative.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Both are <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=Lax</code>, <code>Path=/</code>, and carry <strong>no <code>Domain</code></strong>. The <code>__Host-</code> prefix makes the browser enforce that last part, which is the whole of the origin separation between organisations: every organisation is a subdomain of the same parent, so a <code>Domain</code>-scoped cookie set by one would be sent to all of them.</p>
+
+    <h3>Every request after that</h3>
+    <p>The service forwards the raw session cookie to <code>/internal/authorize</code> and believes the answer. It does not verify the signature itself — it could only check it against the key id the cookie names, which proves “the platform minted this” but not “for <em>this</em> organisation”. Auth verifies it against the resolved organisation's own key. That is why the signed cookie crosses the service boundary whole rather than as a bare session id, and why no domain service holds a signing key.</p>
+
+    <div class="note">
+      <span class="tag">The rule that protects all of this</span>
+      <p>Nothing in the session payload is authorization evidence. Not <code>designationCode</code>, not <code>isHead</code>, not <code>unitCode</code>, not the presence of a user. A job title is not a permission — the permission is a node an administrator ticked, and only Auth knows whether they did. A screen decides only whether to <em>draw</em> something, from <code>held[]</code>; the service decides whether it <em>happens</em>.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ 11 ══════════════ -->
+  <section id="s11">
+    <div class="sec-head"><span class="sec-n">11</span><h2>Where the authorization cost actually is</h2></div>
+    <p class="lede">The control-plane hop is the architectural problem. The database pattern is the throughput problem — and it is the cheaper of the two to fix.</p>
+
+    <p>One <code>/internal/authorize</code> opens <strong>four separate connections</strong> to the organisation's database, and each one re-runs the tenant assertion before doing its own work:</p>
+
+    <div class="tbl">
+      <table>
+        <thead><tr><th>#</th><th>Call</th><th>Statements</th><th>Could it be avoided?</th></tr></thead>
+        <tbody>
+          <tr><td class="num">①</td><td><code>signingKeyId(tenant)</code></td><td>assertion + <code>SELECT signing_key_id</code></td><td><b>Yes.</b> A per-organisation constant that changes on key rotation. Cache it with an explicit invalidation.</td></tr>
+          <tr><td class="num">②</td><td><code>principalFor(tenant, sid)</code></td><td>assertion + one indexed join</td><td><b>No — keep it live.</b> This is the read that makes revocation instant.</td></tr>
+          <tr><td class="num">③</td><td><code>may(tenant, principal, node)</code></td><td>assertion + the live grant query</td><td><b>Partly.</b> See the access token below.</td></tr>
+          <tr><td class="num">④</td><td><code>recordAccess(…)</code></td><td>assertion + <code>INSERT access_audit</code></td><td><b>Yes, off the critical path.</b> It is awaited today and cannot change the verdict by design.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Four fixes, in order of value</h3>
+    <ol class="steps">
+      <li><b>Collapse the four checkouts into one.</b><span>Wrap <code>decide()</code> in a single connection and pass the handle down. Four checkouts and four assertions become one. No security property changes — the assertion still runs, once, before any work. <span class="pri p1">biggest win, lowest risk</span></span></li>
+      <li><b>Take the audit write off the critical path.</b><span>A bounded in-process queue with a flush on shutdown, not fire-and-forget — an audit row that vanishes on a crash is a real loss. But an <code>INSERT</code> that cannot affect the answer should not be adding latency to every decision.</span></li>
+      <li><b>Use the access token the system already mints.</b><span><code>grantsFor()</code> already accepts verified-token grants, and <code>/api/auth/navigation</code> already uses them — but <code>/internal/authorize</code> ignores the token entirely and runs the live query every time. Passing it and using it for the <em>grants</em> half, while still reading the session row live, keeps instant session revocation and drops query ③. <b>Caveat:</b> the token is minted only at login and posting switch, so a dashboard edit that revokes a grant would take up to ten minutes to bite. That is exactly the trade the TTL was chosen for — but make it a decision, not an accident.</span></li>
+      <li><b>Remove the control-plane hop.</b><span>§07, tiers 1 and 2.</span></li>
+    </ol>
+
+    <dl class="tally">
+      <div class="hot"><dt>Today</dt><dd>~9<span>statements, 4 checkouts, 1 HTTP hop</span></dd></div>
+      <div><dt>After fix 1</dt><dd>~5<span>statements, 1 checkout, 1 HTTP hop</span></dd></div>
+      <div><dt>After 1 + 2 + 4</dt><dd>~3<span>statements, 1 checkout, no HTTP hop</span></dd></div>
+      <div><dt>After all four</dt><dd>~2<span>statements, 1 checkout, no HTTP hop</span></dd></div>
+    </dl>
+
+    <div class="note good">
+      <span class="tag">What to preserve while you do it</span>
+      <p>The live session read on every request. It is the reason “ending a posting ends the session” is true immediately rather than at token expiry, and it is the property that makes the ten-minute grant TTL acceptable in the first place. Optimise around it, not through it.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ 12 ══════════════ -->
+  <section id="s12">
+    <div class="sec-head"><span class="sec-n">12</span><h2>What to do first</h2></div>
+
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Priority</th><th>Change</th><th>Effort</th><th>Buys you</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pri p1">1</span></td><td>Collapse the four org-DB checkouts in <code>decide()</code> into one</td><td>~1 day</td><td>Roughly halves the database work of every authorized request. No behaviour change.</td></tr>
+          <tr><td><span class="pri p1">2</span></td><td>Cache the registry lookup in Auth (gateway's pattern)</td><td>~1 day</td><td>Control-plane load drops from per-request to per-minute. Auth survives a console restart.</td></tr>
+          <tr><td><span class="pri p1">3</span></td><td>Fix hardcoded <code>x-forwarded-proto</code></td><td>~1 hour</td><td>Stops a class of bug that will appear the day TLS terminates in front of the gateway.</td></tr>
+          <tr><td><span class="pri p2">4</span></td><td>Split <code>/api/internal/*</code> out of the operator console</td><td>~2 days</td><td>A console deploy stops being a production outage.</td></tr>
+          <tr><td><span class="pri p2">5</span></td><td>Gateway forwards <code>x-tenant-*</code>; Auth stops calling the control plane</td><td>~3 days</td><td>Removes the redundant hop entirely. Four files; existing gateway and runtime verification suites cover the regression surface.</td></tr>
+          <tr><td><span class="pri p2">6</span></td><td>Build the on/off switch — job kinds, console action, worker revocation step</td><td>~3 days</td><td>A real suspend, and a real cut-off, as two distinct operations.</td></tr>
+          <tr><td><span class="pri p3">7</span></td><td>Audit write off the critical path</td><td>~2 days</td><td>One fewer statement and one fewer round trip per decision.</td></tr>
+          <tr><td><span class="pri p3">8</span></td><td>Signed tenant manifest instead of a synchronous lookup</td><td>~1 week</td><td>The property you asked for: the control plane can be off for days and every organisation keeps running, cold starts included.</td></tr>
+          <tr><td><span class="pri p3">9</span></td><td>Split <code>INTERNAL_API_TOKEN</code> into three; plan for mTLS</td><td>~2 days</td><td>Independent rotation. One leak stops being a total compromise.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>The one-sentence summary</h3>
+    <p>The architecture is right — a registry that owns tenant identity, a gateway that proves it, one database per organisation, and one place that answers “may they”. Do not rebuild it. Three narrow things are wrong: <strong>Auth asks the registry a question the gateway already answered</strong>, <strong>one decision opens four database connections where one would do</strong>, and <strong>the off switch has a front door with no lock on the inside</strong>. All three are local fixes, and none of them requires giving up a property the design was built to protect.</p>
+  </section>
+
+  </main>
+</div>
