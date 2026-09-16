@@ -55,7 +55,12 @@ export class VideoCardComponent implements OnInit {
 
   onVideoClick() {
     if (this.video && this.video._id) {
-      this.router.navigate(['/video', this.video._id]);
+      // Hand the already-loaded video object to the player via router state so
+      // it can start HLS immediately instead of waiting a full API round trip
+      // for data we are already holding. The player still refetches in the
+      // background, and falls back to the API when state is absent (deep link,
+      // reload, back/forward navigation).
+      this.router.navigate(['/video', this.video._id], { state: { video: this.video } });
     }
   }
 

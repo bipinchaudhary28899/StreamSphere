@@ -113,7 +113,12 @@ describe('VideoCardComponent', () => {
 
       component.onVideoClick();
 
-      expect(router.navigate).toHaveBeenCalledWith(['/video', 'vid1']);
+      // The video object rides along in router state so the player can start
+      // HLS without waiting on getVideoById().
+      expect(router.navigate).toHaveBeenCalledWith(
+        ['/video', 'vid1'],
+        { state: { video: mockVideo } },
+      );
     });
 
     it('should NOT navigate when video is undefined', () => {

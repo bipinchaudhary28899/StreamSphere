@@ -24,7 +24,10 @@ const corsOptions: cors.CorsOptions = {
     else callback(new Error('Not allowed by CORS'));
   },
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-  allowedHeaders: 'Content-Type,Authorization',
+  // X-Anon-Session carries the per-browser dedup id for logged-out viewers.
+  // Omitting it made the preflight reject every anonymous POST /videos/:id/view,
+  // so view counts only ever incremented for signed-in users.
+  allowedHeaders: 'Content-Type,Authorization,X-Anon-Session',
   optionsSuccessStatus: 200,
 };
 

@@ -13,6 +13,13 @@
   <!-- Google profile images use no-referrer — omit crossorigin to avoid CORS preflight -->
   <link rel="preconnect" href="https://lh3.googleusercontent.com">
 
+  <!-- Video CDN + API: both are fetched cross-origin by XHR (hls.js / HttpClient),
+       so the connection must be opened in anonymous-CORS mode to be reusable.
+       Without these the first manifest request pays full DNS+TCP+TLS on the
+       critical path, which is pure dead time before any video byte arrives. -->
+  <link rel="preconnect" href="https://d3kd63fabw51aq.cloudfront.net" crossorigin>
+  <link rel="preconnect" href="https://stream-sphere-azure.vercel.app" crossorigin>
+
   <!-- Preload the logo WebP so the browser fetches it before rendering the header
        (fixes the 1.4 MB PNG being loaded instead of the 13 KB WebP) -->
   <link rel="preload" href="assets/thumbs/Stream%20Sphere%20Icon.webp" as="image" type="image/webp">
