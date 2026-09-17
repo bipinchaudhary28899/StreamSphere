@@ -1,63 +1,95 @@
-<!-- video-list.component.html -->
-
-<!-- ── Processing banner ───────────────────────────────────────────────────── -->
-<div class="processing-banner" *ngIf="processingVideos.length > 0">
-  <div class="processing-banner__inner">
-    <span class="processing-banner__spinner"></span>
-    <span *ngIf="processingVideos.length === 1">
-      <strong>"{{ processingVideos[0].title }}"</strong> is being processed — it will appear in the feed shortly.
-    </span>
-    <span *ngIf="processingVideos.length > 1">
-      <strong>{{ processingVideos.length }} videos</strong> are being processed — they will appear in the feed shortly.
-    </span>
-  </div>
-</div>
-
 <!-- ── Ready toast ────────────────────────────────────────────────────────── -->
-<div class="ready-toast" *ngIf="readyToast">
+<div class="ss-toast" *ngIf="readyToast" role="status" aria-live="polite">
   <mat-icon>check_circle</mat-icon>
   <span>{{ readyToast }}</span>
+  <button type="button" class="ss-icon-btn ss-icon-btn--sm" (click)="dismissToast()" aria-label="Dismiss">
+    <mat-icon>close</mat-icon>
+  </button>
 </div>
 
 <div class="video-section-container">
 
   <!-- Hero carousel — hidden during text search or when a category is selected -->
-  <div class="hero-wrapper" *ngIf="!isSearchMode && currentCategory === 'All'">
+  <div class="hero-wrapper" *ngIf="showHero">
     <app-hero-carousel></app-hero-carousel>
-    <div class="hero-bottom-fade"></div>
   </div>
 
-  <!-- Content section — overlaps hero fade for "submerged" look;
-       margin-top reset when hero is hidden (search mode) -->
-  <div class="content-section" [class.no-hero]="isSearchMode || currentCategory !== 'All'">
+  <section class="feed" [class.feed--no-hero]="!showHero" aria-labelledby="feed-title">
 
-    <!-- ── Initial loading skeletons ───────────────────────────────────────── -->
-    <div *ngIf="isLoading" class="loading-state">
-      <div class="video-grid">
-        <div *ngFor="let s of [1,2,3,4,5,6,7,8,9,10,11,12]" class="skeleton-card">
-          <div class="skeleton-video"></div>
-          <div class="skeleton-info">
-            <div class="skeleton-avatar"></div>
-            <div class="skeleton-lines">
-              <div class="skeleton-line short"></div>
-              <div class="skeleton-line"></div>
+    <!-- ── Sticky toolbar: categories + processing notice ──────────────── -->
+    <div class="feed-toolbar">
+      <div class="chip-bar" [class.can-left]="canScrollLeft" [class.can-right]="canScrollRight">
+        <button *ngIf="canScrollLeft" type="button" class="chip-scroll chip-scroll--left"
+                (click)="scrollChips(-1)" aria-label="Scroll categories left">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <div class="chip-row" #chipRow (scroll)="updateChipScroll()" role="group" aria-label="Filter by category">
+          <button *ngFor="let cat of categories"
+                  type="button"
+                  class="ss-chip"
+                  [attr.aria-pressed]="cat === currentCategory"
+                  (click)="selectCategory(cat)">{{ cat }}</button>
+        </div>
+        <button *ngIf="canScrollRight" type="button" class="chip-scroll chip-scroll--right"
+                (click)="scrollChips(1)" aria-label="Scroll categories right">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+
+      <div class="processing-notice" *ngIf="processingVideos.length > 0" role="status">
+        <span class="ss-spinner ss-spinner--sm ss-spinner--warning" aria-hidden="true"></span>
+        <span *ngIf="processingVideos.length === 1">
+          <strong>“{{ processingVideos[0].title }}”</strong> is processing. It will appear in the feed when it's ready.
+        </span>
+        <span *ngIf="processingVideos.length > 1">
+          <strong>{{ processingVideos.length }} videos</strong> are processing. They will appear in the feed when they're ready.
+        </span>
+      </div>
+    </div>
+
+    <!-- ── Heading ────────────────────────────────────────────────────── -->
+    <div class="feed-head">
+      <h2 id="feed-title" class="feed-title">{{ feedTitle }}</h2>
+      <span class="feed-count" *ngIf="isSearchMode && !isLoading && !error">
+        {{ displayedVideos.length }} {{ displayedVideos.length === 1 ? 'video' : 'videos' }}
+      </span>
+      <button *ngIf="isFiltered" type="button" class="ss-btn ss-btn--ghost ss-btn--sm feed-clear" (click)="clearFilters()">
+        <mat-icon>close</mat-icon>Clear
+      </button>
+    </div>
+
+    <!-- ── Initial loading skeletons ─────────────────────────────────── -->
+    <ng-container *ngIf="isLoading">
+      <p class="ss-sr-only" role="status">Loading videos</p>
+      <div class="ss-video-grid video-grid" aria-hidden="true">
+        <div *ngFor="let s of skeletons" class="ss-card-skel">
+          <div class="ss-card-skel-thumb ss-skel"></div>
+          <div class="ss-card-skel-body">
+            <span class="ss-card-skel-avatar ss-skel"></span>
+            <div class="ss-card-skel-lines">
+              <span class="ss-skel ss-skel-line" style="width: 92%"></span>
+              <span class="ss-skel ss-skel-line" style="width: 58%"></span>
+              <span class="ss-skel ss-skel-line" style="width: 40%"></span>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </ng-container>
 
-    <!-- ── Error state ──────────────────────────────────────────────────────── -->
-    <div *ngIf="error && !isLoading" class="error-state">
+    <!-- ── Error state ───────────────────────────────────────────────── -->
+    <div *ngIf="error && !isLoading" class="ss-state ss-state--error" role="alert">
       <mat-icon>error_outline</mat-icon>
-      <p>{{ error }}</p>
-      <button mat-button color="primary" (click)="loadVideos()">Retry</button>
+      <h3>{{ isSearchMode ? 'Search didn’t work' : 'Couldn’t load videos' }}</h3>
+      <p>Check your connection, then try again.</p>
+      <button type="button" class="ss-btn ss-btn--primary" (click)="retry()">
+        <mat-icon>refresh</mat-icon>Try again
+      </button>
     </div>
 
-    <!-- ── Video grid ───────────────────────────────────────────────────────── -->
+    <!-- ── Video grid ───────────────────────────────────────────────── -->
     <ng-container *ngIf="!isLoading && !error">
 
-      <div class="video-grid" *ngIf="displayedVideos.length > 0">
+      <div class="ss-video-grid video-grid" *ngIf="displayedVideos.length > 0">
         <app-video-card
           *ngFor="let video of displayedVideos; trackBy: trackById"
           [video]="video"
@@ -66,26 +98,29 @@
       </div>
 
       <!-- Empty state (no results) -->
-      <div *ngIf="displayedVideos.length === 0" class="empty-state">
-        <mat-icon>videocam_off</mat-icon>
-        <p>No videos found</p>
+      <div *ngIf="displayedVideos.length === 0" class="ss-state">
+        <mat-icon>{{ isSearchMode ? 'search_off' : 'video_library' }}</mat-icon>
+        <h3>{{ emptyTitle }}</h3>
+        <p>{{ emptyHint }}</p>
+        <button *ngIf="isFiltered" type="button" class="ss-btn ss-btn--secondary" (click)="clearFilters()">
+          Clear filters
+        </button>
       </div>
 
-      <!-- ── Load-more spinner (infinite scroll) ───────────────────────────── -->
-      <div *ngIf="isLoadingMore" class="load-more-spinner">
-        <mat-spinner diameter="36"></mat-spinner>
+      <!-- ── Load-more spinner (infinite scroll) ──────────────────────── -->
+      <div *ngIf="isLoadingMore" class="load-more">
+        <span class="ss-spinner" role="status" aria-label="Loading more videos"></span>
       </div>
 
-      <!-- ── End-of-feed message ───────────────────────────────────────────── -->
+      <!-- ── End-of-feed message ──────────────────────────────────────── -->
       <div *ngIf="!hasMore && !isLoadingMore && displayedVideos.length > 0 && !isSearchMode" class="end-of-feed">
-        <span>You've seen all the videos</span>
+        <span>You’re all caught up</span>
       </div>
 
-      <!-- ── Sentinel — IntersectionObserver watches this ─────────────────── -->
-      <!-- Placed outside *ngIf so the observer can always latch onto it -->
+      <!-- ── Sentinel — IntersectionObserver watches this ─────────────── -->
       <div #sentinel class="scroll-sentinel" aria-hidden="true"></div>
 
     </ng-container>
 
-  </div><!-- /content-section -->
+  </section>
 </div>

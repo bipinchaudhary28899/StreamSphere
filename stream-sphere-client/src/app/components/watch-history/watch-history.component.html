@@ -1,23 +1,72 @@
-<div class="history-container">
-  <div class="history-header" *ngIf="showHeader">
+<section class="history" aria-labelledby="history-title">
+
+  <header class="history-head" *ngIf="showHeader">
+    <h1 id="history-title" class="history-title">Watch history</h1>
+    <span class="history-count" *ngIf="!loading && !failed && total > 0">
+      {{ total }} {{ total === 1 ? 'video' : 'videos' }}
+    </span>
+  </header>
+
+  <!-- Loading -->
+  <ng-container *ngIf="loading">
+    <p class="ss-sr-only" role="status">Loading your watch history</p>
+    <div class="history-skel-label ss-skel ss-skel-line" aria-hidden="true"></div>
+    <div class="ss-video-grid" aria-hidden="true">
+      <div class="ss-card-skel" *ngFor="let s of skeletons">
+        <div class="ss-card-skel-thumb ss-skel"></div>
+        <div class="ss-card-skel-body">
+          <span class="ss-card-skel-avatar ss-skel"></span>
+          <div class="ss-card-skel-lines">
+            <span class="ss-skel ss-skel-line" style="width: 92%"></span>
+            <span class="ss-skel ss-skel-line" style="width: 58%"></span>
+            <span class="ss-skel ss-skel-line" style="width: 40%"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Signed out -->
+  <div class="ss-state" *ngIf="signedOut">
     <mat-icon>history</mat-icon>
-    <h2>Watch History</h2>
+    <h2>Keep track of what you watch</h2>
+    <p>Sign in to see the videos you’ve watched, newest first.</p>
   </div>
 
-  <div *ngIf="loading" class="state-message">Loading...</div>
-
-  <div *ngIf="error" class="state-message error">{{ error }}</div>
-
-  <div *ngIf="!loading && !error && history.length === 0" class="state-message">
-    <mat-icon>videocam_off</mat-icon>
-    <p>No watch history yet. Start watching some videos!</p>
+  <!-- Error -->
+  <div class="ss-state ss-state--error" *ngIf="failed" role="alert">
+    <mat-icon>error_outline</mat-icon>
+    <h2>Couldn’t load your history</h2>
+    <p>Check your connection, then try again.</p>
+    <button type="button" class="ss-btn ss-btn--primary" (click)="load()">
+      <mat-icon>refresh</mat-icon>Try again
+    </button>
   </div>
 
-  <div *ngIf="!loading && history.length > 0" class="video-grid">
-    <app-video-card
-      *ngFor="let video of history"
-      [video]="video"
-      [flipEnabled]="false">
-    </app-video-card>
+  <!-- Empty -->
+  <div class="ss-state" *ngIf="!loading && !failed && !signedOut && total === 0">
+    <mat-icon>history</mat-icon>
+    <h2>Nothing watched yet</h2>
+    <p>Videos you watch will show up here, so you can find them again.</p>
+    <a class="ss-btn ss-btn--primary" routerLink="/home">
+      <mat-icon>explore</mat-icon>Browse videos
+    </a>
   </div>
-</div>
+
+  <!-- Grouped by when they were watched -->
+  <ng-container *ngIf="!loading && !failed">
+    <section class="history-group"
+             *ngFor="let group of groups; let i = index; trackBy: trackByLabel"
+             [attr.aria-labelledby]="'history-group-' + i">
+      <h2 class="history-group-title" [id]="'history-group-' + i">{{ group.label }}</h2>
+      <div class="ss-video-grid">
+        <app-video-card
+          *ngFor="let video of group.videos; trackBy: trackById"
+          [video]="video"
+          [flipEnabled]="false">
+        </app-video-card>
+      </div>
+    </section>
+  </ng-container>
+
+</section>

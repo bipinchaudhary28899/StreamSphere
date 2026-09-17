@@ -2,13 +2,14 @@ import {
   Component, OnInit, OnDestroy, ElementRef, ViewChild,
   ChangeDetectorRef, HostListener,
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { Subscription } from 'rxjs';
 import { VideoService } from '../../services/video.service';
 import { CommentSectionComponent } from '../comment-section/comment-section.component';
+import { VideoCardComponent } from '../video-card/video-card.component';
 import Hls from 'hls.js';
 
 @Component({
@@ -17,9 +18,9 @@ import Hls from 'hls.js';
   imports: [
     CommonModule,
     MatIconModule,
-    MatButtonModule,
     MatTooltipModule,
     CommentSectionComponent,
+    VideoCardComponent,
   ],
   templateUrl: './video-player.component.html',
   styleUrls: ['./video-player.component.css'],
@@ -27,18 +28,26 @@ import Hls from 'hls.js';
 export class VideoPlayerComponent implements OnInit, OnDestroy {
   @ViewChild('videoElement',   { static: false }) videoRef!: ElementRef<HTMLVideoElement>;
   @ViewChild('playerContainer',{ static: false }) playerContainerRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('descBody',       { static: false }) descBodyRef?: ElementRef<HTMLElement>;
+  @ViewChild('aiBody',         { static: false }) aiBodyRef?: ElementRef<HTMLElement>;
 
   video: any = null;
   loading = true;
   error: string | null = null;
   isOwner = false;
-  isDeleteHovered = false;
   descOpen = false;
   aiSummaryOpen = false;
+  /** Only offer "more" when the collapsed text actually overflows. */
+  descOverflows = false;
+  aiOverflows = false;
   currentUserId: string | null = null;
   userReaction: 'liked' | 'disliked' | 'none' = 'none';
   isLiking = false;
   isDisliking = false;
+
+  /** Video id currently on screen; the component is reused across /video/:id. */
+  private currentVideoId: string | null = null;
+  private subs = new Subscription();
 
   /** True once HLS has been attached for the current hlsUrl, so the background
    *  API refresh does not tear down and restart a player that is already going. */
@@ -48,9 +57,14 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   /** Fallback timer that fires the side effects even if `canplay` never does
    *  (autoplay blocked, decode error, offline) — views must still be recorded. */
   private sideEffectsTimer: any = null;
-  /** Gates <app-comment-section> so its API call cannot compete with the
-   *  manifest and first segment for bandwidth. */
+  /** Gates <app-comment-section> and Up next so their API calls cannot compete
+   *  with the manifest and first segment for bandwidth. */
   commentsReady = false;
+
+  // ── Up next ────────────────────────────────────────────────────────────────
+  upNext: any[] = [];
+  upNextLoading = false;
+  readonly upNextSkeletons = [0, 1, 2, 3, 4, 5];
 
   private hls: Hls | null = null;
   hlsLevels: Array<{ name: string; index: number }> = [];
@@ -58,34 +72,78 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   hlsAutoLevel = -1;
   showSettingsMenu = false;
 
+  // ── Playback state ─────────────────────────────────────────────────────────
   isPlaying = false;
+  hasPlayed = false;
+  isBuffering = false;
   isMuted = false;
+  volume = 1;
   currentTime = 0;
   duration = 0;
+  bufferedEnd = 0;
   controlsVisible = true;
   isFullscreen = false;
+  /** Touch devices tap to reveal controls; mice click to play/pause. */
+  readonly isTouch = typeof window !== 'undefined' && !!window.matchMedia?.('(hover: none)').matches;
   private controlsTimer: any = null;
   // Blocks the synthesised click/mousemove that follows a touch tap.
   private _touchHandled = false;
+
+  /** Short-lived feedback bubble for clicks and keyboard shortcuts. */
+  flash: { icon: string; label?: string } | null = null;
+  private flashTimer: any = null;
+
+  toast: string | null = null;
+  toastIsError = false;
+  private toastTimer: any = null;
 
   get seekPercent(): number {
     return this.duration > 0 ? (this.currentTime / this.duration) * 100 : 0;
   }
 
+  get bufferedPercent(): number {
+    return this.duration > 0 ? Math.min(100, (this.bufferedEnd / this.duration) * 100) : 0;
+  }
+
+  /** Big centre button: while paused, or on touch screens whenever controls show. */
+  get showCenterButton(): boolean {
+    if (this.isBuffering) return false;
+    return !this.isPlaying || (this.isTouch && this.controlsVisible);
+  }
+
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private videoService: VideoService,
     private cdr: ChangeDetectorRef,
   ) {}
 
 
   ngOnInit(): void {
-    const videoId = this.route.snapshot.paramMap.get('id');
+    // paramMap (not the snapshot) so Up next can switch videos in place.
+    this.subs.add(
+      this.route.paramMap.subscribe(params => this.openVideo(params.get('id'))),
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subs.unsubscribe();
+    this.destroyHls();
+    clearTimeout(this.controlsTimer);
+    clearTimeout(this.sideEffectsTimer);
+    clearTimeout(this.flashTimer);
+    clearTimeout(this.toastTimer);
+  }
+
+  private openVideo(videoId: string | null): void {
     if (!videoId) {
       this.error = 'Video ID not found';
       this.loading = false;
       return;
     }
+    if (videoId === this.currentVideoId) return;
+    if (this.currentVideoId !== null) this.resetForNewVideo();
+    this.currentVideoId = videoId;
 
     // When we arrived from a feed card the whole video object — hlsUrl included
     // — was handed over in router state. Start playback off that immediately;
@@ -106,10 +164,31 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.loadVideo(videoId);
   }
 
-  ngOnDestroy(): void {
+  /** Clears everything tied to the previous video before showing the next. */
+  private resetForNewVideo(): void {
     this.destroyHls();
-    clearTimeout(this.controlsTimer);
+    this.hlsStartedFor = null;
     clearTimeout(this.sideEffectsTimer);
+    this.sideEffectsTimer = null;
+    this.sideEffectsDone = false;
+    this.commentsReady = false;
+    this.video = null;
+    this.loading = true;
+    this.error = null;
+    this.isOwner = false;
+    this.userReaction = 'none';
+    this.isLiking = this.isDisliking = false;
+    this.isPlaying = this.hasPlayed = this.isBuffering = false;
+    this.currentTime = this.duration = this.bufferedEnd = 0;
+    this.descOpen = this.aiSummaryOpen = false;
+    this.descOverflows = this.aiOverflows = false;
+    this.showSettingsMenu = false;
+    this.controlsVisible = true;
+    this.upNext = [];
+    this.upNextLoading = false;
+    this.creatorAvatarFailed = false;
+    clearTimeout(this.controlsTimer);
+    window.scrollTo({ top: 0 });
   }
 
   @HostListener('document:click')
@@ -123,6 +202,49 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  // ── Keyboard shortcuts ─────────────────────────────────────────────────────
+  @HostListener('document:keydown', ['$event'])
+  onKeydown(event: KeyboardEvent): void {
+    const v = this.videoRef?.nativeElement;
+    if (!v || event.ctrlKey || event.metaKey || event.altKey) return;
+    const target = event.target as HTMLElement | null;
+    if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+    // Buttons handle Space/Enter themselves.
+    if ((event.key === ' ' || event.key === 'Enter') && target?.tagName === 'BUTTON') return;
+
+    switch (event.key) {
+      case ' ':
+      case 'k':
+      case 'K':
+        event.preventDefault();
+        this.togglePlay(true);
+        break;
+      case 'm':
+      case 'M':
+        this.toggleMute();
+        this.showFlash(v.muted ? 'volume_off' : 'volume_up');
+        break;
+      case 'f':
+      case 'F':
+        this.toggleFullscreen();
+        break;
+      case 'ArrowLeft':
+      case 'j':
+      case 'J':
+        event.preventDefault();
+        this.skip(event.key === 'ArrowLeft' ? -5 : -10);
+        break;
+      case 'ArrowRight':
+      case 'l':
+      case 'L':
+        event.preventDefault();
+        this.skip(event.key === 'ArrowRight' ? 5 : 10);
+        break;
+      default:
+        return;
+    }
+    this.revealControls();
+  }
 
   loadVideo(videoId: string): void {
     // Only show the spinner when nothing is on screen yet. If router state
@@ -132,6 +254,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
     this.videoService.getVideoById(videoId).subscribe({
       next: (video: any) => {
+        if (videoId !== this.currentVideoId) return;   // user moved on
         if (!video) {
           if (!this.video) { this.error = 'Video not found'; this.loading = false; }
           return;
@@ -142,11 +265,13 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
         // Force Angular to render the *ngIf="video.status === 'ready'" block
         // so <video #videoElement> is in the DOM before HLS.js attaches.
         this.cdr.detectChanges();
-        // No-op when ngOnInit already started this exact stream.
+        this.measureOverflow();
+        // No-op when openVideo() already started this exact stream.
         setTimeout(() => this.initHlsPlayer(), 0);
         this.armSideEffects(videoId);
       },
       error: (err: any) => {
+        if (videoId !== this.currentVideoId) return;
         console.error('Error loading video:', err);
         // A failed refresh must not kill a stream that is already playing.
         if (!this.video) {
@@ -173,7 +298,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     if (this.sideEffectsDone || this.sideEffectsTimer) return;
 
     const run = () => {
-      if (this.sideEffectsDone) return;
+      if (this.sideEffectsDone || videoId !== this.currentVideoId) return;
       this.sideEffectsDone = true;
       clearTimeout(this.sideEffectsTimer);
       this.sideEffectsTimer = null;
@@ -182,6 +307,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       this.doRecordView(videoId);
       if (this.currentUserId) this.getUserReaction();
       this.commentsReady = true;
+      this.loadUpNext(videoId);
       this.cdr.detectChanges();
     };
 
@@ -210,7 +336,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     const videoEl = this.videoRef?.nativeElement;
     if (!videoEl || !this.video?.hlsUrl) return;
 
-    // Idempotent: ngOnInit may have already started this exact stream from
+    // Idempotent: openVideo() may have already started this exact stream from
     // router state, and the background refresh must not restart it.
     if (this.hlsStartedFor === this.video.hlsUrl) return;
     this.hlsStartedFor = this.video.hlsUrl;
@@ -250,10 +376,15 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       this.hls.on(Hls.Events.MANIFEST_PARSED, (_evt, data) => {
         this.hlsLevels = [
           { name: 'Auto', index: -1 },
-          ...data.levels.map((lvl: any, i: number) => ({
-            name: lvl.height ? `${lvl.height}p` : `Level ${i}`,
-            index: i,
-          })),
+          ...data.levels
+            .map((lvl: any, i: number) => ({
+              name: lvl.height ? `${lvl.height}p` : `Level ${i}`,
+              height: lvl.height || 0,
+              index: i,
+            }))
+            // Highest quality first, as players usually list them
+            .sort((a: any, b: any) => b.height - a.height)
+            .map(({ name, index }: any) => ({ name, index })),
         ];
         this.hlsCurrentLevel = -1;
         this.cdr.detectChanges();
@@ -286,6 +417,12 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     return lvl ? lvl.name : '';
   }
 
+  /** Label for the quality button: "Auto", or the level the viewer picked. */
+  get qualityLabel(): string {
+    if (this.hlsCurrentLevel === -1) return this.getAutoLevelName() || 'Auto';
+    return this.hlsLevels.find(l => l.index === this.hlsCurrentLevel)?.name || 'Auto';
+  }
+
   private destroyHls(): void {
     if (this.hls) {
       this.hls.destroy();
@@ -296,11 +433,50 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.hlsLevels = [];
   }
 
+  // ── Controls ───────────────────────────────────────────────────────────────
 
-  togglePlay(): void {
+  togglePlay(withFeedback = false): void {
     const v = this.videoRef?.nativeElement;
     if (!v) return;
-    v.paused ? v.play() : v.pause();
+    if (v.paused || v.ended) {
+      v.play().catch(() => {});
+      if (withFeedback) this.showFlash('play_arrow');
+    } else {
+      v.pause();
+      if (withFeedback) this.showFlash('pause');
+    }
+  }
+
+  skip(seconds: number): void {
+    const v = this.videoRef?.nativeElement;
+    if (!v || !isFinite(v.duration)) return;
+    v.currentTime = Math.min(Math.max(0, v.currentTime + seconds), v.duration);
+    this.currentTime = v.currentTime;
+    this.showFlash(seconds < 0 ? 'fast_rewind' : 'fast_forward', `${Math.abs(seconds)}s`);
+  }
+
+  private showFlash(icon: string, label?: string): void {
+    clearTimeout(this.flashTimer);
+    // Drop the old bubble first so its animation restarts.
+    this.flash = null;
+    this.cdr.detectChanges();
+    this.flash = { icon, label };
+    this.flashTimer = setTimeout(() => {
+      this.flash = null;
+      this.cdr.detectChanges();
+    }, 650);
+  }
+
+  private revealControls(): void {
+    this.controlsVisible = true;
+    clearTimeout(this.controlsTimer);
+    if (this.isPlaying) {
+      this.controlsTimer = setTimeout(() => {
+        this.controlsVisible = false;
+        this.showSettingsMenu = false;
+        this.cdr.detectChanges();
+      }, 3000);
+    }
   }
 
   onTouchZone(event: TouchEvent): void {
@@ -320,6 +496,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       }
     } else {
       this.controlsVisible = false;
+      this.showSettingsMenu = false;
     }
     this.cdr.detectChanges();
 
@@ -327,32 +504,40 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     setTimeout(() => { this._touchHandled = false; }, 400);
   }
 
+  /** Mouse click on the picture plays or pauses, as on other video sites. */
   onClickZone(): void {
     if (this._touchHandled) return; // touch already toggled visibility
-    clearTimeout(this.controlsTimer);
-    if (!this.controlsVisible) {
-      this.controlsVisible = true;
-      if (this.isPlaying) {
-        this.controlsTimer = setTimeout(() => {
-          this.controlsVisible = false;
-          this.cdr.detectChanges();
-        }, 3000);
-      }
-    } else {
-      this.controlsVisible = false;
-    }
+    if (this.showSettingsMenu) { this.showSettingsMenu = false; return; }
+    this.togglePlay(true);
+    this.revealControls();
+  }
+
+  onDoubleClickZone(): void {
+    if (this._touchHandled) return;
+    this.toggleFullscreen();
   }
 
   toggleMute(): void {
     const v = this.videoRef?.nativeElement;
     if (!v) return;
+    // Unmuting at zero volume would stay silent, so restore a usable level.
+    if (v.muted && v.volume === 0) v.volume = 0.5;
     v.muted = !v.muted;
+  }
+
+  setVolume(event: Event): void {
+    const v = this.videoRef?.nativeElement;
+    if (!v) return;
+    const value = +(event.target as HTMLInputElement).value;
+    v.volume = value;
+    v.muted = value === 0;
   }
 
   seek(event: Event): void {
     const v = this.videoRef?.nativeElement;
     if (!v) return;
     v.currentTime = +(event.target as HTMLInputElement).value;
+    this.currentTime = v.currentTime;
   }
 
   toggleFullscreen(): void {
@@ -367,18 +552,11 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   onPlayerMouseMove(): void {
     if (this._touchHandled) return; // synthesised mousemove from a touch tap — ignore
-    this.controlsVisible = true;
-    clearTimeout(this.controlsTimer);
-    if (this.isPlaying) {
-      this.controlsTimer = setTimeout(() => {
-        this.controlsVisible = false;
-        this.cdr.detectChanges();
-      }, 3000);
-    }
+    this.revealControls();
   }
 
   onPlayerMouseLeave(): void {
-    if (this.isPlaying) {
+    if (this.isPlaying && !this.showSettingsMenu) {
       clearTimeout(this.controlsTimer);
       this.controlsTimer = setTimeout(() => {
         this.controlsVisible = false;
@@ -387,15 +565,10 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     }
   }
 
-
-
   onVideoPlay(): void {
     this.isPlaying = true;
-    clearTimeout(this.controlsTimer);
-    this.controlsTimer = setTimeout(() => {
-      this.controlsVisible = false;
-      this.cdr.detectChanges();
-    }, 3000);
+    this.hasPlayed = true;
+    this.revealControls();
   }
 
   onVideoPause(): void {
@@ -410,9 +583,37 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     clearTimeout(this.controlsTimer);
   }
 
+  onWaiting(): void {
+    this.isBuffering = true;
+  }
+
+  onPlaying(): void {
+    this.isBuffering = false;
+  }
+
   onTimeUpdate(): void {
     const v = this.videoRef?.nativeElement;
-    if (v) this.currentTime = v.currentTime;
+    if (!v) return;
+    this.currentTime = v.currentTime;
+    this.updateBuffered(v);
+  }
+
+  onProgress(): void {
+    const v = this.videoRef?.nativeElement;
+    if (v) this.updateBuffered(v);
+  }
+
+  /** End of the buffered range that contains the playhead. */
+  private updateBuffered(v: HTMLVideoElement): void {
+    const ranges = v.buffered;
+    let end = 0;
+    for (let i = 0; i < ranges.length; i++) {
+      if (ranges.start(i) <= v.currentTime + 0.5 && ranges.end(i) >= v.currentTime) {
+        end = ranges.end(i);
+        break;
+      }
+    }
+    this.bufferedEnd = end;
   }
 
   onLoadedMetadata(): void {
@@ -422,9 +623,17 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   onVolumeChange(): void {
     const v = this.videoRef?.nativeElement;
-    if (v) this.isMuted = v.muted;
+    if (!v) return;
+    this.isMuted = v.muted;
+    this.volume = v.muted ? 0 : v.volume;
   }
 
+  get volumeIcon(): string {
+    if (this.isMuted || this.volume === 0) return 'volume_off';
+    return this.volume < 0.5 ? 'volume_down' : 'volume_up';
+  }
+
+  // ── Side effects ───────────────────────────────────────────────────────────
 
   private recordWatchHistory(videoId: string): void {
     const userData = localStorage.getItem('user');
@@ -438,15 +647,55 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   private doRecordView(videoId: string): void {
     this.videoService.recordView(videoId).subscribe({
-      next: (res) => { if (res.views > 0) this.video.views = res.views; },
+      next: (res) => {
+        if (res.views > 0 && this.video?._id === videoId) this.video.views = res.views;
+      },
       error: () => {},
     });
   }
 
+  /** Other videos to keep watching: same category first, then the latest feed. */
+  private loadUpNext(videoId: string): void {
+    this.upNextLoading = true;
+    const category = this.video?.category;
+    const keep = (list: any[]) =>
+      (list || []).filter(v => v?._id && v._id !== videoId && (v.status ?? 'ready') === 'ready');
+
+    this.videoService.getFeed(undefined, category || undefined).subscribe({
+      next: (page) => {
+        if (videoId !== this.currentVideoId) return;
+        const sameCategory = keep(page.videos);
+        if (sameCategory.length >= 6 || !category) {
+          this.upNext = sameCategory.slice(0, 12);
+          this.upNextLoading = false;
+          return;
+        }
+        // Not enough in this category — top up with the latest videos.
+        this.videoService.getFeed().subscribe({
+          next: (latest) => {
+            if (videoId !== this.currentVideoId) return;
+            const seen = new Set(sameCategory.map(v => v._id));
+            this.upNext = [...sameCategory, ...keep(latest.videos).filter(v => !seen.has(v._id))].slice(0, 12);
+            this.upNextLoading = false;
+          },
+          error: () => { this.upNext = sameCategory; this.upNextLoading = false; },
+        });
+      },
+      error: () => { this.upNextLoading = false; },
+    });
+  }
+
+  trackById(_: number, video: any): string {
+    return video._id;
+  }
+
   getUserReaction(): void {
     if (!this.currentUserId || !this.video._id) return;
-    this.videoService.getUserReaction(this.video._id).subscribe({
-      next: (response) => { this.userReaction = response.reaction as 'liked' | 'disliked' | 'none'; },
+    const videoId = this.video._id;
+    this.videoService.getUserReaction(videoId).subscribe({
+      next: (response) => {
+        if (videoId === this.currentVideoId) this.userReaction = response.reaction as 'liked' | 'disliked' | 'none';
+      },
       error: () => { this.userReaction = 'none'; },
     });
   }
@@ -461,7 +710,10 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
         this.userReaction = this.userReaction === 'liked' ? 'none' : 'liked';
         this.isLiking = false;
       },
-      error: () => { this.isLiking = false; },
+      error: () => {
+        this.isLiking = false;
+        this.showToast('Couldn’t save your like. Try again.', true);
+      },
     });
   }
 
@@ -475,33 +727,114 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
         this.userReaction = this.userReaction === 'disliked' ? 'none' : 'disliked';
         this.isDisliking = false;
       },
-      error: () => { this.isDisliking = false; },
+      error: () => {
+        this.isDisliking = false;
+        this.showToast('Couldn’t save your rating. Try again.', true);
+      },
     });
+  }
+
+  async share(): Promise<void> {
+    const url = `${window.location.origin}/video/${this.video?._id}`;
+    const nav = navigator as Navigator & { share?: (data: ShareData) => Promise<void> };
+    if (nav.share && this.isTouch) {
+      try {
+        await nav.share({ title: this.video?.title, url });
+        return;
+      } catch {
+        // Cancelled or unavailable — fall back to copying the link.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      this.showToast('Link copied');
+    } catch {
+      this.showToast('Couldn’t copy the link. Copy it from the address bar.', true);
+    }
+  }
+
+  private showToast(message: string, isError = false): void {
+    clearTimeout(this.toastTimer);
+    this.toast = message;
+    this.toastIsError = isError;
+    this.cdr.detectChanges();
+    this.toastTimer = setTimeout(() => {
+      this.toast = null;
+      this.cdr.detectChanges();
+    }, 3000);
   }
 
   onDeleteClick(): void {
     if (!this.video || !this.isOwner) return;
-    if (confirm('Are you sure you want to delete this video? This action cannot be undone.')) {
+    if (confirm('Delete this video? This can’t be undone.')) {
       const userData = localStorage.getItem('user');
       if (!userData) return;
       const user = JSON.parse(userData);
       this.videoService.deleteVideo(this.video._id, user.userId).subscribe({
-        next: () => { window.location.href = '/home'; },
-        error: (err) => { console.error('Error deleting video:', err); },
+        next: () => {
+          this.videoService.triggerFeedRefresh();
+          this.router.navigate(['/home']);
+        },
+        error: (err) => {
+          console.error('Error deleting video:', err);
+          this.showToast('Couldn’t delete the video. Try again.', true);
+        },
       });
     }
   }
 
+  // ── Description ────────────────────────────────────────────────────────────
+
+  /** Checks whether the collapsed description / AI summary are cut off. */
+  private measureOverflow(): void {
+    setTimeout(() => {
+      const d = this.descBodyRef?.nativeElement;
+      const a = this.aiBodyRef?.nativeElement;
+      const desc = !!d && d.scrollHeight > d.clientHeight + 2;
+      const ai = !!a && a.scrollHeight > a.clientHeight + 2;
+      if (desc !== this.descOverflows || ai !== this.aiOverflows) {
+        this.descOverflows = desc;
+        this.aiOverflows = ai;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    if (!this.descOpen || !this.aiSummaryOpen) this.measureOverflow();
+  }
 
   formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('en-US', {
       year: 'numeric', month: 'short', day: 'numeric',
     });
   }
 
+  timeAgo(value: string | undefined | null): string {
+    if (!value) return '';
+    const then = new Date(value).getTime();
+    if (isNaN(then)) return '';
+    const seconds = Math.max(0, Math.floor((Date.now() - then) / 1000));
+    const units: Array<[number, string]> = [
+      [31_536_000, 'year'], [2_592_000, 'month'], [604_800, 'week'],
+      [86_400, 'day'], [3_600, 'hour'], [60, 'minute'],
+    ];
+    for (const [size, name] of units) {
+      const n = Math.floor(seconds / size);
+      if (n >= 1) return `${n} ${name}${n === 1 ? '' : 's'} ago`;
+    }
+    return 'Just now';
+  }
+
   retryLoad(): void {
     const videoId = this.route.snapshot.paramMap.get('id');
-    if (videoId) this.loadVideo(videoId);
+    if (videoId) {
+      this.currentVideoId = videoId;
+      this.loadVideo(videoId);
+    }
   }
 
   formatViews(count: number): string {
@@ -513,8 +846,16 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   formatTime(seconds: number): string {
     if (!seconds || isNaN(seconds)) return '0:00';
-    const m = Math.floor(seconds / 60);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
     const s = Math.floor(seconds % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
+    const ss = s.toString().padStart(2, '0');
+    return h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${ss}` : `${m}:${ss}`;
   }
+
+  get creatorInitial(): string {
+    return ((this.video?.userName || 'U').trim()[0] || 'U').toUpperCase();
+  }
+
+  creatorAvatarFailed = false;
 }

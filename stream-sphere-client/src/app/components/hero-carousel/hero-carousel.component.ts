@@ -1,5 +1,7 @@
 import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
 import { Subscription } from 'rxjs';
 import { VideoService } from '../../services/video.service';
 import { Video } from '../../models/video';
@@ -10,7 +12,7 @@ import { MediaManagerService } from '../../services/media-manager.service';
   templateUrl: './hero-carousel.component.html',
   styleUrls: ['./hero-carousel.component.css'],
   standalone: true,
-  imports: [CommonModule]
+  imports: [CommonModule, MatIconModule]
 })
 export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('videoElement', { static: false }) videoElement!: ElementRef<HTMLVideoElement>;
@@ -23,6 +25,9 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
   hasAudio = true;   // default true; checkAudioTrack() may override if API available
   userInteracted = false;
   descriptionExpanded = false;
+  /** Media fades out while the next slide loads, instead of a hard cut. */
+  mediaFading = false;
+  private fadeFallbackTimer: any = null;
 
   /** Min chars before "Read more" is shown — short descriptions need no toggle */
   readonly DESC_THRESHOLD = 120;
@@ -39,6 +44,7 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
     private videoService: VideoService,
     private ngZone: NgZone,
     private mediaManager: MediaManagerService,
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -61,6 +67,7 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
       this.intersectionObserver = null;
     }
     this.stopAutoAdvance();
+    clearTimeout(this.fadeFallbackTimer);
     this.mediaSubs.unsubscribe();
     document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
   }
@@ -172,6 +179,10 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
           category: backendVideo.category,
           likes: backendVideo.likes || 0,
           dislikes: backendVideo.dislikes || 0,
+          views: backendVideo.views || 0,
+          status: backendVideo.status,
+          userName: backendVideo.userName,
+          aiSummary: backendVideo.aiSummary ?? null,
           uploadedAt: backendVideo.uploadedAt || '',
           commentCount: backendVideo.commentCount || 0
         }));
@@ -205,14 +216,24 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   formatTimestamp(date: Date): string {
-    if (!date || isNaN(date.getTime())) return 'Unknown date';
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    if (diffInSeconds < 60) return 'Just now';
-    if (diffInSeconds < 3600) return Math.floor(diffInSeconds / 60) + ' minutes ago';
-    if (diffInSeconds < 86400) return Math.floor(diffInSeconds / 3600) + ' hours ago';
-    if (diffInSeconds < 2592000) return Math.floor(diffInSeconds / 86400) + ' days ago';
-    return Math.floor(diffInSeconds / 2592000) + ' months ago';
+    if (!date || isNaN(date.getTime())) return '';
+    const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+    const units: Array<[number, string]> = [
+      [31_536_000, 'year'], [2_592_000, 'month'], [604_800, 'week'],
+      [86_400, 'day'], [3_600, 'hour'], [60, 'minute'],
+    ];
+    for (const [size, name] of units) {
+      const n = Math.floor(seconds / size);
+      if (n >= 1) return `${n} ${name}${n === 1 ? '' : 's'} ago`;
+    }
+    return 'Just now';
+  }
+
+  formatCount(count: number): string {
+    if (!count) return '0';
+    if (count >= 1_000_000) return (count / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (count >= 1_000) return (count / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
+    return count.toLocaleString();
   }
 
   createDate(dateString: string): Date {
@@ -246,6 +267,7 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onVideoLoad(): void {
+    this.endFade();
     this.checkAudioTrack();
     this.observeCurrentVideo();
     // Always start muted — required by browser for autoplay without interaction
@@ -283,27 +305,21 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   nextVideo(): void {
-    this.unobserveCurrentVideo();
-    this.stopAutoAdvance();
-    this.descriptionExpanded = false;
-    this.currentIndex = (this.currentIndex + 1) % this.videos.length;
-    setTimeout(() => {
-      this.observeCurrentVideo();
-      setTimeout(() => {
-        if (this.videoElement?.nativeElement) {
-          this.videoElement.nativeElement.muted = !this.userInteracted ? true : this.isMuted;
-        }
-        this.forcePlayIfVisible();
-        this.startAutoAdvance();
-      }, 200);
-    }, 100);
+    this.goTo((this.currentIndex + 1) % this.videos.length);
   }
 
   previousVideo(): void {
+    this.goTo((this.currentIndex - 1 + this.videos.length) % this.videos.length);
+  }
+
+  /** Switch slides with a short fade; also used by the slide dots. */
+  goTo(index: number): void {
+    if (!this.videos.length || index === this.currentIndex) return;
     this.unobserveCurrentVideo();
     this.stopAutoAdvance();
     this.descriptionExpanded = false;
-    this.currentIndex = (this.currentIndex - 1 + this.videos.length) % this.videos.length;
+    this.startFade();
+    this.currentIndex = index;
     setTimeout(() => {
       this.observeCurrentVideo();
       setTimeout(() => {
@@ -316,10 +332,23 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
     }, 100);
   }
 
+  private startFade(): void {
+    this.mediaFading = true;
+    clearTimeout(this.fadeFallbackTimer);
+    // Never leave the hero dark if the next clip fails to load.
+    this.fadeFallbackTimer = setTimeout(() => this.endFade(), 1500);
+  }
+
+  private endFade(): void {
+    clearTimeout(this.fadeFallbackTimer);
+    this.mediaFading = false;
+  }
+
   onPlayNowClick(): void {
-    if (this.videos[this.currentIndex]) {
-      window.location.href = `/video/${this.videos[this.currentIndex]._id}`;
-    }
+    const video = this.videos[this.currentIndex];
+    if (!video) return;
+    // In-app navigation keeps the SPA loaded; the player can start from router state.
+    this.router.navigate(['/video', video._id], { state: { video } });
   }
 
   get currentVideo(): Video | null {

@@ -1,149 +1,200 @@
-<div class="comment-section">
+<section class="cs" aria-labelledby="cs-title">
 
   <!-- Header -->
-  <div class="cs-header">
-    <h2 class="cs-title">
-      <span class="cs-icon">💬</span>
-      {{ totalComments }} Comment{{ totalComments !== 1 ? 's' : '' }}
-    </h2>
-  </div>
+  <h2 id="cs-title" class="cs-title">
+    {{ totalComments }} {{ totalComments === 1 ? 'Comment' : 'Comments' }}
+  </h2>
 
-  <!-- New comment form -->
-  <div class="cs-form" *ngIf="isLoggedIn">
-    <img [src]="currentUser?.profileImage || getDefaultAvatar(currentUser?.name || 'User')"
-         [alt]="currentUser?.name"
-         class="cs-avatar"
-         (error)="onAvatarError($event, currentUser?.name || 'User')">
-    <div class="cs-input-wrap">
-      <textarea [(ngModel)]="newComment"
+  <!-- New comment -->
+  <div class="cs-compose" *ngIf="isLoggedIn; else signInNudge">
+    <img *ngIf="avatarUrl(currentUser?.profileImage) as src; else composerInitials"
+         class="ss-avatar cs-avatar" [src]="src" alt=""
+         referrerpolicy="no-referrer" (error)="onAvatarError(src)">
+    <ng-template #composerInitials>
+      <span class="ss-avatar cs-avatar" aria-hidden="true">{{ initials(currentUser?.name) }}</span>
+    </ng-template>
+
+    <div class="cs-compose-body">
+      <label class="ss-sr-only" for="cs-new">Add a comment</label>
+      <textarea id="cs-new"
+                class="cs-input"
+                [(ngModel)]="newComment"
                 placeholder="Add a comment…"
-                class="cs-textarea"
-                rows="2"
+                rows="1"
                 maxlength="1000"
-                [disabled]="submitting"></textarea>
-      <div class="cs-form-actions">
-        <span class="cs-char">{{ newComment.length }}/1000</span>
-        <button class="cs-btn cs-btn--primary"
+                [disabled]="submitting"
+                (focus)="composerActive = true"></textarea>
+      <div class="cs-compose-actions" *ngIf="composerActive || newComment">
+        <span class="cs-count" [class.is-near]="newComment.length > 900">{{ newComment.length }}/1000</span>
+        <button type="button" class="ss-btn ss-btn--ghost ss-btn--sm" (click)="cancelNew()">Cancel</button>
+        <button type="button"
+                class="ss-btn ss-btn--primary ss-btn--sm"
                 (click)="submitComment()"
                 [disabled]="!newComment.trim() || submitting">
-          {{ submitting ? 'Posting…' : 'Post' }}
+          {{ submitting ? 'Posting…' : 'Comment' }}
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Login nudge -->
-  <div class="cs-login-nudge" *ngIf="!isLoggedIn">
-    <span>🔒 Log in to join the conversation</span>
+  <ng-template #signInNudge>
+    <div class="cs-nudge">
+      <mat-icon>lock</mat-icon>
+      <span>Sign in to join the conversation.</span>
+    </div>
+  </ng-template>
+
+  <!-- Request errors -->
+  <div class="cs-alert" *ngIf="errorMessage" role="alert">
+    <mat-icon>error_outline</mat-icon>
+    <span>{{ errorMessage }}</span>
+    <button type="button" class="ss-icon-btn ss-icon-btn--sm" (click)="errorMessage = null" aria-label="Dismiss">
+      <mat-icon>close</mat-icon>
+    </button>
   </div>
 
   <!-- Loading -->
-  <div class="cs-loading" *ngIf="loading">
-    <div class="cs-spinner"></div>
-    <span>Loading comments…</span>
-  </div>
+  <ng-container *ngIf="loading">
+    <p class="ss-sr-only" role="status">Loading comments</p>
+    <div class="cs-skeleton" *ngFor="let s of skeletonRows" aria-hidden="true">
+      <span class="ss-skel cs-skeleton-avatar"></span>
+      <span class="cs-skeleton-lines">
+        <span class="ss-skel ss-skel-line" style="width: 30%"></span>
+        <span class="ss-skel ss-skel-line" style="width: 85%"></span>
+      </span>
+    </div>
+  </ng-container>
 
   <!-- Empty -->
-  <div class="cs-empty" *ngIf="!loading && comments.length === 0">
-    <span>🗨️ No comments yet — be the first!</span>
+  <div class="cs-empty" *ngIf="!loading && !loadFailed && comments.length === 0">
+    <mat-icon>forum</mat-icon>
+    <p><strong>No comments yet</strong></p>
+    <p>{{ isLoggedIn ? 'Start the conversation.' : 'Sign in to be the first to comment.' }}</p>
   </div>
 
   <!-- Comment list -->
-  <div class="cs-list" *ngIf="!loading">
-    <div class="cs-comment" *ngFor="let comment of comments">
+  <ul class="cs-list" *ngIf="!loading && comments.length > 0">
+    <li class="cs-item" *ngFor="let comment of comments; trackBy: trackById">
 
-      <!-- Top-level comment -->
-      <div class="cs-comment-body">
-        <img [src]="comment.user_profile_image || getDefaultAvatar(comment.username)"
-             [alt]="comment.username"
-             class="cs-avatar cs-avatar--sm"
-             (error)="onAvatarError($event, comment.username)">
+      <img *ngIf="avatarUrl(comment.user_profile_image) as src; else itemInitials"
+           class="ss-avatar cs-avatar" [src]="src" alt=""
+           referrerpolicy="no-referrer" (error)="onAvatarError(src)">
+      <ng-template #itemInitials>
+        <span class="ss-avatar cs-avatar" aria-hidden="true">{{ initials(comment.username) }}</span>
+      </ng-template>
 
-        <div class="cs-comment-content">
-          <!-- Meta row -->
-          <div class="cs-comment-meta">
-            <span class="cs-username">{{ comment.username }}</span>
-            <span class="cs-date">{{ formatDate(comment.created_at) }}</span>
-            <div class="cs-owner-actions" *ngIf="isOwner(comment)">
-              <button class="cs-action-btn" (click)="startEdit(comment)" *ngIf="editingCommentId !== comment._id">Edit</button>
-              <button class="cs-action-btn cs-action-btn--delete" (click)="deleteComment(comment._id)">Delete</button>
+      <div class="cs-main">
+        <!-- Meta row -->
+        <div class="cs-meta">
+          <span class="cs-name">{{ comment.username }}</span>
+          <span class="cs-you" *ngIf="isOwner(comment)">You</span>
+          <time class="cs-date" [attr.datetime]="comment.created_at">{{ formatDate(comment.created_at) }}</time>
+        </div>
+
+        <!-- Content or edit form -->
+        <p class="cs-text" *ngIf="editingCommentId !== comment._id">{{ comment.content }}</p>
+
+        <div class="cs-edit" *ngIf="editingCommentId === comment._id">
+          <label class="ss-sr-only" [attr.for]="'cs-edit-' + comment._id">Edit comment</label>
+          <textarea [id]="'cs-edit-' + comment._id"
+                    [(ngModel)]="editContent"
+                    class="cs-input cs-input--boxed"
+                    rows="2"
+                    maxlength="1000"></textarea>
+          <div class="cs-compose-actions">
+            <span class="cs-count">{{ editContent.length }}/1000</span>
+            <button type="button" class="ss-btn ss-btn--ghost ss-btn--sm" (click)="cancelEdit()">Cancel</button>
+            <button type="button" class="ss-btn ss-btn--primary ss-btn--sm"
+                    (click)="updateComment(comment._id)"
+                    [disabled]="!editContent.trim()">Save</button>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="cs-actions" *ngIf="editingCommentId !== comment._id">
+          <button type="button" class="cs-action" (click)="openReplyForm(comment)" *ngIf="isLoggedIn">
+            <mat-icon>reply</mat-icon>Reply
+          </button>
+          <ng-container *ngIf="isOwner(comment)">
+            <button type="button" class="cs-action" (click)="startEdit(comment)">
+              <mat-icon>edit</mat-icon>Edit
+            </button>
+            <button type="button" class="cs-action cs-action--danger" (click)="deleteComment(comment._id)">
+              <mat-icon>delete_outline</mat-icon>Delete
+            </button>
+          </ng-container>
+        </div>
+
+        <!-- Inline reply form -->
+        <div class="cs-compose cs-compose--reply" *ngIf="comment.showReplyForm">
+          <img *ngIf="avatarUrl(currentUser?.profileImage) as src; else replyInitials"
+               class="ss-avatar ss-avatar--xs" [src]="src" alt=""
+               referrerpolicy="no-referrer" (error)="onAvatarError(src)">
+          <ng-template #replyInitials>
+            <span class="ss-avatar ss-avatar--xs" aria-hidden="true">{{ initials(currentUser?.name) }}</span>
+          </ng-template>
+          <div class="cs-compose-body">
+            <label class="ss-sr-only" [attr.for]="'cs-reply-' + comment._id">Reply to {{ comment.username }}</label>
+            <textarea [id]="'cs-reply-' + comment._id"
+                      [(ngModel)]="comment.replyContent"
+                      [placeholder]="'Reply to ' + comment.username + '…'"
+                      class="cs-input"
+                      rows="1"
+                      maxlength="1000"
+                      [disabled]="comment.submittingReply"></textarea>
+            <div class="cs-compose-actions">
+              <span class="cs-count">{{ comment.replyContent.length }}/1000</span>
+              <button type="button" class="ss-btn ss-btn--ghost ss-btn--sm" (click)="comment.showReplyForm = false">Cancel</button>
+              <button type="button"
+                      class="ss-btn ss-btn--primary ss-btn--sm"
+                      (click)="submitReply(comment)"
+                      [disabled]="!comment.replyContent.trim() || comment.submittingReply">
+                {{ comment.submittingReply ? 'Posting…' : 'Reply' }}
+              </button>
             </div>
           </div>
+        </div>
 
-          <!-- Content or edit form -->
-          <p class="cs-text" *ngIf="editingCommentId !== comment._id">{{ comment.content }}</p>
-          <div class="cs-edit-form" *ngIf="editingCommentId === comment._id">
-            <textarea [(ngModel)]="editContent" class="cs-textarea cs-textarea--edit" rows="2" maxlength="1000"></textarea>
-            <div class="cs-form-actions">
-              <span class="cs-char">{{ editContent.length }}/1000</span>
-              <button class="cs-btn cs-btn--ghost" (click)="cancelEdit()">Cancel</button>
-              <button class="cs-btn cs-btn--primary" (click)="updateComment(comment._id)" [disabled]="!editContent.trim()">Save</button>
-            </div>
-          </div>
+        <!-- Replies toggle -->
+        <button type="button"
+                class="cs-replies-toggle"
+                *ngIf="(comment.replies_count || 0) > 0 || comment.replies.length > 0"
+                [attr.aria-expanded]="comment.showReplies"
+                (click)="toggleReplies(comment)">
+          <span class="ss-spinner ss-spinner--sm" *ngIf="comment.loadingReplies"></span>
+          <mat-icon *ngIf="!comment.loadingReplies">{{ comment.showReplies ? 'expand_less' : 'expand_more' }}</mat-icon>
+          {{ comment.showReplies
+              ? 'Hide replies'
+              : (comment.replies_count || comment.replies.length) + ' ' + ((comment.replies_count || comment.replies.length) === 1 ? 'reply' : 'replies') }}
+        </button>
 
-          <!-- Reply bar -->
-          <div class="cs-reply-bar" *ngIf="editingCommentId !== comment._id">
-            <button class="cs-reply-btn" (click)="openReplyForm(comment)" *ngIf="isLoggedIn">
-              💬 Reply
-            </button>
-            <button class="cs-view-replies-btn"
-                    *ngIf="(comment.replies_count || 0) > 0 || comment.replies.length > 0"
-                    (click)="toggleReplies(comment)">
-              <span *ngIf="!comment.loadingReplies">
-                {{ comment.showReplies ? '▲ Hide replies' : '▼ ' + (comment.replies_count || comment.replies.length) + ' ' + ((comment.replies_count || comment.replies.length) === 1 ? 'reply' : 'replies') }}
-              </span>
-              <span *ngIf="comment.loadingReplies">Loading…</span>
-            </button>
-          </div>
-
-          <!-- Inline reply form -->
-          <div class="cs-reply-form" *ngIf="comment.showReplyForm">
-            <img [src]="currentUser?.profileImage || getDefaultAvatar(currentUser?.name || 'User')"
-                 class="cs-avatar cs-avatar--xs"
-                 (error)="onAvatarError($event, currentUser?.name || 'User')">
-            <div class="cs-input-wrap">
-              <textarea [(ngModel)]="comment.replyContent"
-                        placeholder="Write a reply…"
-                        class="cs-textarea cs-textarea--reply"
-                        rows="2"
-                        maxlength="1000"
-                        [disabled]="comment.submittingReply"></textarea>
-              <div class="cs-form-actions">
-                <span class="cs-char">{{ comment.replyContent.length }}/1000</span>
-                <button class="cs-btn cs-btn--ghost" (click)="comment.showReplyForm = false">Cancel</button>
-                <button class="cs-btn cs-btn--primary"
-                        (click)="submitReply(comment)"
-                        [disabled]="!comment.replyContent.trim() || comment.submittingReply">
-                  {{ comment.submittingReply ? 'Posting…' : 'Reply' }}
+        <!-- Replies -->
+        <ul class="cs-replies" *ngIf="comment.showReplies && comment.replies.length > 0">
+          <li class="cs-item cs-item--reply" *ngFor="let reply of comment.replies; trackBy: trackById">
+            <img *ngIf="avatarUrl(reply.user_profile_image) as src; else replyItemInitials"
+                 class="ss-avatar ss-avatar--xs" [src]="src" alt=""
+                 referrerpolicy="no-referrer" (error)="onAvatarError(src)">
+            <ng-template #replyItemInitials>
+              <span class="ss-avatar ss-avatar--xs" aria-hidden="true">{{ initials(reply.username) }}</span>
+            </ng-template>
+            <div class="cs-main">
+              <div class="cs-meta">
+                <span class="cs-name">{{ reply.username }}</span>
+                <span class="cs-you" *ngIf="isOwner(reply)">You</span>
+                <time class="cs-date" [attr.datetime]="reply.created_at">{{ formatDate(reply.created_at) }}</time>
+              </div>
+              <p class="cs-text">{{ reply.content }}</p>
+              <div class="cs-actions" *ngIf="isOwner(reply)">
+                <button type="button" class="cs-action cs-action--danger" (click)="deleteReply(reply, comment)">
+                  <mat-icon>delete_outline</mat-icon>Delete
                 </button>
               </div>
             </div>
-          </div>
+          </li>
+        </ul>
 
-          <!-- Replies list -->
-          <div class="cs-replies" *ngIf="comment.showReplies && comment.replies.length > 0">
-            <div class="cs-reply" *ngFor="let reply of comment.replies">
-              <img [src]="reply.user_profile_image || getDefaultAvatar(reply.username)"
-                   [alt]="reply.username"
-                   class="cs-avatar cs-avatar--xs"
-                   (error)="onAvatarError($event, reply.username)">
-              <div class="cs-comment-content">
-                <div class="cs-comment-meta">
-                  <span class="cs-username">{{ reply.username }}</span>
-                  <span class="cs-date">{{ formatDate(reply.created_at) }}</span>
-                  <div class="cs-owner-actions" *ngIf="isOwner(reply)">
-                    <button class="cs-action-btn cs-action-btn--delete" (click)="deleteReply(reply, comment)">Delete</button>
-                  </div>
-                </div>
-                <p class="cs-text">{{ reply.content }}</p>
-              </div>
-            </div>
-          </div>
-
-        </div>
       </div>
+    </li>
+  </ul>
 
-    </div>
-  </div>
-
-</div>
+</section>

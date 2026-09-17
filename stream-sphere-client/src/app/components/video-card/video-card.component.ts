@@ -1,10 +1,11 @@
-import { Component, Input, OnInit, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
-import { MatCard, MatCardContent } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
+import {
+  Component, Input, OnInit, OnChanges, OnDestroy, Output, EventEmitter,
+  ChangeDetectorRef, SimpleChanges,
+} from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MediaManagerService } from '../../services/media-manager.service';
 
 @Component({
@@ -12,20 +13,29 @@ import { MediaManagerService } from '../../services/media-manager.service';
   templateUrl: './video-card.component.html',
   styleUrls: ['./video-card.component.scss'],
   standalone: true,
-  imports: [MatCardContent, MatCard, CommonModule, MatButtonModule, MatIconModule]
+  imports: [CommonModule, MatIconModule, RouterLink],
 })
-export class VideoCardComponent implements OnInit {
+export class VideoCardComponent implements OnInit, OnChanges, OnDestroy {
   @Input() video: any;
+  /** Shows the info button that reveals the description over the thumbnail. */
   @Input() flipEnabled: boolean = true;
   @Input() faded: boolean = false;
+  /** 'grid' for feeds, 'compact' for side lists such as Up next. */
+  @Input() layout: 'grid' | 'compact' = 'grid';
   @Output() videoDeleted = new EventEmitter<string>();
   safeUrl: any;
+  /** Cached so change detection sees stable references. */
+  link: any[] | null = null;
+  linkState: { video: any } | undefined = undefined;
   currentUserId: string | null = null;
   isOwner: boolean = false;
+  /** Description panel open over the thumbnail. */
   flip = false;
-  previewLoaded    = false;  // true once the 2s delay fires — lazy-loads the video src
+  avatarFailed = false;
+  previewLoaded    = false;  // true once the hover delay fires — lazy-loads the video src
   isPreviewPlaying = false;  // true while the preview video is active (thumbnail fades out)
   private previewDelayTimer: any = null;
+  private hoverActive = false;
 
   constructor(
     private sanitizer: DomSanitizer,
@@ -39,8 +49,25 @@ export class VideoCardComponent implements OnInit {
       console.error('No video data provided to video card component');
       return;
     }
+    this.setup();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // Cards can be re-bound to another video (e.g. a reused list slot).
+    if (changes['video'] && !changes['video'].firstChange && this.video) {
+      this.previewLoaded = false;
+      this.isPreviewPlaying = false;
+      this.avatarFailed = false;
+      this.flip = false;
+      this.setup();
+    }
+  }
+
+  private setup(): void {
+    this.link = this.video._id ? ['/video', this.video._id] : null;
+    this.linkState = { video: this.video };
     // Only use previewUrl — S3_url (raw file) is deleted after transcoding.
-    // If previewUrl is absent the hover just shows the thumbnail overlay with no video.
+    // If previewUrl is absent the hover just shows the thumbnail with no video.
     const previewSrc = this.video.previewUrl ?? null;
     this.safeUrl = previewSrc
       ? this.sanitizer.bypassSecurityTrustResourceUrl(previewSrc)
@@ -50,7 +77,16 @@ export class VideoCardComponent implements OnInit {
       const user = JSON.parse(userData);
       this.currentUserId = user.userId;
       this.isOwner = this.video.user_id === user.userId;
+    } else {
+      this.currentUserId = null;
+      this.isOwner = false;
     }
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.previewDelayTimer);
+    // A card removed mid-hover (feed refresh) must not leave the hero paused.
+    if (this.hoverActive) this.mediaManager.cardHoverEnd();
   }
 
   onVideoClick() {
@@ -73,12 +109,14 @@ export class VideoCardComponent implements OnInit {
 
   onFlipClick(event: Event) {
     event.stopPropagation();
+    event.preventDefault?.();
     this.flip = !this.flip;
   }
 
   onThumbHover(event: MouseEvent): void {
-    if (!this.safeUrl) return;            // no preview available — skip entirely
+    if (!this.safeUrl || this.flip) return;   // no preview, or the description is open
     const thumbWrap = event.currentTarget as HTMLElement;
+    this.hoverActive = true;
     this.mediaManager.cardHoverStart();   // pause the hero carousel
 
     // Wait 1 s before starting the preview so brief mouseovers don't trigger it
@@ -87,6 +125,7 @@ export class VideoCardComponent implements OnInit {
       if (!this.previewLoaded) {
         // First time — inject <source>, let Angular render it, then play
         this.previewLoaded = true;
+        this.cdr.detectChanges();
         setTimeout(() => this.playPreview(thumbWrap), 50);
       } else {
         this.playPreview(thumbWrap);
@@ -95,7 +134,7 @@ export class VideoCardComponent implements OnInit {
   }
 
   onThumbLeave(event: MouseEvent): void {
-    // Cancel the pending delay if the user left before 2 s
+    // Cancel the pending delay if the user left before it fired
     clearTimeout(this.previewDelayTimer);
     this.previewDelayTimer = null;
     this.isPreviewPlaying = false;        // thumbnail cover fades back in
@@ -106,12 +145,15 @@ export class VideoCardComponent implements OnInit {
       video.pause();
       video.currentTime = 0;
     }
-    this.mediaManager.cardHoverEnd();     // allow the hero carousel to resume
+    if (this.hoverActive) {
+      this.hoverActive = false;
+      this.mediaManager.cardHoverEnd();   // allow the hero carousel to resume
+    }
   }
 
   private playPreview(thumbWrap: HTMLElement): void {
     const video = thumbWrap.querySelector<HTMLVideoElement>('video.video-preview');
-    if (!video) return;
+    if (!video || !this.hoverActive) return;
 
     // Set muted as a DOM property — the HTML attribute alone is unreliable in some browsers
     video.muted = true;
@@ -124,6 +166,7 @@ export class VideoCardComponent implements OnInit {
     video.play()
       .then(() => {
         // play() resolves once the first frame is committed — safe to fade now
+        if (!this.hoverActive) { video.pause(); return; }
         this.isPreviewPlaying = true;
         this.cdr.detectChanges();
       })
@@ -138,8 +181,13 @@ export class VideoCardComponent implements OnInit {
   }
 
   onAvatarError(event: Event): void {
-    // Hide broken image and fall through to the ng-template initialsAvatar
+    // Hide the broken image and show the initials avatar instead
     (event.target as HTMLImageElement).style.display = 'none';
+    this.avatarFailed = true;
+  }
+
+  get initial(): string {
+    return ((this.video?.userName || 'U').trim()[0] || 'U').toUpperCase();
   }
 
   formatViews(count: number): string {
@@ -147,5 +195,22 @@ export class VideoCardComponent implements OnInit {
     if (count >= 1_000_000) return (count / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
     if (count >= 1_000) return (count / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
     return count.toLocaleString();
+  }
+
+  /** "3 days ago" style relative time; empty when the date is missing or invalid. */
+  timeAgo(value: string | undefined | null): string {
+    if (!value) return '';
+    const then = new Date(value).getTime();
+    if (isNaN(then)) return '';
+    const seconds = Math.max(0, Math.floor((Date.now() - then) / 1000));
+    const units: Array<[number, string]> = [
+      [31_536_000, 'year'], [2_592_000, 'month'], [604_800, 'week'],
+      [86_400, 'day'], [3_600, 'hour'], [60, 'minute'],
+    ];
+    for (const [size, name] of units) {
+      const n = Math.floor(seconds / size);
+      if (n >= 1) return `${n} ${name}${n === 1 ? '' : 's'} ago`;
+    }
+    return 'Just now';
   }
 }

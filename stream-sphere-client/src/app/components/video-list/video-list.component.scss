@@ -5,174 +5,172 @@
   background: var(--bg-base);
 }
 
-/* ── Hero wrapper ─────────────────────────────────────────────────────── */
 .hero-wrapper {
   position: relative;
   width: 100%;
 }
 
-/* Gradient overlay fades the hero bottom into the page background */
-.hero-bottom-fade {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 160px;
-  background: linear-gradient(to bottom, transparent 0%, var(--bg-base) 100%);
-  pointer-events: none;
-  z-index: 4;
-}
-
-/* ── Content section — "submerged" overlap ────────────────────────────── */
-.content-section {
+/* ── Feed section ─────────────────────────────────────────────────────── */
+.feed {
   position: relative;
-  z-index: 5;
-  margin-top: -100px;
-  padding-bottom: 40px;
+  padding-bottom: var(--space-12);
 }
 
-/* No-hero mode (search / category filter) — hero is gone.
-   margin-top must be reset to 0 AND we need to clear the fixed navbar.
-   Navbar is ~64px tall on desktop; responsive breakpoints below adjust. */
-.content-section.no-hero {
-  margin-top: 0 !important;
-  padding-top: 80px;   /* 64px navbar + 16px breathing room */
+/* Without the hero, the feed has to clear the fixed header itself */
+.feed--no-hero {
+  padding-top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
 }
 
-/* ── Video grid ───────────────────────────────────────────────────────── */
-.video-grid {
+/* ── Sticky toolbar ───────────────────────────────────────────────────── */
+.feed-toolbar {
+  position: sticky;
+  top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  z-index: var(--z-sticky);
+  background: var(--bg-base);
+}
+@supports (background: color-mix(in srgb, red 50%, transparent)) {
+  .feed-toolbar {
+    background: color-mix(in srgb, var(--bg-base) 88%, transparent);
+    -webkit-backdrop-filter: saturate(160%) blur(16px);
+    backdrop-filter: saturate(160%) blur(16px);
+  }
+}
+
+.chip-bar {
+  position: relative;
+  max-width: 1920px;
+  margin: 0 auto;
+}
+
+.chip-row {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--page-gutter);
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.chip-row::-webkit-scrollbar { display: none; }
+
+/* Fade the row out under the scroll buttons */
+.chip-bar.can-left .chip-row {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 72px);
+  mask-image: linear-gradient(to right, transparent 0, #000 72px);
+}
+.chip-bar.can-right .chip-row {
+  -webkit-mask-image: linear-gradient(to left, transparent 0, #000 72px);
+  mask-image: linear-gradient(to left, transparent 0, #000 72px);
+}
+.chip-bar.can-left.can-right .chip-row {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 72px, #000 calc(100% - 72px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 72px, #000 calc(100% - 72px), transparent 100%);
+}
+
+.chip-scroll {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);   /* 5 cards at full desktop width */
-  gap: 16px;
-  padding: 0 24px;
-  margin-top: 24px;
+  place-items: center;
+  width: var(--control-sm);
+  height: var(--control-sm);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-round);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: background var(--duration-fast) ease;
+
+  .mat-icon { width: var(--icon-md); height: var(--icon-md); font-size: var(--icon-md); }
+
+  &:hover { background: var(--bg-surface-2); }
+}
+.chip-scroll--left  { left: calc(var(--page-gutter) - 4px); }
+.chip-scroll--right { right: calc(var(--page-gutter) - 4px); }
+
+/* Touch screens scroll the row directly */
+@media (hover: none) {
+  .chip-scroll { display: none; }
 }
 
-/* ── States ───────────────────────────────────────────────────────────── */
-.loading-state,
-.error-state,
-.empty-state {
+.processing-notice {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
+  gap: var(--space-3);
+  max-width: 1920px;
+  margin: 0 auto;
+  padding: var(--space-2) var(--page-gutter);
+  border-top: 1px solid var(--warning-border);
+  background: var(--warning-soft);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+
+  strong { font-weight: var(--font-weight-semibold); }
+}
+
+/* ── Heading ──────────────────────────────────────────────────────────── */
+.feed-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  max-width: 1920px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--page-gutter) var(--space-4);
+}
+
+.feed-title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.feed-count {
+  font-size: var(--font-size-sm);
   color: var(--text-muted);
-  gap: 12px;
-  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
-.error-state mat-icon,
-.empty-state mat-icon {
-  font-size: 48px;
-  width: 48px;
-  height: 48px;
-  color: var(--border-strong);
+.feed-clear { margin-left: auto; }
+
+/* ── Video grid (columns and gaps come from .ss-video-grid) ──────────── */
+.video-grid {
+  max-width: 1920px;
+  margin: 0 auto;
+  padding: 0 var(--page-gutter);
 }
 
-.loading-state .video-grid {
-  width: 100%;
-  margin-top: 0;
-  margin-bottom: 20px;
-}
-
-/* ── Skeleton cards ───────────────────────────────────────────────────── */
-.skeleton-card {
-  background: var(--bg-surface);
-  border-radius: 14px;
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  height: 340px;
-  transition: background var(--transition);
-}
-
-.skeleton-video {
-  height: 58%;
-  background: linear-gradient(
-    90deg,
-    var(--skeleton-base) 25%,
-    var(--skeleton-shine) 50%,
-    var(--skeleton-base) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
-}
-
-.skeleton-info {
-  display: flex;
-  align-items: center;
-  padding: 14px 16px;
-  gap: 12px;
-  flex: 1;
-}
-
-.skeleton-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: linear-gradient(
-    90deg,
-    var(--skeleton-base) 25%,
-    var(--skeleton-shine) 50%,
-    var(--skeleton-base) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
-  flex-shrink: 0;
-}
-
-.skeleton-lines {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.skeleton-line {
-  height: 12px;
-  border-radius: 6px;
-  width: 100%;
-  background: linear-gradient(
-    90deg,
-    var(--skeleton-base) 25%,
-    var(--skeleton-shine) 50%,
-    var(--skeleton-base) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
-}
-
-.skeleton-line.short { width: 55%; }
-
-@keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position:  200% 0; }
-}
-
-/* ── Infinite scroll helpers ─────────────────────────────────────────────── */
+/* ── Infinite scroll helpers ─────────────────────────────────────────── */
 .scroll-sentinel {
   height: 1px;
   width: 100%;
 }
 
-.load-more-spinner {
+.load-more {
   display: flex;
   justify-content: center;
-  padding: 24px 0 8px;
+  padding: var(--space-8) 0 var(--space-2);
 }
 
 .end-of-feed {
   display: flex;
   align-items: center;
-  padding: 20px 24px 8px;
+  gap: var(--space-3);
+  max-width: 1920px;
+  margin: 0 auto;
+  padding: var(--space-10) var(--page-gutter) var(--space-2);
   color: var(--text-muted);
-  font-size: 0.82rem;
-  letter-spacing: 0.3px;
-  gap: 12px;
+  font-size: var(--font-size-xs);
 
-  &::before, &::after {
+  &::before,
+  &::after {
     content: '';
     flex: 1;
     height: 1px;
@@ -180,155 +178,8 @@
   }
 }
 
-/* ── Large tablet / small laptop ──────────────────────────────────────── */
-@media (max-width: 1280px) {
-  .video-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-  }
-}
-
-/* ── Tablet ───────────────────────────────────────────────────────────── */
-@media (max-width: 900px) {
-  .video-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
-    padding: 0 16px;
-  }
-  .content-section { margin-top: -80px; }
-  .content-section.no-hero { padding-top: 76px; } /* 60px navbar + 16px */
-  .processing-banner { top: 60px; } /* navbar is 60px at this breakpoint */
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   MOBILE  ≤ 600px  —  mini card list layout
-   ═══════════════════════════════════════════════════════════════════════ */
+/* ── Small screens ────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
-
-  .hero-bottom-fade { height: 100px; }
-
-  .content-section {
-    margin-top: -60px; // less overlap — mini cards are 88px tall, not 380px
-    padding-bottom: 80px; // room for bottom nav
-  }
-  .content-section.no-hero { padding-top: 72px; } /* 56px navbar + 16px */
-
-
-  // ── Grid becomes a single-column list with tight gap ──────────────────
-  .video-grid {
-    grid-template-columns: 1fr;
-    gap: 8px;       // tight list spacing between 88px mini cards
-    padding: 0 12px;
-    margin-top: 12px;
-  }
-
-  // ── Skeleton: also horizontal mini-card style ─────────────────────────
-  .skeleton-card {
-    height: 88px;
-    flex-direction: row;
-    border-radius: 10px;
-  }
-
-  .skeleton-video {
-    flex: 0 0 140px;
-    width: 140px;
-    height: 88px;
-    border-radius: 10px 0 0 10px;
-  }
-
-  .skeleton-info {
-    flex: 1;
-    padding: 10px 14px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    justify-content: center;
-  }
-
-  .skeleton-avatar {
-    width: 18px;
-    height: 18px;
-  }
-
-  .skeleton-lines {
-    width: 100%;
-    gap: 6px;
-  }
-
-  .skeleton-line        { height: 10px; }
-  .skeleton-line.short  { width: 60%; }
-
-  // ── State messages ─────────────────────────────────────────────────────
-  .loading-state,
-  .error-state,
-  .empty-state {
-    padding: 24px 16px;
-  }
-
-  .processing-banner { top: 56px; } /* navbar is 56px at ≤600px */
-}
-
-// ── Processing banner ─────────────────────────────────────────────────────────
-.processing-banner {
-  position: sticky;
-  top: 64px;   /* sits just below the fixed navbar (64px tall on desktop) */
-  z-index: 499; /* below navbar (500) but above all page content */
-  background: linear-gradient(90deg, #f39c12, #e67e22);
-  color: #fff;
-  padding: 0;
-
-  &__inner {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 10px 20px;
-    font-size: 0.9rem;
-    font-weight: 500;
-  }
-
-  &__spinner {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255,255,255,0.4);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: banner-spin 0.8s linear infinite;
-    flex-shrink: 0;
-  }
-}
-
-@keyframes banner-spin { to { transform: rotate(360deg); } }
-
-// ── Ready toast ───────────────────────────────────────────────────────────────
-.ready-toast {
-  position: fixed;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #27ae60;
-  color: #fff;
-  padding: 12px 24px;
-  border-radius: 999px;
-  font-size: 0.92rem;
-  font-weight: 600;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-  animation: toast-in 0.3s ease;
-
-  mat-icon {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
-  }
-}
-
-@keyframes toast-in {
-  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .feed-head { padding-top: var(--space-2); }
+  .feed-title { font-size: var(--font-size-lg); }
 }

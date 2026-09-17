@@ -1,75 +1,166 @@
-<div class="upload-container" [class.upload-container--dialog]="dialogRef">
+<div class="upload" [class.upload--dialog]="dialogRef">
 
-  <!-- Dialog header (only shown when opened as a modal) -->
-  <div class="upload-dialog-header" *ngIf="dialogRef">
-    <h2 class="upload-dialog-title">Upload Video</h2>
-    <button class="upload-close-btn" (click)="dialogRef.close()" matTooltip="Close">
+  <header class="upload-head">
+    <div>
+      <h2 *ngIf="dialogRef; else pageTitle" id="upload-title" class="upload-title">Upload video</h2>
+      <ng-template #pageTitle>
+        <h1 class="upload-title upload-title--page">Upload video</h1>
+      </ng-template>
+      <p class="upload-sub" id="upload-rules">MP4, MOV or WebM, up to 7 minutes.</p>
+    </div>
+    <button *ngIf="dialogRef"
+            type="button"
+            class="ss-icon-btn upload-close"
+            (click)="close()"
+            [disabled]="isUploading"
+            aria-label="Close">
       <mat-icon>close</mat-icon>
     </button>
-  </div>
+  </header>
 
-  <form [formGroup]="uploadForm" (ngSubmit)="onSubmit()">
+  <form class="upload-form" [formGroup]="uploadForm" (ngSubmit)="onSubmit()" novalidate>
 
-    <div class="form-group">
-      <label>Title</label>
-      <input formControlName="title" type="text" placeholder="Enter video title" />
-    </div>
+    <!-- ── Video file ───────────────────────────────────────────────────── -->
+    <ng-container *ngIf="uploadPhase !== 'success'">
+    <input #fileInput
+           id="upload-file"
+           type="file"
+           accept="video/*"
+           hidden
+           (change)="onFileSelected($event)" />
 
-    <div class="form-group">
-      <label>Description <span class="optional">(optional)</span></label>
-      <textarea formControlName="description" placeholder="What's this video about?" rows="3"></textarea>
-    </div>
-
-    <div class="form-group">
-      <label>Video File</label>
-      <div class="file-drop-zone" (click)="fileInput.click()">
-        <mat-icon class="file-icon">{{ selectedFile ? 'videocam' : 'cloud_upload' }}</mat-icon>
-        <span class="file-label">
-          {{ selectedFile ? selectedFile.name : 'Click to choose a video file' }}
-        </span>
-        <span class="file-hint">MP4, MOV, WebM — max 7 minutes</span>
-      </div>
-      <input #fileInput type="file" (change)="onFileSelected($event)" accept="video/*" style="display:none" />
-    </div>
-
-    <div *ngIf="errorMessage" class="error-message">
-      <mat-icon>error_outline</mat-icon>
-      {{ errorMessage }}
-    </div>
-
-    <button type="submit" [disabled]="isUploading || !uploadForm.valid">
-      <mat-icon *ngIf="!isUploading">upload</mat-icon>
-      <ng-container [ngSwitch]="uploadPhase">
-        <ng-container *ngSwitchCase="'uploading'">Uploading… {{ uploadProgress }}%</ng-container>
-        <ng-container *ngSwitchCase="'saving'">Saving…</ng-container>
-        <ng-container *ngSwitchDefault>Upload Video</ng-container>
-      </ng-container>
+    <button *ngIf="!selectedFile"
+            #dropzone
+            id="upload-dropzone"
+            type="button"
+            class="dropzone"
+            [class.is-dragging]="isDragging"
+            [attr.aria-busy]="checkingFile"
+            [disabled]="checkingFile"
+            aria-describedby="upload-rules"
+            (click)="fileInput.click()"
+            (dragover)="onDragOver($event)"
+            (dragleave)="onDragLeave($event)"
+            (drop)="onDrop($event)">
+      <span class="dropzone-icon">
+        <span *ngIf="checkingFile" class="ss-spinner"></span>
+        <mat-icon *ngIf="!checkingFile">{{ isDragging ? 'file_download' : 'cloud_upload' }}</mat-icon>
+      </span>
+      <span class="dropzone-title">
+        {{ checkingFile ? 'Checking your video…' : (isDragging ? 'Drop to add your video' : 'Drag and drop a video') }}
+      </span>
+      <span class="dropzone-sub" *ngIf="!checkingFile">or <span class="dropzone-link">choose a file</span></span>
     </button>
 
-    <!-- Determinate bar while bytes are being sent to S3 -->
-    <mat-progress-bar
-      *ngIf="uploadPhase === 'uploading'"
-      mode="determinate"
-      [value]="uploadProgress"
-      class="upload-progress-bar">
-    </mat-progress-bar>
-
-    <!-- Indeterminate bar while metadata is being saved to the backend -->
-    <mat-progress-bar
-      *ngIf="uploadPhase === 'saving'"
-      mode="indeterminate"
-      class="upload-progress-bar">
-    </mat-progress-bar>
-
-    <!-- Phase status label -->
-    <div *ngIf="uploadPhase === 'saving'" class="upload-phase-label">
-      <mat-icon class="phase-icon spin">sync</mat-icon>
-      <span>Saving your video…</span>
+    <div *ngIf="selectedFile" class="file-row">
+      <span class="file-row-icon" aria-hidden="true"><mat-icon>movie</mat-icon></span>
+      <div class="file-row-text">
+        <span class="file-row-name" [attr.title]="selectedFile.name">{{ selectedFile.name }}</span>
+        <span class="file-row-meta">
+          {{ fileSizeLabel }}<ng-container *ngIf="durationLabel"> · {{ durationLabel }}</ng-container>
+        </span>
+      </div>
+      <button type="button"
+              class="ss-btn ss-btn--ghost ss-btn--sm"
+              [disabled]="isUploading"
+              (click)="fileInput.click()">Replace</button>
+      <button type="button"
+              class="ss-icon-btn ss-icon-btn--sm"
+              [disabled]="isUploading"
+              (click)="removeFile()"
+              aria-label="Remove video">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
 
-    <div *ngIf="uploadPhase === 'success'" class="success-message">
+    <!-- ── Details ──────────────────────────────────────────────────────── -->
+    <div class="field">
+      <div class="field-top">
+        <label class="field-label" for="upload-title-input">Title</label>
+        <span class="field-count" [class.is-near]="titleLength > TITLE_MAX - 20" aria-hidden="true">
+          {{ titleLength }}/{{ TITLE_MAX }}
+        </span>
+      </div>
+      <input #titleInput
+             id="upload-title-input"
+             class="field-input"
+             type="text"
+             formControlName="title"
+             placeholder="Add a title that describes your video"
+             autocomplete="off"
+             [attr.maxlength]="TITLE_MAX"
+             [attr.aria-invalid]="showTitleError"
+             [attr.aria-describedby]="showTitleError ? 'upload-title-error' : null" />
+      <span class="field-error" id="upload-title-error" *ngIf="showTitleError">
+        <mat-icon>error_outline</mat-icon>Add a title to upload your video.
+      </span>
+    </div>
+
+    <div class="field">
+      <div class="field-top">
+        <label class="field-label" for="upload-description">
+          Description <span class="field-optional">(optional)</span>
+        </label>
+        <span class="field-count" [class.is-near]="descriptionLength > DESCRIPTION_MAX - 100" aria-hidden="true">
+          {{ descriptionLength }}/{{ DESCRIPTION_MAX }}
+        </span>
+      </div>
+      <textarea id="upload-description"
+                class="field-input field-input--area"
+                formControlName="description"
+                rows="3"
+                placeholder="Tell viewers what your video is about"
+                [attr.maxlength]="DESCRIPTION_MAX"></textarea>
+    </div>
+    </ng-container>
+
+    <!-- ── Feedback ─────────────────────────────────────────────────────── -->
+    <div *ngIf="errorMessage" class="upload-alert" role="alert">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <div *ngIf="uploadPhase === 'uploading' || uploadPhase === 'saving'" class="upload-progress">
+      <div class="upload-progress-top">
+        <span role="status">{{ uploadPhase === 'saving' ? 'Finishing up…' : 'Uploading…' }}</span>
+        <span class="upload-progress-value" *ngIf="uploadPhase === 'uploading'">{{ uploadProgress }}%</span>
+      </div>
+      <div class="upload-bar"
+           [class.is-indeterminate]="uploadPhase === 'saving'"
+           role="progressbar"
+           aria-label="Upload progress"
+           aria-valuemin="0"
+           aria-valuemax="100"
+           [attr.aria-valuenow]="uploadPhase === 'uploading' ? uploadProgress : null">
+        <span class="upload-bar-fill" [style.width.%]="uploadPhase === 'uploading' ? uploadProgress : null"></span>
+      </div>
+      <span class="upload-progress-meta">
+        {{ uploadPhase === 'uploading' ? uploadedLabel + ' · ' : '' }}Keep this page open until the upload finishes.
+      </span>
+    </div>
+
+    <div *ngIf="uploadPhase === 'success'" class="upload-success" role="status">
       <mat-icon>check_circle</mat-icon>
-      Video saved successfully!
+      <div>
+        <strong>Upload complete</strong>
+        <span>We’re processing your video. It will appear in the feed when it’s ready.</span>
+      </div>
+    </div>
+
+    <!-- ── Actions ──────────────────────────────────────────────────────── -->
+    <div class="upload-actions" *ngIf="uploadPhase !== 'success'">
+      <button *ngIf="dialogRef"
+              type="button"
+              class="ss-btn ss-btn--ghost"
+              [disabled]="isUploading"
+              (click)="close()">Cancel</button>
+      <button type="submit"
+              class="ss-btn ss-btn--primary"
+              [disabled]="isUploading || checkingFile || !selectedFile">
+        <span *ngIf="isUploading" class="ss-spinner ss-spinner--sm ss-spinner--media"></span>
+        <mat-icon *ngIf="!isUploading">upload</mat-icon>
+        {{ isUploading ? 'Uploading…' : 'Upload' }}
+      </button>
     </div>
 
   </form>

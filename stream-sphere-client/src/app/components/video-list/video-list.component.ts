@@ -1,25 +1,22 @@
 import {
   Component, OnInit, OnDestroy, AfterViewInit,
-  ViewChild, ElementRef, ChangeDetectorRef,
+  ViewChild, ElementRef, ChangeDetectorRef, HostListener,
 } from '@angular/core';
 import { VideoService } from '../../services/video.service';
 import { VideoCardComponent } from '../video-card/video-card.component';
 import { MatIcon } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Subscription, debounceTime, distinctUntilChanged, filter } from 'rxjs';
 import { HeroCarouselComponent } from '../hero-carousel/hero-carousel.component';
 import { UploadStatusService, ProcessingVideo } from '../../services/upload-status.service';
+import { VIDEO_CATEGORIES } from '../../models/categories';
 
 @Component({
   selector: 'app-video-list',
   templateUrl: './video-list.component.html',
   styleUrls: ['./video-list.component.scss'],
   standalone: true,
-  imports: [
-    VideoCardComponent, MatIcon, CommonModule,
-    MatProgressSpinnerModule, HeroCarouselComponent,
-  ],
+  imports: [VideoCardComponent, MatIcon, CommonModule, HeroCarouselComponent],
 })
 export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
 
@@ -40,8 +37,16 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // Active filters
   currentCategory = 'All';
-  private currentSearch = '';
+  currentSearch = '';
   isSearchMode  = false; // true → server-side search, no infinite scroll (used in template)
+
+  // Category chip bar
+  readonly categories: string[] = ['All', ...VIDEO_CATEGORIES];
+  canScrollLeft  = false;
+  canScrollRight = false;
+
+  /** Placeholder cards shown while the first page loads. */
+  readonly skeletons = Array.from({ length: 12 }, (_, i) => i);
 
   // ── Subscriptions / cleanup ───────────────────────────────────────────────────
   private subs: Subscription[] = [];
@@ -49,6 +54,7 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // Sentinel element at the bottom of the grid — triggers next page load
   @ViewChild('sentinel') sentinelRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('chipRow') chipRowRef?: ElementRef<HTMLDivElement>;
 
   constructor(
     private videoService: VideoService,
@@ -80,7 +86,7 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
     this.subs.push(
       this.uploadStatus.ready$.pipe(filter(id => !!id)).subscribe(id => {
         const video = this.processingVideos.find(v => v.id === id);
-        this.readyToast = video ? `"${video.title}" is ready!` : 'Your video is ready!';
+        this.readyToast = video ? `“${video.title}” is ready to watch` : 'Your video is ready to watch';
         this.cdr.detectChanges();
         // Refresh the feed so the video appears in the grid
         this.resetAndLoad();
@@ -129,11 +135,91 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.setupIntersectionObserver();
+    // Measure after layout so the chip-bar arrows reflect real overflow.
+    setTimeout(() => this.updateChipScroll());
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.updateChipScroll();
   }
 
   ngOnDestroy(): void {
     this.subs.forEach(s => s.unsubscribe());
     this.observer?.disconnect();
+    clearTimeout(this.readyToastTimer);
+  }
+
+  // ── Header text ───────────────────────────────────────────────────────────────
+
+  /** The hero only shows on the unfiltered feed. */
+  get showHero(): boolean {
+    return !this.isSearchMode && this.currentCategory === 'All';
+  }
+
+  get isFiltered(): boolean {
+    return this.isSearchMode || this.currentCategory !== 'All';
+  }
+
+  get feedTitle(): string {
+    if (this.isSearchMode) return `Results for “${this.currentSearch.trim()}”`;
+    if (this.currentCategory !== 'All') return this.currentCategory;
+    return 'Latest videos';
+  }
+
+  get emptyTitle(): string {
+    if (this.isSearchMode) return 'No results';
+    if (this.currentCategory !== 'All') return `No ${this.currentCategory} videos yet`;
+    return 'No videos yet';
+  }
+
+  get emptyHint(): string {
+    if (this.isSearchMode) return 'Try different words, or search across all categories.';
+    if (this.currentCategory !== 'All') return 'Pick another category or check back later.';
+    return 'Uploaded videos will appear here.';
+  }
+
+  // ── Category chips ────────────────────────────────────────────────────────────
+
+  selectCategory(cat: string): void {
+    // The category$ subscription reloads the feed (or re-runs the search).
+    this.videoService.setCategory(cat);
+  }
+
+  clearFilters(): void {
+    this.videoService.setSearchTerm('');
+    this.videoService.setCategory('All');
+  }
+
+  scrollChips(direction: 1 | -1): void {
+    const row = this.chipRowRef?.nativeElement;
+    if (!row) return;
+    row.scrollBy({ left: direction * Math.round(row.clientWidth * 0.7), behavior: 'smooth' });
+  }
+
+  updateChipScroll(): void {
+    const row = this.chipRowRef?.nativeElement;
+    if (!row) return;
+    const left  = row.scrollLeft > 4;
+    const right = row.scrollLeft + row.clientWidth < row.scrollWidth - 4;
+    if (left !== this.canScrollLeft || right !== this.canScrollRight) {
+      this.canScrollLeft = left;
+      this.canScrollRight = right;
+      this.cdr.detectChanges();
+    }
+  }
+
+  dismissToast(): void {
+    clearTimeout(this.readyToastTimer);
+    this.readyToast = null;
+  }
+
+  retry(): void {
+    if (this.isSearchMode && this.currentSearch.trim().length >= 2) {
+      this.runSearch(this.currentSearch.trim());
+    } else {
+      this.loadFirstPage();
+    }
   }
 
   // ── IntersectionObserver ──────────────────────────────────────────────────────
