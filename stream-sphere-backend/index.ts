@@ -10,10 +10,6 @@ process.env.NODE_OPTIONS = '--dns-result-order=ipv4first';
 import centralRoute from './routes/centralRoute.route';
 import { globalLimiter } from './middleware/rateLimiter.middleware';
 import { redisService } from './services/redis.service';
-import './models/telemetryPing';
-import './models/radioMapCache';
-import './models/streamingSession';
-import './models/oracleDecision';
 
 const app: Application = express();
 

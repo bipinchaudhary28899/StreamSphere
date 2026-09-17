@@ -1,28 +1,54 @@
 <app-header></app-header>
 
-<main class="main-body" [class.home-page]="isHomePage">
+<main class="main-body" [class.home-page]="isHomePage" [class.has-bottom-nav]="isLoggedIn">
   <router-outlet></router-outlet>
 </main>
 
 <!-- Mobile bottom navigation (logged-in only) -->
-<nav class="mobile-bottom-nav" *ngIf="isLoggedIn">
+<nav class="mobile-bottom-nav" *ngIf="isLoggedIn" aria-label="Main">
   <a routerLink="/home"
      routerLinkActive="active"
      [routerLinkActiveOptions]="{exact: false}"
+     #homeLink="routerLinkActive"
+     [attr.aria-current]="homeLink.isActive ? 'page' : null"
      class="nav-item">
-    <mat-icon>home</mat-icon>
-    <span>Home</span>
+    <span class="nav-icon"><mat-icon>home</mat-icon></span>
+    <span class="nav-label">Home</span>
   </a>
-  <a routerLink="/upload" routerLinkActive="active" class="nav-item">
-    <mat-icon>cloud_upload</mat-icon>
-    <span>Upload</span>
+  <a routerLink="/history"
+     routerLinkActive="active"
+     #historyLink="routerLinkActive"
+     [attr.aria-current]="historyLink.isActive ? 'page' : null"
+     class="nav-item">
+    <span class="nav-icon"><mat-icon>history</mat-icon></span>
+    <span class="nav-label">History</span>
   </a>
-  <a routerLink="/user-profile" routerLinkActive="active" class="nav-item">
-    <mat-icon>person</mat-icon>
-    <span>You</span>
+  <a routerLink="/upload"
+     routerLinkActive="active"
+     #uploadLink="routerLinkActive"
+     [attr.aria-current]="uploadLink.isActive ? 'page' : null"
+     class="nav-item nav-item--create"
+     [class.is-busy]="uploads.isTransferring"
+     [class.is-failed]="uploads.hasFailed"
+     [attr.aria-label]="uploadNavAriaLabel">
+    <span class="nav-icon">
+      <span *ngIf="uploads.isTransferring; else createIcon" class="ss-spinner ss-spinner--sm ss-spinner--media"></span>
+      <ng-template #createIcon>
+        <mat-icon>{{ uploads.hasFailed ? 'priority_high' : 'add' }}</mat-icon>
+      </ng-template>
+      <span *ngIf="!uploads.isTransferring && uploads.processingCount > 0" class="nav-dot" aria-hidden="true"></span>
+    </span>
+    <span class="nav-label">{{ uploadNavLabel }}</span>
   </a>
-  <a routerLink="/history" routerLinkActive="active" class="nav-item">
-    <mat-icon>history</mat-icon>
-    <span>History</span>
+  <a routerLink="/user-profile"
+     routerLinkActive="active"
+     #profileLink="routerLinkActive"
+     [attr.aria-current]="profileLink.isActive ? 'page' : null"
+     class="nav-item">
+    <span class="nav-icon"><mat-icon>account_circle</mat-icon></span>
+    <span class="nav-label">You</span>
   </a>
 </nav>
+
+<!-- Follows an upload while the user browses -->
+<app-upload-indicator></app-upload-indicator>

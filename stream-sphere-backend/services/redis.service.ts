@@ -109,17 +109,6 @@ class RedisService {
       console.error('[Redis] delPattern error:', e.message);
     }
   }
-
-  /** Persist a value with NO expiry — survives until explicitly changed.
-   *  Used for admin-controlled feature flags (e.g. genabr_enabled). */
-  async setPersistent(key: string, value: unknown): Promise<void> {
-    if (!this.alive()) return;
-    try {
-      await this.client!.set(key, JSON.stringify(value));
-    } catch (e: any) {
-      console.error('[Redis] setPersistent error:', e.message);
-    }
-  }
 }
 
 // Export singleton
@@ -131,14 +120,6 @@ export const CK = {
   search:         (term: string) => `ss:search:${encodeURIComponent(term.toLowerCase())}`,
   topLiked:       () => 'ss:top-liked',
   singleVideo:    (id: string) => `ss:video:${id}`,
-  // GenABR — Oracle result cached per user+tile for one prediction cycle
-  oracleResult:   (userId: string, tileId: string) => `genabr:oracle:${userId}:${tileId}`,
-  // GenABR — in-flight lock: set when an Oracle LLM call is in progress.
-  // Prevents a second prediction cycle from firing a duplicate LLM call before
-  // the first one has written its result to Redis (race window: ~2–4 seconds).
-  oracleInflight: (userId: string, tileId: string) => `genabr:oracle:inflight:${userId}:${tileId}`,
-  // Admin feature flag — persisted indefinitely; defaults to true if missing
-  genabrEnabled:  () => 'ss:admin:genabr_enabled',
 } as const;
 
 export const TTL = {
@@ -146,13 +127,4 @@ export const TTL = {
   search:       60,   // 1 min  — search results
   topLiked:    300,   // 5 min  — hero carousel
   video:       600,   // 10 min — single video page
-  // Oracle cache TTL: 5 minutes per tile.
-  // Mobile users moving to a new tile get a fresh Oracle call immediately
-  // (new tile = new cache key = cache miss, regardless of TTL).
-  // Stationary/laptop users re-use the same cache key, so Oracle only re-fires
-  // every 5 min instead of every 60 s — ~5× less token spend for static sessions.
-  oracleResult:    300,
-  // In-flight lock TTL: 30s covers the worst-case LLM response time (typically 2–4s).
-  // If the LLM call takes longer than 30s it has already timed out anyway.
-  oracleInflight:   30,
 } as const;

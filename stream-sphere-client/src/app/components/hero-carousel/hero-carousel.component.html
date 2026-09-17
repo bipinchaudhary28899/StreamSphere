@@ -1,115 +1,143 @@
-<div class="hero-carousel" *ngIf="videos.length > 0 && !isLoading && !error">
-  <div class="hero-container">
+<section class="hero-carousel"
+         *ngIf="videos.length > 0 && !isLoading && !error"
+         aria-roledescription="carousel"
+         aria-label="Featured videos">
 
-    <!-- Background Video/Image -->
-    <div class="hero-background">
-      <!-- 8-second preview MP4 — lightweight, no HLS needed for carousel -->
-      <video
-        #videoElement
-        *ngIf="currentPreviewSrc"
-        [src]="currentPreviewSrc"
-        class="hero-video"
-        loop
-        playsinline
-        preload="metadata"
-        aria-hidden="true"
-        (loadeddata)="onVideoLoad()">
-        <track kind="captions" src="/captions.vtt" srclang="en" label="English">
-      </video>
+  <!-- Background: 8-second preview MP4, with the thumbnail as its poster -->
+  <div class="hero-background" [class.is-fading]="mediaFading">
+    <video
+      #videoElement
+      *ngIf="currentPreviewSrc"
+      [src]="currentPreviewSrc"
+      [attr.poster]="currentVideo?.thumbnailUrl || null"
+      class="hero-video"
+      loop
+      muted
+      playsinline
+      preload="metadata"
+      disablepictureinpicture
+      aria-hidden="true"
+      (loadeddata)="onVideoLoad()">
+    </video>
 
-      <img
-        *ngIf="!currentVideo?.S3_url && currentVideo?.thumbnailUrl"
-        [src]="currentVideo?.thumbnailUrl"
-        [alt]="currentVideo?.title"
-        class="hero-image">
-    </div>
+    <img
+      *ngIf="!currentPreviewSrc && currentVideo?.thumbnailUrl"
+      [src]="currentVideo?.thumbnailUrl"
+      alt=""
+      class="hero-image">
+  </div>
 
-    <!-- Gradient Overlays -->
-    <div class="hero-overlay">
-      <div class="gradient-top"></div>
-      <div class="gradient-bottom"></div>
-    </div>
+  <div class="hero-scrim" aria-hidden="true"></div>
 
-    <!-- Content -->
-    <div class="hero-content">
-      <div class="hero-text">
+  <!-- Content -->
+  <div class="hero-content">
+    <!-- Re-created per slide so the entrance animation replays -->
+    <div class="hero-text" *ngFor="let slide of [currentIndex]" role="group" aria-roledescription="slide" [attr.aria-label]="'Slide ' + (slide + 1) + ' of ' + videos.length">
 
-        <!-- Title — hidden when description is fully expanded to save space -->
-        <h1 class="hero-title" *ngIf="!descriptionExpanded">{{ currentVideo?.title }}</h1>
+      <p class="hero-eyebrow">
+        <span class="hero-rank">
+          <mat-icon>local_fire_department</mat-icon>
+          #{{ currentIndex + 1 }} most liked
+        </span>
+        <span class="ss-badge ss-badge--category" *ngIf="currentVideo?.category">{{ currentVideo?.category }}</span>
+      </p>
 
-        <!-- Description — clamped to 3 lines by default -->
-        <p class="hero-description" [class.expanded]="descriptionExpanded">
-          {{ currentVideo?.description }}
-        </p>
+      <h1 class="hero-title">{{ currentVideo?.title }}</h1>
 
-        <!-- Read more / Read less toggle (only shown when text is long) -->
-        <button
-          *ngIf="(currentVideo?.description?.length ?? 0) > DESC_THRESHOLD"
-          class="desc-toggle-btn"
-          (click)="toggleDescription($event)">
-          {{ descriptionExpanded ? 'Read less ▲' : 'Read more ▼' }}
+      <p class="hero-meta">
+        <span *ngIf="currentVideo?.userName">{{ currentVideo?.userName }}</span>
+        <span><mat-icon>thumb_up</mat-icon>{{ formatCount(currentVideo?.likes || 0) }}</span>
+        <span *ngIf="currentVideo?.views"><mat-icon>visibility</mat-icon>{{ formatCount(currentVideo?.views || 0) }}</span>
+        <span *ngIf="formatTimestamp(createDate(currentVideo?.uploadedAt || '')) as ago">{{ ago }}</span>
+      </p>
+
+      <p class="hero-description" *ngIf="currentVideo?.description" [class.expanded]="descriptionExpanded">
+        {{ currentVideo?.description }}
+      </p>
+
+      <button
+        *ngIf="(currentVideo?.description?.length ?? 0) > DESC_THRESHOLD"
+        type="button"
+        class="desc-toggle-btn"
+        [attr.aria-expanded]="descriptionExpanded"
+        (click)="toggleDescription($event)">
+        {{ descriptionExpanded ? 'Show less' : 'Show more' }}
+        <mat-icon>{{ descriptionExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+      </button>
+
+      <div class="hero-actions">
+        <button type="button" class="ss-btn ss-btn--primary ss-btn--lg" (click)="onPlayNowClick()">
+          <mat-icon>play_arrow</mat-icon>
+          Watch now
         </button>
 
-        <div class="hero-meta">
-          <span class="hero-likes">{{ currentVideo?.likes }} likes</span>
-          <span class="hero-timestamp">
-            {{ formatTimestamp(createDate(currentVideo?.uploadedAt || '')) }}
-          </span>
-        </div>
-        <div class="hero-actions">
-          <button class="hero-play-btn" (click)="onPlayNowClick()">
-            <span class="play-icon">▶</span>
-            Play Now
-          </button>
+        <!-- Before the first interaction the preview is muted (browser autoplay rule) -->
+        <button *ngIf="!userInteracted"
+                type="button"
+                class="ss-btn ss-btn--glass ss-btn--lg"
+                (click)="handleWatchWithSound()">
+          <mat-icon>volume_up</mat-icon>
+          Play with sound
+        </button>
 
-          <!-- Shown before first interaction -->
-          <button
-            class="hero-sound-btn"
-            *ngIf="!userInteracted"
-            (click)="handleWatchWithSound()">
-            🔇 Watch with Sound
-          </button>
-
-          <!-- Shown after interaction — always visible so it never disappears mid-play -->
-          <button
-            class="hero-mute-btn"
-            *ngIf="userInteracted"
-            (click)="toggleMute()">
-            {{ isMuted ? '🔇 Unmute' : '🔊 Mute' }}
-          </button>
-        </div>
+        <button *ngIf="userInteracted"
+                type="button"
+                class="ss-btn ss-btn--glass ss-btn--lg hero-mute"
+                [attr.aria-label]="isMuted ? 'Unmute preview' : 'Mute preview'"
+                (click)="toggleMute()">
+          <mat-icon>{{ isMuted ? 'volume_off' : 'volume_up' }}</mat-icon>
+        </button>
       </div>
     </div>
-
-    <!-- Navigation Controls -->
-    <div class="hero-controls">
-      <button class="nav-btn prev-btn" (click)="previousVideo()" aria-label="Previous video">‹</button>
-      <button class="nav-btn next-btn" (click)="nextVideo()" aria-label="Next video">›</button>
-    </div>
-
   </div>
-</div>
+
+  <!-- Slide controls -->
+  <div class="hero-controls" *ngIf="videos.length > 1">
+    <button type="button" class="nav-btn" (click)="previousVideo()" aria-label="Previous featured video">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+    <button type="button" class="nav-btn" (click)="nextVideo()" aria-label="Next featured video">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+  </div>
+
+  <div class="hero-dots" *ngIf="videos.length > 1" role="group" aria-label="Choose a featured video">
+    <button *ngFor="let v of videos; let i = index"
+            type="button"
+            class="hero-dot"
+            [class.active]="i === currentIndex"
+            [attr.aria-current]="i === currentIndex ? 'true' : null"
+            [attr.aria-label]="'Show ' + v.title"
+            (click)="goTo(i)"></button>
+  </div>
+</section>
 
 <!-- Loading State -->
-<div class="hero-carousel loading" *ngIf="isLoading">
-  <div class="loading-spinner">
-    <div class="spinner"></div>
-    <p>Loading top videos...</p>
+<section class="hero-carousel hero-carousel--skeleton" *ngIf="isLoading" aria-hidden="true">
+  <div class="hero-content">
+    <div class="hero-text">
+      <span class="skel-line skel-line--eyebrow"></span>
+      <span class="skel-line skel-line--title"></span>
+      <span class="skel-line skel-line--title short"></span>
+      <span class="skel-line skel-line--meta"></span>
+      <div class="hero-actions">
+        <span class="skel-pill"></span>
+        <span class="skel-pill skel-pill--wide"></span>
+      </div>
+    </div>
   </div>
-</div>
+</section>
 
 <!-- Error State -->
-<div class="hero-carousel error" *ngIf="error && !isLoading">
-  <div class="error-message">
-    <p>{{ error }}</p>
-    <button (click)="loadTopVideos()">Try Again</button>
+<section class="hero-carousel hero-carousel--message" *ngIf="error && !isLoading">
+  <div class="hero-message">
+    <mat-icon>error_outline</mat-icon>
+    <p>Featured videos didn’t load.</p>
+    <button type="button" class="ss-btn ss-btn--glass" (click)="loadTopVideos()">
+      <mat-icon>refresh</mat-icon>Try again
+    </button>
   </div>
-</div>
+</section>
 
-<!-- Empty State -->
-<div class="hero-carousel empty" *ngIf="!isLoading && !error && videos.length === 0">
-  <div class="empty-message">
-    <p>No videos available</p>
-    <button (click)="loadTopVideos()">Refresh</button>
-  </div>
-</div>
+<!-- Empty State: nothing to feature yet, so collapse to a slim spacer under the header -->
+<div class="hero-empty" *ngIf="!isLoading && !error && videos.length === 0"></div>

@@ -1,6 +1,7 @@
 import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
 import { CommentService, Comment } from '../../services/comment.service';
 import { AuthService } from '../../services/auth.service';
 import { Subscription } from 'rxjs';
@@ -17,7 +18,7 @@ export interface CommentUI extends Comment {
 @Component({
   selector: 'app-comment-section',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatIconModule],
   templateUrl: './comment-section.component.html',
   styleUrls: ['./comment-section.component.css']
 })
@@ -32,6 +33,14 @@ export class CommentSectionComponent implements OnInit, OnDestroy {
   submitting: boolean = false;
   editingCommentId: string | null = null;
   editContent: string = '';
+  /** The new-comment box expands its actions once focused. */
+  composerActive = false;
+  /** Shown above the list when a request fails. */
+  errorMessage: string | null = null;
+  loadFailed = false;
+  /** Avatar URLs that failed to load; those fall back to initials. */
+  private failedAvatars = new Set<string>();
+  readonly skeletonRows = [0, 1, 2];
 
   private subscriptions: Subscription[] = [];
 
@@ -78,7 +87,11 @@ export class CommentSectionComponent implements OnInit, OnDestroy {
           this.comments = response.comments.map(c => this.toUI(c));
           this.loading = false;
         },
-        error: () => { this.loading = false; }
+        error: () => {
+          this.loading = false;
+          this.loadFailed = true;
+          this.errorMessage = 'Comments didn’t load. Refresh the page to try again.';
+        }
       })
     );
   }
@@ -106,8 +119,13 @@ export class CommentSectionComponent implements OnInit, OnDestroy {
           this.comments.unshift(this.toUI(response.comment));
           this.newComment = '';
           this.submitting = false;
+          this.composerActive = false;
+          this.errorMessage = null;
         },
-        error: () => { this.submitting = false; }
+        error: () => {
+          this.submitting = false;
+          this.errorMessage = 'Your comment wasn’t posted. Check your connection and try again.';
+        }
       })
     );
   }
@@ -134,7 +152,10 @@ export class CommentSectionComponent implements OnInit, OnDestroy {
           this.editingCommentId = null;
           this.editContent = '';
         },
-        error: (err) => console.error('Error updating comment:', err)
+        error: (err) => {
+          console.error('Error updating comment:', err);
+          this.errorMessage = 'Your edit wasn’t saved. Try again.';
+        }
       })
     );
   }
@@ -144,7 +165,10 @@ export class CommentSectionComponent implements OnInit, OnDestroy {
     this.subscriptions.push(
       this.commentService.deleteComment(commentId).subscribe({
         next: () => { this.comments = this.comments.filter(c => c._id !== commentId); },
-        error: (err) => console.error('Error deleting comment:', err)
+        error: (err) => {
+          console.error('Error deleting comment:', err);
+          this.errorMessage = 'The comment wasn’t deleted. Try again.';
+        }
       })
     );
   }
@@ -168,7 +192,10 @@ export class CommentSectionComponent implements OnInit, OnDestroy {
           comment.showReplies = true;
           comment.loadingReplies = false;
         },
-        error: () => { comment.loadingReplies = false; }
+        error: () => {
+          comment.loadingReplies = false;
+          this.errorMessage = 'Replies didn’t load. Try again.';
+        }
       })
     );
   }
@@ -193,7 +220,10 @@ export class CommentSectionComponent implements OnInit, OnDestroy {
           comment.replyContent = '';
           comment.submittingReply = false;
         },
-        error: () => { comment.submittingReply = false; }
+        error: () => {
+          comment.submittingReply = false;
+          this.errorMessage = 'Your reply wasn’t posted. Try again.';
+        }
       })
     );
   }
@@ -206,7 +236,10 @@ export class CommentSectionComponent implements OnInit, OnDestroy {
           parent.replies = parent.replies.filter(r => r._id !== reply._id);
           parent.replies_count = Math.max(0, (parent.replies_count || 1) - 1);
         },
-        error: (err) => console.error('Error deleting reply:', err)
+        error: (err) => {
+          console.error('Error deleting reply:', err);
+          this.errorMessage = 'The reply wasn’t deleted. Try again.';
+        }
       })
     );
   }
@@ -235,13 +268,29 @@ export class CommentSectionComponent implements OnInit, OnDestroy {
     return date.toLocaleDateString();
   }
 
-  getDefaultAvatar(username: string): string {
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random&color=fff&size=40`;
+  /** Profile image to show, or null to render initials instead. */
+  avatarUrl(url: string | null | undefined): string | null {
+    return url && !this.failedAvatars.has(url) ? url : null;
   }
 
-  onAvatarError(event: Event, username: string): void {
-    const img = event.target as HTMLImageElement;
-    img.onerror = null; // prevent infinite loop
-    img.src = this.getDefaultAvatar(username);
+  onAvatarError(url: string | null | undefined): void {
+    if (url) this.failedAvatars.add(url);
+  }
+
+  initials(name: string | null | undefined): string {
+    const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return 'U';
+    const first = parts[0][0] || '';
+    const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+    return (first + last).toUpperCase();
+  }
+
+  cancelNew(): void {
+    this.newComment = '';
+    this.composerActive = false;
+  }
+
+  trackById(_: number, item: Comment): string {
+    return item._id;
   }
 }

@@ -1,269 +1,353 @@
-<div class="vp-container">
+<div class="vp-page">
 
-  <!-- Loading -->
-  <div *ngIf="loading" class="vp-state">
-    <div class="vp-spinner"></div>
-    <p>Loading video…</p>
-  </div>
-
-  <!-- Error -->
-  <div *ngIf="error && !loading" class="vp-state vp-error">
-    <mat-icon class="vp-state-icon">error_outline</mat-icon>
-    <h2>Something went wrong</h2>
-    <p>{{ error }}</p>
-    <button class="vp-retry-btn" (click)="retryLoad()">Try Again</button>
-  </div>
-
-  <!-- Main content -->
-  <div *ngIf="video && !loading && !error" class="vp-content">
-
-    <!-- ── Player ──────────────────────────────────────────────────────── -->
-    <div class="vp-player-wrap" #playerContainer
-         [class.vp-player-wrap--fs]="isFullscreen"
-         (mousemove)="onPlayerMouseMove()"
-         (mouseleave)="onPlayerMouseLeave()"
-         (touchstart)="onTouchZone($event)"
-         (click)="onClickZone()">
-
-      <!-- Processing state — owner sees spinner + personal message; others see "unavailable" -->
-      <div *ngIf="video.status === 'processing'" class="vp-processing">
-        <div class="vp-spinner" *ngIf="isOwner"></div>
-        <mat-icon *ngIf="!isOwner" style="font-size:48px;width:48px;height:48px;color:var(--text-muted)">videocam_off</mat-icon>
-        <p *ngIf="isOwner">Your video is being processed — it will be ready shortly.</p>
-        <p *ngIf="!isOwner">This video is not yet available.</p>
+  <!-- ── Loading ───────────────────────────────────────────────────────── -->
+  <div *ngIf="loading" class="vp-layout" aria-busy="true">
+    <p class="ss-sr-only" role="status">Loading video</p>
+    <div class="vp-primary">
+      <div class="vp-frame vp-frame--skeleton ss-skel"></div>
+      <div class="vp-skeleton-lines" aria-hidden="true">
+        <span class="ss-skel ss-skel-line" style="width: 70%; height: 22px"></span>
+        <span class="ss-skel ss-skel-line" style="width: 40%"></span>
       </div>
+    </div>
+  </div>
 
-      <!-- HLS player (status === 'ready') -->
-      <ng-container *ngIf="video.status === 'ready'">
+  <!-- ── Error ─────────────────────────────────────────────────────────── -->
+  <div *ngIf="error && !loading" class="ss-state ss-state--error vp-error" role="alert">
+    <mat-icon>error_outline</mat-icon>
+    <h2>{{ error === 'Video not found' ? 'This video isn’t available' : 'Couldn’t load this video' }}</h2>
+    <p>{{ error === 'Video not found' ? 'It may have been removed by its creator.' : 'Check your connection, then try again.' }}</p>
+    <button type="button" class="ss-btn ss-btn--primary" (click)="retryLoad()">
+      <mat-icon>refresh</mat-icon>Try again
+    </button>
+  </div>
 
-        <video
-          #videoElement
-          class="vp-player"
-          preload="metadata"
-          playsinline
-          (play)="onVideoPlay()"
-          (pause)="onVideoPause()"
-          (timeupdate)="onTimeUpdate()"
-          (loadedmetadata)="onLoadedMetadata()"
-          (volumechange)="onVolumeChange()"
-          (ended)="onVideoEnded()">
-          <track kind="captions" src="/captions.vtt" srclang="en" label="English" default>
-        </video>
+  <!-- ── Main content ──────────────────────────────────────────────────── -->
+  <div *ngIf="video && !loading && !error" class="vp-layout">
+    <div class="vp-primary">
 
-        <!-- Transparent overlay — no click handler here; click bubbles to vp-player-wrap -->
-        <div class="vp-click-zone"></div>
+      <!-- ── Player ─────────────────────────────────────────────────── -->
+      <div class="vp-player-wrap vp-frame" #playerContainer
+           [class.vp-player-wrap--fs]="isFullscreen"
+           [class.vp-player-wrap--idle]="isPlaying && !controlsVisible"
+           (mousemove)="onPlayerMouseMove()"
+           (mouseleave)="onPlayerMouseLeave()"
+           (touchstart)="onTouchZone($event)">
 
-        <!-- ── Center play / pause button ────────────────────────────── -->
-        <div class="vp-center-btn"
-             [class.vp-center-btn--hidden]="!controlsVisible"
-             (click)="togglePlay(); $event.stopPropagation()">
-          <mat-icon>{{ isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
+        <!-- Processing state — owner sees a spinner and a personal message; others see "unavailable" -->
+        <div *ngIf="video.status === 'processing'" class="vp-processing">
+          <span class="ss-spinner ss-spinner--lg ss-spinner--media" *ngIf="isOwner"></span>
+          <mat-icon *ngIf="!isOwner">videocam_off</mat-icon>
+          <p class="vp-processing-title">{{ isOwner ? 'Your video is processing' : 'This video isn’t ready yet' }}</p>
+          <p class="vp-processing-text">{{ isOwner ? 'It will be ready to watch in a few minutes.' : 'Check back soon.' }}</p>
         </div>
 
-        <!-- ── GenABR activity badge (top-right, non-intrusive) ──────── -->
-        <div class="vp-genabr-badge"
-             *ngIf="genabrBadgeVisible"
-             [class.vp-genabr-badge--aggressive]="genabrBadgeLevel === 'aggressive'"
-             [class.vp-genabr-badge--oracle]="genabrBadgeOracle">
-          <span class="vp-genabr-dot"></span>
-          <span class="vp-genabr-label">{{ genabrBadgeLabel }}</span>
-          <span class="vp-genabr-sub">{{ genabrBadgeSublabel }}</span>
-        </div>
+        <!-- HLS player (status === 'ready') -->
+        <ng-container *ngIf="video.status === 'ready'">
 
-        <!-- ── Custom controls overlay ──────────────────────────────── -->
-        <div class="vp-controls" [class.vp-controls--hidden]="!controlsVisible">
+          <video
+            #videoElement
+            class="vp-player"
+            preload="metadata"
+            playsinline
+            [attr.poster]="video.thumbnailUrl || null"
+            (play)="onVideoPlay()"
+            (pause)="onVideoPause()"
+            (playing)="onPlaying()"
+            (waiting)="onWaiting()"
+            (canplay)="onPlaying()"
+            (seeked)="onPlaying()"
+            (progress)="onProgress()"
+            (timeupdate)="onTimeUpdate()"
+            (loadedmetadata)="onLoadedMetadata()"
+            (volumechange)="onVolumeChange()"
+            (ended)="onVideoEnded()">
+          </video>
 
-          <!-- Seekbar — stopPropagation on the wrap so dragging/tapping the bar
-               never also toggles controls visibility -->
-          <div class="vp-seekbar-wrap" (click)="$event.stopPropagation()">
-            <input
-              type="range"
-              class="vp-seekbar"
-              min="0"
-              [max]="duration || 100"
-              [value]="currentTime"
-              step="0.1"
-              [style.--pct]="seekPercent + '%'"
-              (input)="seek($event)">
+          <!-- Click to play/pause, double-click for full screen -->
+          <div class="vp-click-zone"
+               (click)="onClickZone()"
+               (dblclick)="onDoubleClickZone()"
+               aria-hidden="true"></div>
+
+          <!-- Buffering -->
+          <div class="vp-buffering" *ngIf="isBuffering" aria-hidden="true">
+            <span class="ss-spinner ss-spinner--lg ss-spinner--media"></span>
           </div>
 
-          <!-- Controls bar — NO blanket stopPropagation; each interactive element
-               handles its own so empty space in the bar still bubbles to onClickZone() -->
-          <div class="vp-controls-bar">
+          <!-- Feedback bubble for clicks and shortcuts -->
+          <div class="vp-flash" *ngIf="flash" aria-hidden="true">
+            <mat-icon>{{ flash.icon }}</mat-icon>
+            <span *ngIf="flash.label">{{ flash.label }}</span>
+          </div>
 
-            <!-- Left cluster -->
-            <div class="vp-ctrl-left">
-              <!-- Play / Pause -->
-              <button class="vp-ctrl-btn"
-                      (click)="togglePlay(); $event.stopPropagation()"
-                      [attr.aria-label]="isPlaying ? 'Pause' : 'Play'">
-                <mat-icon>{{ isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
-              </button>
+          <!-- ── Centre play / pause ──────────────────────────────────── -->
+          <button type="button"
+                  class="vp-center-btn"
+                  [class.vp-center-btn--hidden]="!showCenterButton"
+                  [attr.tabindex]="showCenterButton ? null : -1"
+                  [attr.aria-label]="isPlaying ? 'Pause' : 'Play'"
+                  (click)="togglePlay(); $event.stopPropagation()">
+            <mat-icon>{{ isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
+          </button>
 
-              <!-- Mute / Unmute -->
-              <button class="vp-ctrl-btn"
-                      (click)="toggleMute(); $event.stopPropagation()"
-                      [attr.aria-label]="isMuted ? 'Unmute' : 'Mute'">
-                <mat-icon>{{ isMuted ? 'volume_off' : 'volume_up' }}</mat-icon>
-              </button>
+          <!-- ── Controls overlay ─────────────────────────────────────── -->
+          <div class="vp-controls" [class.vp-controls--hidden]="!controlsVisible">
 
-              <!-- Time display -->
-              <span class="vp-time" (click)="$event.stopPropagation()">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span>
+            <!-- Seekbar -->
+            <div class="vp-seekbar-wrap" (click)="$event.stopPropagation()">
+              <input
+                type="range"
+                class="vp-seekbar"
+                aria-label="Seek"
+                min="0"
+                [max]="duration || 100"
+                [value]="currentTime"
+                [attr.aria-valuetext]="formatTime(currentTime) + ' of ' + formatTime(duration)"
+                step="0.1"
+                [style.--pct]="seekPercent + '%'"
+                [style.--buf]="bufferedPercent + '%'"
+                (input)="seek($event)">
             </div>
 
-            <!-- Right cluster -->
-            <div class="vp-ctrl-right">
+            <div class="vp-controls-bar">
 
-              <!-- Settings (3-dot) — quality lives here -->
-              <div class="vp-settings-wrap" *ngIf="hlsLevels.length > 1">
-                <button
-                  class="vp-ctrl-btn"
-                  (click)="showSettingsMenu = !showSettingsMenu; $event.stopPropagation()"
-                  aria-label="Settings">
-                  <mat-icon>settings</mat-icon>
+              <!-- Left cluster -->
+              <div class="vp-ctrl-left">
+                <button type="button" class="vp-ctrl-btn"
+                        (click)="togglePlay(); $event.stopPropagation()"
+                        [attr.aria-label]="isPlaying ? 'Pause (k)' : 'Play (k)'">
+                  <mat-icon>{{ isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
                 </button>
 
-                <div class="vp-settings-menu" *ngIf="showSettingsMenu" (click)="$event.stopPropagation()">
-                  <div class="vp-settings-header">Quality</div>
-                  <button
-                    *ngFor="let lvl of hlsLevels"
-                    class="vp-settings-item"
-                    [class.active]="hlsCurrentLevel === lvl.index"
-                    (click)="setQuality(lvl.index); showSettingsMenu = false; $event.stopPropagation()">
-                    <mat-icon class="vp-check">{{ hlsCurrentLevel === lvl.index ? 'check' : '' }}</mat-icon>
-                    <span class="vp-settings-label">
-                      {{ lvl.name }}
-                      <span class="vp-auto-badge" *ngIf="lvl.index === -1 && hlsAutoLevel !== -1">
-                        ({{ getAutoLevelName() }})
-                      </span>
-                    </span>
+                <button type="button" class="vp-ctrl-btn vp-ctrl-btn--skip"
+                        (click)="skip(-10); $event.stopPropagation()"
+                        aria-label="Back 10 seconds (j)">
+                  <mat-icon>replay_10</mat-icon>
+                </button>
+                <button type="button" class="vp-ctrl-btn vp-ctrl-btn--skip"
+                        (click)="skip(10); $event.stopPropagation()"
+                        aria-label="Forward 10 seconds (l)">
+                  <mat-icon>forward_10</mat-icon>
+                </button>
+
+                <div class="vp-volume" (click)="$event.stopPropagation()">
+                  <button type="button" class="vp-ctrl-btn"
+                          (click)="toggleMute()"
+                          [attr.aria-label]="isMuted ? 'Unmute (m)' : 'Mute (m)'">
+                    <mat-icon>{{ volumeIcon }}</mat-icon>
                   </button>
+                  <input type="range"
+                         class="vp-volume-slider"
+                         aria-label="Volume"
+                         min="0" max="1" step="0.05"
+                         [value]="isMuted ? 0 : volume"
+                         [style.--pct]="(isMuted ? 0 : volume) * 100 + '%'"
+                         (input)="setVolume($event)">
                 </div>
+
+                <span class="vp-time" (click)="$event.stopPropagation()">
+                  {{ formatTime(currentTime) }} <span class="vp-time-sep">/</span> {{ formatTime(duration) }}
+                </span>
               </div>
 
-              <!-- Fullscreen -->
-              <button class="vp-ctrl-btn" (click)="toggleFullscreen(); $event.stopPropagation()" aria-label="Fullscreen">
-                <mat-icon>{{ isFullscreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+              <!-- Right cluster -->
+              <div class="vp-ctrl-right">
+
+                <!-- Quality -->
+                <div class="vp-settings-wrap" *ngIf="hlsLevels.length > 1">
+                  <button
+                    type="button"
+                    class="vp-ctrl-btn vp-quality-btn"
+                    (click)="toggleSettingsMenu($event)"
+                    [attr.aria-expanded]="showSettingsMenu"
+                    aria-haspopup="menu"
+                    [attr.aria-label]="'Quality: ' + qualityLabel">
+                    <mat-icon>settings</mat-icon>
+                    <span class="vp-quality-tag" *ngIf="hlsCurrentLevel !== -1 || getAutoLevelName()">{{ qualityLabel }}</span>
+                  </button>
+
+                  <div class="vp-settings-menu" *ngIf="showSettingsMenu" role="menu" aria-label="Quality" (click)="$event.stopPropagation()">
+                    <div class="vp-settings-header">Quality</div>
+                    <button
+                      *ngFor="let lvl of hlsLevels"
+                      type="button"
+                      role="menuitemradio"
+                      class="vp-settings-item"
+                      [attr.aria-checked]="hlsCurrentLevel === lvl.index"
+                      [class.active]="hlsCurrentLevel === lvl.index"
+                      (click)="chooseQuality(lvl.index, $event)">
+                      <mat-icon class="vp-check">check</mat-icon>
+                      <span class="vp-settings-label">
+                        {{ lvl.name }}
+                        <span class="vp-auto-badge" *ngIf="lvl.index === -1 && hlsAutoLevel !== -1">
+                          {{ getAutoLevelName() }}
+                        </span>
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Fullscreen -->
+                <button type="button" class="vp-ctrl-btn"
+                        (click)="toggleFullscreen(); $event.stopPropagation()"
+                        [attr.aria-label]="isFullscreen ? 'Exit full screen (f)' : 'Full screen (f)'">
+                  <mat-icon>{{ isFullscreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+                </button>
+              </div>
+
+            </div><!-- /vp-controls-bar -->
+          </div><!-- /vp-controls -->
+
+        </ng-container>
+      </div><!-- /vp-player-wrap -->
+
+      <!-- ── Details ──────────────────────────────────────────────────── -->
+      <div class="vp-details">
+
+        <h1 class="vp-title">{{ video.title }}</h1>
+
+        <div class="vp-actions-row">
+
+          <!-- Creator -->
+          <div class="vp-creator">
+            <img *ngIf="video.user_profile_image && !creatorAvatarFailed; else creatorInitials"
+                 class="ss-avatar ss-avatar--md"
+                 [src]="video.user_profile_image"
+                 alt=""
+                 referrerpolicy="no-referrer"
+                 (error)="creatorAvatarFailed = true" />
+            <ng-template #creatorInitials>
+              <span class="ss-avatar ss-avatar--md" aria-hidden="true">{{ creatorInitial }}</span>
+            </ng-template>
+            <div class="vp-creator-text">
+              <span class="vp-creator-name">{{ video.userName || 'Unknown creator' }}</span>
+              <span class="vp-creator-label">{{ isOwner ? 'Your video' : 'Creator' }}</span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="vp-action-group">
+            <div class="vp-reactions" *ngIf="currentUserId; else loginPrompt">
+              <button
+                type="button"
+                class="vp-react-btn"
+                [class.vp-react-btn--liked]="userReaction === 'liked'"
+                [attr.aria-pressed]="userReaction === 'liked'"
+                [disabled]="isLiking"
+                (click)="onLikeClick()"
+                matTooltip="I like this">
+                <mat-icon>{{ userReaction === 'liked' ? 'thumb_up' : 'thumb_up_off_alt' }}</mat-icon>
+                <span>{{ formatViews(video.likes || 0) }}</span>
+              </button>
+              <span class="vp-react-divider" aria-hidden="true"></span>
+              <button
+                type="button"
+                class="vp-react-btn"
+                [class.vp-react-btn--disliked]="userReaction === 'disliked'"
+                [attr.aria-pressed]="userReaction === 'disliked'"
+                [disabled]="isDisliking"
+                (click)="onDislikeClick()"
+                matTooltip="I dislike this"
+                [attr.aria-label]="'Dislike (' + (video.dislikes || 0) + ')'">
+                <mat-icon>{{ userReaction === 'disliked' ? 'thumb_down' : 'thumb_down_off_alt' }}</mat-icon>
+                <span *ngIf="video.dislikes">{{ formatViews(video.dislikes) }}</span>
               </button>
             </div>
+            <ng-template #loginPrompt>
+              <span class="vp-login-hint">
+                <mat-icon>thumb_up_off_alt</mat-icon>{{ formatViews(video.likes || 0) }}
+                <span class="vp-login-hint-text">· Sign in to rate</span>
+              </span>
+            </ng-template>
 
-          </div><!-- /vp-controls-bar -->
-        </div><!-- /vp-controls -->
+            <button type="button" class="ss-btn ss-btn--secondary vp-share" (click)="share()">
+              <mat-icon>share</mat-icon>Share
+            </button>
 
+            <button *ngIf="isOwner"
+                    type="button"
+                    class="ss-icon-btn vp-delete-btn"
+                    (click)="onDeleteClick()"
+                    matTooltip="Delete video"
+                    aria-label="Delete video">
+              <mat-icon>delete_outline</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- ── About: stats + description ─────────────────────────────── -->
+        <section class="vp-about" [class.is-open]="descOpen" aria-label="About this video">
+          <p class="vp-about-meta">
+            <strong>{{ formatViews(video.views || 0) }} {{ (video.views || 0) === 1 ? 'view' : 'views' }}</strong>
+            <span *ngIf="timeAgo(video.uploadedAt) as ago">{{ ago }}</span>
+            <span class="vp-about-date" *ngIf="formatDate(video.uploadedAt) as date">{{ date }}</span>
+            <span class="ss-badge ss-badge--category" *ngIf="video.category">{{ video.category }}</span>
+            <span class="ss-badge ss-badge--warning" *ngIf="video.status === 'processing' && isOwner">
+              <mat-icon class="ss-spin">hourglass_empty</mat-icon>Processing
+            </span>
+          </p>
+          <div class="vp-about-text" #descBody>{{ video.description || 'No description yet.' }}</div>
+          <button *ngIf="descOverflows || descOpen"
+                  type="button"
+                  class="vp-about-toggle"
+                  [attr.aria-expanded]="descOpen"
+                  (click)="toggleDescription()">
+            {{ descOpen ? 'Show less' : 'Show more' }}
+          </button>
+        </section>
+
+        <!-- ── AI summary ─────────────────────────────────────────────── -->
+        <section class="vp-ai" *ngIf="video.aiSummary" [class.is-open]="aiSummaryOpen" aria-label="AI summary">
+          <p class="vp-ai-head">
+            <span class="ss-badge ss-badge--ai"><mat-icon>auto_awesome</mat-icon>AI summary</span>
+            <span class="vp-ai-note">Generated from the video’s audio</span>
+          </p>
+          <div class="vp-ai-text" #aiBody>{{ video.aiSummary }}</div>
+          <button *ngIf="aiOverflows || aiSummaryOpen"
+                  type="button"
+                  class="vp-about-toggle vp-about-toggle--ai"
+                  [attr.aria-expanded]="aiSummaryOpen"
+                  (click)="toggleAiSummary()">
+            {{ aiSummaryOpen ? 'Show less' : 'Show more' }}
+          </button>
+        </section>
+      </div>
+
+      <!-- ── Comments ─────────────────────────────────────────────────── -->
+      <!-- Mounted only once the player can paint a frame; the comment fetch used
+           to race the manifest and first segment for bandwidth. -->
+      <app-comment-section *ngIf="commentsReady" [videoId]="video._id"></app-comment-section>
+    </div>
+
+    <!-- ── Up next ─────────────────────────────────────────────────────── -->
+    <aside class="vp-secondary" aria-labelledby="up-next-title">
+      <h2 id="up-next-title" class="vp-secondary-title">Up next</h2>
+
+      <ng-container *ngIf="!commentsReady || upNextLoading">
+        <div class="vp-upnext-skeleton" *ngFor="let s of upNextSkeletons" aria-hidden="true">
+          <span class="ss-skel vp-upnext-skeleton-thumb"></span>
+          <span class="vp-upnext-skeleton-lines">
+            <span class="ss-skel ss-skel-line" style="width: 95%"></span>
+            <span class="ss-skel ss-skel-line" style="width: 70%"></span>
+            <span class="ss-skel ss-skel-line" style="width: 45%"></span>
+          </span>
+        </div>
       </ng-container>
-    </div><!-- /vp-player-wrap -->
 
-    <!-- ── Below-player panel ─────────────────────────────────────────── -->
-    <div class="vp-panel">
-
-      <!-- Title row -->
-      <div class="vp-title-row">
-        <h1 class="vp-title">{{ video.title }}</h1>
-        <mat-icon
-          *ngIf="isOwner"
-          class="vp-delete-btn"
-          (click)="onDeleteClick()"
-          matTooltip="Delete video"
-          (mouseenter)="isDeleteHovered = true"
-          (mouseleave)="isDeleteHovered = false">
-          {{ isDeleteHovered ? 'delete' : 'delete_outline' }}
-        </mat-icon>
+      <div class="vp-upnext-list" *ngIf="commentsReady && !upNextLoading">
+        <app-video-card *ngFor="let item of upNext; trackBy: trackById"
+                        [video]="item"
+                        [flipEnabled]="false"
+                        layout="compact">
+        </app-video-card>
+        <p class="vp-upnext-empty" *ngIf="upNext.length === 0">No other videos yet.</p>
       </div>
+    </aside>
+  </div>
 
-      <!-- Meta chips row -->
-      <div class="vp-meta-row">
-        <span class="vp-chip vp-chip--date">
-          <mat-icon>calendar_today</mat-icon>
-          {{ formatDate(video.uploadedAt) }}
-        </span>
-        <span class="vp-chip vp-chip--category" *ngIf="video.category">
-          {{ video.category }}
-        </span>
-        <span class="vp-chip vp-chip--views">
-          <mat-icon>visibility</mat-icon>
-          {{ formatViews(video.views || 0) }} views
-        </span>
-        <span class="vp-chip vp-chip--processing" *ngIf="video.status === 'processing' && isOwner">
-          <mat-icon>hourglass_empty</mat-icon>
-          Processing…
-        </span>
-      </div>
-
-      <!-- ── Action bar ──────────────────────────────────────────────── -->
-      <div class="vp-action-bar">
-
-        <!-- Uploader info -->
-        <div class="vp-uploader">
-          <div class="vp-uploader-avatar">{{ (video.userName || 'U')[0].toUpperCase() }}</div>
-          <div class="vp-uploader-info">
-            <span class="vp-uploader-name">{{ video.userName }}</span>
-            <span class="vp-uploader-label">Creator</span>
-          </div>
-        </div>
-
-        <!-- Like / dislike buttons -->
-        <div class="vp-reactions">
-          <ng-container *ngIf="currentUserId; else loginPrompt">
-            <button
-              class="vp-react-btn"
-              [class.vp-react-btn--liked]="userReaction === 'liked'"
-              [disabled]="isLiking"
-              (click)="onLikeClick()"
-              matTooltip="Like">
-              <mat-icon>{{ userReaction === 'liked' ? 'thumb_up' : 'thumb_up_off_alt' }}</mat-icon>
-              <span>{{ video.likes || 0 }}</span>
-            </button>
-            <div class="vp-react-divider"></div>
-            <button
-              class="vp-react-btn"
-              [class.vp-react-btn--disliked]="userReaction === 'disliked'"
-              [disabled]="isDisliking"
-              (click)="onDislikeClick()"
-              matTooltip="Dislike">
-              <mat-icon>{{ userReaction === 'disliked' ? 'thumb_down' : 'thumb_down_off_alt' }}</mat-icon>
-              <span>{{ video.dislikes || 0 }}</span>
-            </button>
-          </ng-container>
-          <ng-template #loginPrompt>
-            <span class="vp-login-hint">Sign in to like this video</span>
-          </ng-template>
-        </div>
-      </div>
-
-      <!-- ── Description ─────────────────────────────────────────────── -->
-      <div class="vp-description" *ngIf="video.description" [class.vp-description--expanded]="descOpen">
-        <div class="vp-description-body">
-          <p>{{ video.description }}</p>
-        </div>
-        <button class="vp-desc-toggle" (click)="descOpen = !descOpen">
-          {{ descOpen ? 'Show less' : 'Show more' }}
-          <mat-icon>{{ descOpen ? 'expand_less' : 'expand_more' }}</mat-icon>
-        </button>
-      </div>
-
-      <!-- ── AI Summary ─────────────────────────────────────────────── -->
-      <div class="vp-ai-summary" *ngIf="video.aiSummary" [class.vp-ai-summary--expanded]="aiSummaryOpen">
-        <div class="vp-ai-summary-header">
-          <div class="vp-ai-badge">
-            <mat-icon>auto_awesome</mat-icon>
-            AI Summary
-          </div>
-        </div>
-        <div class="vp-ai-summary-body">
-          <p>{{ video.aiSummary }}</p>
-        </div>
-        <button class="vp-ai-toggle" (click)="aiSummaryOpen = !aiSummaryOpen">
-          {{ aiSummaryOpen ? 'Show less' : 'Show more' }}
-          <mat-icon>{{ aiSummaryOpen ? 'expand_less' : 'expand_more' }}</mat-icon>
-        </button>
-      </div>
-
-    </div><!-- /vp-panel -->
-
-    <!-- ── Comments ───────────────────────────────────────────────────── -->
-    <!-- Mounted only once the player can paint a frame; the comment fetch used
-         to race the manifest and first segment for bandwidth. -->
-    <app-comment-section *ngIf="commentsReady" [videoId]="video._id"></app-comment-section>
-
-  </div><!-- /vp-content -->
+  <div class="ss-toast" *ngIf="toast" [class.ss-toast--error]="toastIsError" role="status" aria-live="polite">
+    <mat-icon>{{ toastIsError ? 'error_outline' : 'check_circle' }}</mat-icon>
+    <span>{{ toast }}</span>
+  </div>
 </div>

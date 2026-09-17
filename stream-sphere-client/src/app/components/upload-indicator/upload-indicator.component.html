@@ -1,0 +1,48 @@
+<div class="upc-stack" *ngIf="!onUploadPage && items.length > 0" aria-label="Upload status">
+  <aside *ngFor="let item of items; trackBy: trackByKey"
+         class="upc"
+         [class.is-failed]="tone(item) === 'failed'"
+         [class.is-ready]="tone(item) === 'ready'">
+
+    <span class="upc-thumb" aria-hidden="true">
+      <img *ngIf="poster(item) as image; else thumbIcon" [src]="image" alt="" />
+      <ng-template #thumbIcon><mat-icon>movie</mat-icon></ng-template>
+    </span>
+
+    <div class="upc-body">
+      <p class="upc-status">
+        <span *ngIf="tone(item) === 'busy'"
+              class="ss-spinner ss-spinner--sm"
+              [class.ss-spinner--warning]="progress(item) === null && !indeterminate(item)"></span>
+        <mat-icon *ngIf="tone(item) === 'ready'">check_circle</mat-icon>
+        <mat-icon *ngIf="tone(item) === 'failed'">error_outline</mat-icon>
+        {{ statusText(item) }}
+      </p>
+      <p class="upc-title" [attr.title]="title(item)">{{ title(item) }}</p>
+
+      <div *ngIf="progress(item) !== null || indeterminate(item)"
+           class="upc-bar"
+           [class.is-indeterminate]="indeterminate(item)"
+           aria-hidden="true">
+        <span class="upc-bar-fill" [style.width.%]="progress(item)"></span>
+      </div>
+
+      <p class="upc-detail" *ngIf="detailText(item) as detail">{{ detail }}</p>
+    </div>
+
+    <div class="upc-actions">
+      <a *ngIf="watchId(item) as id; else viewLink"
+         class="ss-btn ss-btn--primary ss-btn--sm"
+         [routerLink]="['/video', id]">Watch</a>
+      <ng-template #viewLink>
+        <a class="ss-btn ss-btn--secondary ss-btn--sm" routerLink="/upload">View</a>
+      </ng-template>
+      <button type="button" class="ss-icon-btn ss-icon-btn--sm" (click)="hide(item)" aria-label="Hide upload status">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </aside>
+</div>
+
+<!-- Always in the DOM so changes are announced -->
+<p class="ss-sr-only" role="status" aria-live="polite">{{ announcement }}</p>

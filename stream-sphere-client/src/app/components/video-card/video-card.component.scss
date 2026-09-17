@@ -1,611 +1,343 @@
 // ════════════════════════════════════════════════════════════════════════════
-//  VideoCard — redesigned aesthetic layout
-//  Desktop: vertical card (380px).  Mobile ≤ 600px: horizontal mini-card (88px).
+//  VideoCard — frameless 16:9 thumbnail with details underneath
+//  layout 'grid' for feeds, 'compact' (thumbnail left) for side lists.
 // ════════════════════════════════════════════════════════════════════════════
 
-// ── Card shell ────────────────────────────────────────────────────────────────
-.video-card {
-  position: relative;
-  z-index: 1;
-  border-radius: 16px;
-  overflow: visible;
-  background: transparent;
-  border: none;
-  padding: 3px;
-  transition: box-shadow 0.25s, transform 0.2s;
-  display: flex;
-  flex-direction: column;
-  height: 380px;
-  min-height: 300px;
-  max-height: 460px;
-  width: 100%;
-  cursor: pointer;
-  box-sizing: border-box;
-
-  // Animated gradient border on hover
-  &::before {
-    content: '';
-    position: absolute;
-    z-index: 0;
-    inset: 0;
-    border-radius: 16px;
-    background: linear-gradient(120deg, var(--accent), #ff79a8, var(--accent));
-    background-size: 300% 300%;
-    opacity: 0;
-    transition: opacity 0.25s;
-    pointer-events: none;
-    animation: none;
-  }
-
-  &:hover::before {
-    opacity: 1;
-    animation: borderGradientMove 3s ease-in-out infinite;
-  }
-
-  &:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 14px 32px var(--accent-soft-2);
-  }
-}
-
-@keyframes borderGradientMove {
-  0%   { background-position: 0%   50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0%   50%; }
-}
-
-// ── Inner surface ─────────────────────────────────────────────────────────────
-.video-card-inner {
-  position: relative;
-  z-index: 1;
-  background: var(--bg-surface);
-  border-radius: 13px;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--shadow-sm);
-  transition: background var(--transition);
-}
-
-// ── Thumbnail section ─────────────────────────────────────────────────────────
-.thumb-wrap {
-  position: relative;
-  flex: 0 0 58%;
-  overflow: hidden;
-  border-radius: 13px 13px 0 0;
-  background: #111;
-}
-
-.video-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+:host {
   display: block;
-  pointer-events: none;
+  min-width: 0;
 }
 
-// Thumbnail cover — overlays the video until the 2 s preview kicks in
+.vcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+
+  &.is-faded {
+    opacity: 0.65;
+    filter: grayscale(0.6);
+    pointer-events: none;
+  }
+}
+
+// ── Thumbnail ─────────────────────────────────────────────────────────────────
+.vcard-media {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 16 / 9;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--media-bg);
+  transition:
+    border-radius var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-base) ease;
+}
+
+.vcard-thumb {
+  position: absolute;
+  inset: 0;
+  display: block;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.video-preview,
 .thumb-cover {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  z-index: 2;                      // above video-preview (z-index: auto)
-  transition: opacity 0.35s ease;
-  pointer-events: none;
-  background: #111;                // fallback while image loads
+  display: block;
 }
 
-.thumb-cover--hidden {
-  opacity: 0;
-  pointer-events: none;
+.video-preview { pointer-events: none; }
+
+.thumb-cover {
+  z-index: 1;
+  background: var(--media-bg);
+  transition:
+    opacity 350ms ease,
+    transform var(--duration-slow) var(--ease-standard);
 }
 
-// Hover overlay — light scrim + centred play icon
-// Kept intentionally subtle (0.22) so the playing preview shows through clearly
-.thumb-overlay {
+.thumb-cover--hidden { opacity: 0; }
+
+.thumb-fallback {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.22);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.22s;
-  pointer-events: none;
-  z-index: 3;                      // above thumb-cover (z-index: 2)
-}
-
-.video-card:hover .thumb-overlay {
-  opacity: 1;
-}
-
-.play-hint {
-  font-size: 52px !important;
-  width: 52px !important;
-  height: 52px !important;
-  color: #fff;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
-  transform: scale(0.88);
-  transition: transform 0.22s;
-}
-
-.video-card:hover .play-hint {
-  transform: scale(1);
-}
-
-// Category badge — overlaid on thumbnail, bottom-left
-.cat-badge {
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
-  z-index: 3;                      // above thumb-cover
+  z-index: 1;
+  display: grid;
+  place-items: center;
   background: var(--tag-gradient);
-  color: #fff;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.85);
+
+  .mat-icon { width: 40px; height: 40px; font-size: 40px; }
+}
+
+// Play hint in the centre — hidden once the preview is actually playing
+.thumb-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: var(--control-lg);
+  height: var(--control-lg);
+  border-radius: var(--radius-round);
+  background: var(--media-chip);
+  color: var(--on-media);
+  -webkit-backdrop-filter: blur(var(--blur-sm));
+  backdrop-filter: blur(var(--blur-sm));
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.85);
+  transition:
+    opacity var(--duration-base) ease,
+    transform var(--duration-base) var(--ease-standard);
   pointer-events: none;
 
-  &--empty {
-    background: rgba(0, 0, 0, 0.45);
-    color: rgba(255, 255, 255, 0.7);
-    box-shadow: none;
-  }
-
-  &--back {
-    position: static;
-    margin-bottom: 4px;
-    display: inline-block;
-    pointer-events: none;
-  }
+  .mat-icon { width: 28px; height: 28px; font-size: 28px; }
 }
 
-// Flip / info trigger — overlaid on thumbnail, top-right
-.flip-trigger {
+.vcard-media:hover {
+  .thumb-cover { transform: scale(1.04); }
+  .thumb-play { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.vcard:hover .vcard-media { box-shadow: var(--shadow-lg); }
+
+.vcard.is-previewing {
+  .vcard-media { border-radius: var(--radius-sm); }
+  .thumb-play { opacity: 0; }
+}
+
+// Overlays
+.vcard-cat,
+.vcard-likes,
+.vcard-processing {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 30px;
-  height: 30px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(6px);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.22s, background 0.2s, transform 0.2s;
-  z-index: 5;
-
-  mat-icon {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-    color: rgba(255, 255, 255, 0.9);
-  }
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.72);
-    transform: scale(1.1);
-  }
-
-  // Back-face close button — always visible
-  &--back {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    opacity: 1;
-    background: var(--bg-surface-2);
-
-    mat-icon { color: var(--text-secondary); }
-
-    &:hover { background: var(--border-strong); transform: none; }
-  }
+  z-index: 3;
+  pointer-events: none;
+  box-shadow: var(--media-shadow);
 }
 
-.video-card:hover .flip-trigger:not(.flip-trigger--back) {
-  opacity: 1;
-}
-
-// ── Card info area ─────────────────────────────────────────────────────────────
-mat-card-content.card-body {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 12px 14px 14px;
-  overflow: hidden;
-}
-
-// YouTube-style row: avatar | title + meta stacked
-.card-info-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  min-width: 0;
-}
-
-// Real profile picture
-.avatar-img {
-  flex-shrink: 0;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid var(--border);
-  background: var(--bg-surface-2);
-
-  &--sm {
-    width: 26px;
-    height: 26px;
-  }
-}
-
-// Coloured initial circle
-.avatar-circle {
-  flex-shrink: 0;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--tag-gradient);
-  color: #fff;
-  font-size: 0.85rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  user-select: none;
-
-  &--sm {
-    width: 26px;
-    height: 26px;
-    font-size: 0.72rem;
-  }
-}
-
-// Text block: title + meta stacked
-.text-block {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-// ── Title ─────────────────────────────────────────────────────────────────────
-.video-title {
-  font-size: 0.92rem;
-  font-weight: 600;
-  margin: 0;
-  line-height: 1.38;
-  color: var(--text-primary);
-
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-// ── Meta row: uploader · likes ─────────────────────────────────────────────────
-.video-meta {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  overflow: hidden;
-  flex-wrap: nowrap;
-}
-
-.uploader-name {
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  white-space: nowrap;
+.vcard-cat {
+  left: var(--space-2);
+  bottom: var(--space-2);
+  max-width: calc(100% - 96px);
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px;
 }
 
-.meta-dot {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  flex-shrink: 0;
-  line-height: 1;
-  margin-top: 1px;
+.vcard-likes {
+  right: var(--space-2);
+  bottom: var(--space-2);
+  font-variant-numeric: tabular-nums;
 }
 
-.like-icon {
-  font-size: 13px !important;
-  width: 13px !important;
-  height: 13px !important;
-  color: var(--accent);
-  flex-shrink: 0;
+.vcard-processing {
+  top: var(--space-2);
+  left: var(--space-2);
 }
 
-.like-count {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  flex-shrink: 0;
+.vcard.is-previewing {
+  .vcard-cat,
+  .vcard-likes { opacity: 0; }
 }
 
-.view-icon {
-  font-size: 13px !important;
-  width: 13px !important;
-  height: 13px !important;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.view-count {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
-
-// ── Faded ─────────────────────────────────────────────────────────────────────
-.video-card.faded {
-  filter: grayscale(0.6) brightness(0.9);
-  opacity: 0.65;
-  pointer-events: none;
-}
-
-// ── Flip card shell ───────────────────────────────────────────────────────────
-.flip-card {
-  perspective: 1000px;
-  width: 100%;
-  height: 380px;
-}
-
-.flip-card-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-style: preserve-3d;
-}
-
-.flip-card.flipped .flip-card-inner {
-  transform: rotateY(180deg);
-}
-
-.flip-card-front,
-.flip-card-back {
+.vcard-info {
   position: absolute;
-  width: 100%;
-  height: 100%;
-  backface-visibility: hidden;
-  top: 0;
-  left: 0;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: var(--control-sm);
+  height: var(--control-sm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-round);
+  background: var(--media-chip);
+  color: var(--on-media);
+  -webkit-backdrop-filter: blur(var(--blur-sm));
+  backdrop-filter: blur(var(--blur-sm));
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--duration-base) ease,
+    background var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
+
+  .mat-icon { width: var(--icon-sm); height: var(--icon-sm); font-size: var(--icon-sm); }
+
+  &:hover { background: var(--media-chip-hover); transform: scale(1.08); }
+  &:focus-visible { opacity: 1; }
 }
 
-.flip-card-front { z-index: 2; }
+.vcard-media:hover .vcard-info,
+.vcard.is-flipped .vcard-info { opacity: 1; }
 
-.flip-card-back {
-  transform: rotateY(180deg);
-  z-index: 1;
+@media (hover: none) {
+  .vcard-info { opacity: 1; }
 }
 
-.flip-card-front .video-card,
-.flip-card-back .video-card {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-}
-
-// ── Flipped back content ───────────────────────────────────────────────────────
-.flipped-content {
+// Description panel over the thumbnail
+.vcard-about {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  padding: 32px 24px 24px;
-  text-align: center;
-  gap: 10px;
-  position: relative;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-10) var(--space-3) var(--space-3);
+  background: rgba(10, 10, 16, 0.9);
+  color: var(--on-media);
+  -webkit-backdrop-filter: blur(var(--blur-sm));
+  backdrop-filter: blur(var(--blur-sm));
+  animation: ss-rise var(--duration-base) var(--ease-out) both;
 }
 
-.flip-back-title {
-  font-size: 1rem !important;
-  font-weight: 700 !important;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-}
-
-.video-description {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  line-height: 1.6;
+.vcard-about-title {
   margin: 0;
-  overflow: hidden;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
   display: -webkit-box;
-  -webkit-line-clamp: 5;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
   -webkit-box-orient: vertical;
-  line-clamp: 5;
+  overflow: hidden;
 }
 
-.flip-back-meta {
+.vcard-about-text {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+  color: var(--on-media-2);
+  white-space: pre-line;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+// ── Details ───────────────────────────────────────────────────────────────────
+.vcard-body {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.vcard-avatar {
+  width: 36px;
+  height: 36px;
   margin-top: 2px;
 }
 
+.vcard-text {
+  flex: 1;
+  min-width: 0;
+}
 
-// ════════════════════════════════════════════════════════════════════════════
-//  MOBILE  ≤ 600px  —  Horizontal mini card (88 px tall)
-// ════════════════════════════════════════════════════════════════════════════
-@media (max-width: 600px) {
+.vcard-title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 
-  // Disable 3-D flip
-  .flip-card {
-    perspective: none;
-    height: auto;
-    min-height: auto;
-    max-height: none;
-  }
+  a {
+    color: inherit;
+    text-decoration: none;
+    outline: none;
 
-  .flip-card-inner {
-    transform-style: flat;
-    transition: none;
-    height: auto;
-    transform: none !important;
-  }
-
-  .flip-card-front {
-    position: relative;
-    backface-visibility: visible;
-    height: auto;
-    top: auto;
-    left: auto;
-    width: 100%;
-  }
-
-  .flip-card-back  { display: none !important; }
-  .flip-trigger    { display: none !important; }
-  .thumb-overlay   { display: none !important; }
-
-  // Mini card shell
-  .video-card {
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    padding: 2px;
-    border-radius: 12px;
-
-    &::before { display: none; }
-    &:hover   { transform: none; box-shadow: none; }
-    &:active  { transform: scale(0.985); }
-  }
-
-  // Horizontal inner layout
-  .video-card-inner {
-    flex-direction: row !important;
-    height: 88px;
-    border-radius: 10px;
-    align-items: stretch;
-  }
-
-  // Thumbnail — left column, fixed width
-  .thumb-wrap {
-    flex: 0 0 140px !important;
-    width: 140px !important;
-    height: 88px !important;
-    border-radius: 10px 0 0 10px;
-    overflow: hidden;
-  }
-
-  .video-preview {
-    width: 140px !important;
-    height: 88px !important;
-    border-radius: 10px 0 0 10px;
-    object-fit: cover;
-
-    &::-webkit-media-controls          { display: none !important; }
-    &::-webkit-media-controls-enclosure { display: none !important; }
-  }
-
-  // Category badge stays but smaller
-  .cat-badge {
-    font-size: 0.55rem !important;
-    padding: 2px 6px !important;
-    bottom: 6px;
-    left: 6px;
-    letter-spacing: 0.3px;
-  }
-
-  // Info — right column
-  mat-card-content.card-body {
-    flex: 1 1 0 !important;
-    min-width: 0;
-    padding: 8px 10px !important;
-    justify-content: center;
-  }
-
-  .card-info-row {
-    gap: 7px;
-    align-items: center;
-  }
-
-  // Smaller avatar
-  .avatar-circle, .avatar-img {
-    width: 22px !important;
-    height: 22px !important;
-    font-size: 0.68rem !important;
-    flex-shrink: 0;
-  }
-
-  .text-block { gap: 3px; }
-
-  .video-title {
-    font-size: 0.82rem !important;
-    line-height: 1.3;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-  }
-
-  .uploader-name {
-    font-size: 0.72rem !important;
-    max-width: 80px;
-  }
-
-  .meta-dot { font-size: 0.65rem !important; }
-
-  .like-icon {
-    font-size: 11px !important;
-    width: 11px !important;
-    height: 11px !important;
-  }
-
-  .like-count { font-size: 0.72rem !important; }
-
-  mat-card.video-card {
-    height: auto !important;
-    min-height: 0 !important;
+    // The whole details area is part of the link
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+    }
   }
 }
 
-// Processing badge — overlaid on thumbnail, top-left, amber colour
-.processing-badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 3;                      // above thumb-cover
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(243, 156, 18, 0.9);
-  color: #fff;
-  padding: 3px 8px;
-  border-radius: 20px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.vcard-channel,
+.vcard-meta {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-snug);
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-  pointer-events: none;
-
-  mat-icon {
-    font-size: 12px;
-    width: 12px;
-    height: 12px;
-    animation: spin 1.2s linear infinite;
-  }
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+.vcard-channel { color: var(--text-secondary); }
+
+.vcard-meta {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+
+  .dot { margin: 0 var(--space-1); }
+}
+
+.vcard:hover .vcard-title { color: var(--text-primary); }
+
+// Keyboard focus: ring the thumbnail when the title link is focused
+.vcard:focus-within .vcard-media { box-shadow: var(--shadow-lg); }
+.vcard:has(.vcard-title a:focus-visible) .vcard-media {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@supports not selector(:has(a)) {
+  .vcard-title a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+}
+
+// ── Compact layout (Up next, side lists) ──────────────────────────────────────
+.vcard--compact {
+  flex-direction: row;
+  gap: var(--space-3);
+
+  .vcard-media {
+    flex: 0 0 168px;
+    width: 168px;
+    border-radius: var(--radius-sm);
+  }
+
+  .vcard-cat,
+  .thumb-play { display: none; }
+
+  .vcard-likes {
+    right: var(--space-1);
+    bottom: var(--space-1);
+    height: 20px;
+    padding: 0 6px;
+    font-size: 10px;
+  }
+
+  .vcard-body { flex: 1; }
+
+  .vcard-title {
+    font-size: var(--font-size-sm);
+    margin-bottom: 2px;
+  }
+
+  .vcard-channel,
+  .vcard-meta { font-size: var(--font-size-2xs); }
+
+  &:hover .vcard-media { box-shadow: none; }
+}
+
+@media (max-width: 480px) {
+  .vcard--compact .vcard-media {
+    flex-basis: 144px;
+    width: 144px;
+  }
+}

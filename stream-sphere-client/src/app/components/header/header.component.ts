@@ -2,22 +2,19 @@ import {
   Component, OnInit, OnDestroy, ChangeDetectorRef,
   HostListener, ViewChild, ElementRef, inject,
 } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
 import { CommonModule }        from '@angular/common';
-import { RouterModule }        from '@angular/router';
-import { MatDialog }           from '@angular/material/dialog';
-import { UploadVideoComponent } from '../upload-video/upload-video.component';
+import { NavigationCancel, NavigationEnd, NavigationError, Router, RouterModule } from '@angular/router';
 import { MatButtonModule }     from '@angular/material/button';
 import { MatIconModule }       from '@angular/material/icon';
 import { MatMenuModule }       from '@angular/material/menu';
 import { MatDividerModule }    from '@angular/material/divider';
 import { MatTooltipModule }    from '@angular/material/tooltip';
 import { UserLoginComponent }  from '../user-login/user-login.component';
-import { Router }              from '@angular/router';
 import { AuthService }         from '../../services/auth.service';
 import { ThemeService }        from '../../services/theme.service';
 import { VideoService }        from '../../services/video.service';
-import { Subscription }        from 'rxjs';
+import { UploadManagerService } from '../../services/upload-manager.service';
+import { Subscription, filter } from 'rxjs';
 import { User }                from '../../models/user';
 
 @Component({
@@ -34,31 +31,24 @@ import { User }                from '../../models/user';
 export class HeaderComponent implements OnInit, OnDestroy {
 
   // ── State ────────────────────────────────────────────────────────────────
-  isScrolled  = false;
-  searchOpen  = false;
-  searchTerm  = '';
-  selectedCategory = 'All';
+  isScrolled       = false;
+  /** Small screens: the search field opens as a row under the bar. */
+  mobileSearchOpen = false;
+  searchTerm       = '';
 
   isLoggedIn   = false;
   user: User | null = null;
   profileImage = '';
+  avatarFailed = false;
+
+  /** True on the home feed, where the bar sits over the hero. */
+  private isHomeRoute = true;
+  private activeCategory = 'All';
+  /** Set when typing a search sends the user to the feed, so the field stays open. */
+  private navigatingForSearch = false;
 
   private readonly DEFAULT_AVATAR = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNlNWU3ZWYiLz4KPHBhdGggZD0iTTIwIDEwQzIyLjA5IDEwIDI0IDEyLjA5IDI0IDE0QzI0IDE1LjkxIDIyLjA5IDE4IDIwIDE4QzE3LjkxIDE4IDE2IDE1LjkxIDE2IDE0QzE2IDEyLjA5IDE3LjkxIDEwIDIwIDEwWk0yMCAyMEMyMi4wOSAyMCAyNCAyMi4wOSAyNCAyNEMyNCAyNS45MSAyMi4wOSAyOCAyMCAyOEMxNy45MSAyOCAxNiAyNS45MSAxNiAyNEMxNiAyMi4wOSAxNy45MSAyMCAyMCAyMFoiIGZpbGw9IiM5Y2EzYWYiLz4KPC9zdmc+';
-  private loginSubscription: Subscription | null = null;
-
-  // ── Categories (from the retired category-slider) ────────────────────────
-  readonly categories: string[] = [
-    'Music', 'Gaming', 'Sports', 'Movies', 'Comedy', 'Web Series',
-    'Learning', 'Podcasts', 'News', 'Fitness', 'Vlogs', 'Travel',
-    'Tech', 'Food & Recipes', 'Motivation', 'Short Films', 'Art & Design',
-    'Fashion', 'Kids', 'History', 'DIY', 'Documentaries', 'Spirituality',
-    'Real Estate', 'Automotive', 'Science', 'Nature', 'Animals',
-    'Health & Wellness', 'Business & Finance', 'Personal Development',
-    'Unboxing & Reviews', 'Live Streams', 'Events & Conferences',
-    'Memes & Challenges', 'Festivals', 'Interviews', 'Trailers & Teasers',
-    'Animation', 'Magic & Illusions', 'Comedy Skits', 'Parodies',
-    'Reaction Videos', 'ASMR',
-  ];
+  private subs: Subscription[] = [];
 
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
 
@@ -70,21 +60,54 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private videoService: VideoService,
     private cdr:          ChangeDetectorRef,
     public  themeService: ThemeService,
-    private dialog:       MatDialog,
+    public  uploads:      UploadManagerService,
   ) { }
 
   // ── Lifecycle ────────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.loadUserData();
-    this.loginSubscription = this.authService.getLoginState().subscribe(loggedIn => {
-      this.isLoggedIn = loggedIn;
-      this.loadUserData();
-      setTimeout(() => this.cdr.detectChanges());
-    });
+    this.isHomeRoute = this.isHomeUrl(this.router.url);
+
+    this.subs.push(
+      this.authService.getLoginState().subscribe(loggedIn => {
+        this.isLoggedIn = loggedIn;
+        this.loadUserData();
+        setTimeout(() => this.cdr.detectChanges());
+      }),
+      this.router.events
+        .pipe(filter((e): e is NavigationEnd | NavigationCancel | NavigationError =>
+          e instanceof NavigationEnd || e instanceof NavigationCancel || e instanceof NavigationError))
+        .subscribe(e => {
+          if (e instanceof NavigationEnd) {
+            this.isHomeRoute = this.isHomeUrl(e.urlAfterRedirects);
+            if (!this.navigatingForSearch) this.mobileSearchOpen = false;
+          }
+          this.navigatingForSearch = false;
+        }),
+      this.videoService.category$.subscribe(cat => this.activeCategory = cat),
+      this.videoService.search$.subscribe(term => {
+        // Keep the field in sync when another view clears the search.
+        if (!term && this.searchTerm) this.searchTerm = '';
+      }),
+    );
   }
 
   ngOnDestroy(): void {
-    this.loginSubscription?.unsubscribe();
+    this.subs.forEach(s => s.unsubscribe());
+  }
+
+  /** Transparent over the home hero; solid everywhere else. */
+  get overlayMode(): boolean {
+    return this.isHomeRoute
+      && !this.isScrolled
+      && !this.mobileSearchOpen
+      && !this.searchTerm
+      && this.activeCategory === 'All';
+  }
+
+  private isHomeUrl(url: string): boolean {
+    const path = (url || '/').split(/[?#]/)[0];
+    return path === '/' || path === '/home';
   }
 
   // ── Scroll listener (transparent → solid) ────────────────────────────────
@@ -106,12 +129,25 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ── Close search when clicking outside the header ────────────────────────
+  // ── Close the mobile search row when clicking outside the header ─────────
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (this.searchOpen && !this.hostEl.nativeElement.contains(event.target as Node)) {
+    if (this.mobileSearchOpen && !this.hostEl.nativeElement.contains(event.target as Node)) {
       this.closeSearch();
     }
+  }
+
+  // ── "/" focuses search, as on most video sites ───────────────────────────
+  @HostListener('document:keydown', ['$event'])
+  onKeydown(event: KeyboardEvent): void {
+    if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
+    const target = event.target as HTMLElement | null;
+    if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+    // Not while a menu or dialog is open (they render in the overlay container)
+    if (target?.closest('.cdk-overlay-container') || document.querySelector('.cdk-overlay-backdrop')) return;
+    event.preventDefault();
+    if (window.matchMedia('(max-width: 768px)').matches) this.mobileSearchOpen = true;
+    setTimeout(() => this.searchInput?.nativeElement?.focus());
   }
 
   // ── User data ────────────────────────────────────────────────────────────
@@ -119,9 +155,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
     try {
       const raw = localStorage.getItem('user');
       if (raw) {
-        this.user        = JSON.parse(raw);
-        this.isLoggedIn  = true;
-        this.profileImage = this.user?.profileImage || this.DEFAULT_AVATAR;
+        this.user         = JSON.parse(raw);
+        this.isLoggedIn   = true;
+        this.profileImage = this.user?.profileImage || '';
+        this.avatarFailed = false;
       } else {
         this.resetUser();
       }
@@ -136,8 +173,17 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.profileImage = this.DEFAULT_AVATAR;
   }
 
+  get initials(): string {
+    const name = (this.user?.name || '').trim();
+    if (!name) return 'U';
+    const parts = name.split(/\s+/);
+    return ((parts[0][0] || '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+  }
+
   onImageError(event: any): void {
-    event.target.src = this.DEFAULT_AVATAR;
+    // Fall back to the initials avatar instead of a broken image.
+    this.avatarFailed = true;
+    if (event?.target) event.target.src = this.DEFAULT_AVATAR;
   }
 
   // ── Navigation ───────────────────────────────────────────────────────────
@@ -146,51 +192,88 @@ export class HeaderComponent implements OnInit, OnDestroy {
   navigateToHome():    void { this.router.navigate(['/home']); }
   navigateToProfile(): void { this.router.navigate(['/user-profile']); this.closeSearch(); }
   navigateToAdmin():   void { this.router.navigate(['/admin']); this.closeSearch(); }
-  navigateToUpload(): void {
-    this.closeSearch();
-    this.dialog.open(UploadVideoComponent, {
-      width: '560px',
-      maxWidth: '96vw',
-      panelClass: 'ss-upload-dialog',
-      autoFocus: true,
-      restoreFocus: true,
-    });
+  navigateToUpload(): void { this.router.navigate(['/upload']); this.closeSearch(); }
+
+  /** The Upload button doubles as the upload's status while one is running. */
+  get uploadButtonText(): string {
+    const active = this.uploads.active;
+    const waiting = this.uploads.waiting.length;
+    if (active?.phase === 'uploading') {
+      return waiting > 0 ? `Uploading ${active.progress}% · +${waiting}` : `Uploading ${active.progress}%`;
+    }
+    if (active?.phase === 'saving') return 'Finishing…';
+    if (this.uploads.hasFailed) return 'Upload failed';
+    return 'Upload';
+  }
+
+  get uploadButtonLabel(): string {
+    const active = this.uploads.active;
+    const waiting = this.uploads.waiting.length;
+    if (active?.phase === 'uploading') {
+      const queue = waiting > 0 ? `, ${waiting} more waiting` : '';
+      return `Uploading, ${active.progress}% done${queue}. View uploads`;
+    }
+    if (active?.phase === 'saving') return 'Finishing upload. View uploads';
+    if (this.uploads.hasFailed) return 'Upload failed. View uploads';
+    const processing = this.uploads.processingCount;
+    if (processing > 0) return `Upload a video. ${processing} ${processing === 1 ? 'video' : 'videos'} processing`;
+    return 'Upload a video';
   }
   navigateToHistory(): void { this.router.navigate(['/history']); this.closeSearch(); }
+
+  /** Logo on the home page resets filters and scrolls to the top. */
+  onBrandClick(): void {
+    if (this.isHomeRoute) {
+      this.searchTerm = '';
+      this.videoService.setSearchTerm('');
+      this.videoService.setCategory('All');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
 
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/home']);
   }
 
-  // ── Search panel ─────────────────────────────────────────────────────────
+  // ── Search ───────────────────────────────────────────────────────────────
   toggleSearch(): void {
-    this.searchOpen = !this.searchOpen;
-    if (this.searchOpen) {
-      // Focus the input after it animates in
-      setTimeout(() => this.searchInput?.nativeElement?.focus(), 150);
+    this.mobileSearchOpen = !this.mobileSearchOpen;
+    if (this.mobileSearchOpen) {
+      setTimeout(() => this.searchInput?.nativeElement?.focus(), 50);
     }
   }
 
   closeSearch(): void {
-    this.searchOpen = false;
+    this.mobileSearchOpen = false;
   }
 
-  onSearchInput(event: any): void {
-    this.searchTerm = event.target.value;
+  onSearchInput(event: Event): void {
+    this.searchTerm = (event.target as HTMLInputElement).value;
     // No local debounce here — VideoListComponent already applies debounceTime(350)
     // on the search$ stream, so we emit immediately.
     this.videoService.setSearchTerm(this.searchTerm.toLowerCase());
+    // Results render in the home feed.
+    if (this.searchTerm.trim() && !this.isHomeRoute) this.goToFeedForSearch();
+  }
+
+  onSearchSubmit(event: Event): void {
+    event.preventDefault();
+    if (!this.searchTerm.trim()) return;
+    if (!this.isHomeRoute) this.goToFeedForSearch();
+    // Drop the on-screen keyboard so results are visible.
+    if (window.matchMedia('(max-width: 768px)').matches) this.searchInput?.nativeElement?.blur();
+  }
+
+  private goToFeedForSearch(): void {
+    if (this.navigatingForSearch) return; // already on the way; typing continues
+    this.navigatingForSearch = true;
+    this.router.navigate(['/home']);
   }
 
   clearSearch(): void {
     this.searchTerm = '';
     this.videoService.setSearchTerm('');
     this.searchInput?.nativeElement?.focus();
-  }
-
-  selectCategory(cat: string): void {
-    this.selectedCategory = cat;
-    this.videoService.setCategory(cat);
   }
 }

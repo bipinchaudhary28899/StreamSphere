@@ -12,30 +12,18 @@
   width: 100%;
   background: var(--bg-base);
   transition: background var(--transition);
-  /* On non-home pages: add top padding to clear the fixed header */
-  padding-top: 68px;
+  /* Clear the fixed header on every page except home, where the hero sits under it */
+  padding-top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
 }
 
-/* Home page: hero carousel fills from the top behind the transparent header */
 .main-body.home-page {
   padding-top: 0;
 }
 
-/* Mobile: account for bottom nav when logged in */
 @media (max-width: 768px) {
-  .main-body {
-    padding-top: 60px;
-    padding-bottom: 64px;
+  .main-body.has-bottom-nav {
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
   }
-  /* Hero fills from the very top on mobile too (transparent navbar sits on top) */
-  .main-body.home-page {
-    padding-top: 0;
-  }
-}
-
-@media (max-width: 480px) {
-  .main-body { padding-top: 56px; }
-  .main-body.home-page { padding-top: 0; }
 }
 
 /* ── Mobile bottom navigation ──────────────────────────────────────────── */
@@ -45,47 +33,88 @@
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 1000;
-  background: var(--bg-surface);
-  border-top: 1px solid var(--border);
-  box-shadow: 0 -2px 12px rgba(0,0,0,0.1);
-  height: 60px;
+  z-index: var(--z-bottom-nav);
+  height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+  padding: 0 var(--space-1) env(safe-area-inset-bottom, 0px);
   justify-content: space-around;
   align-items: center;
-  padding: 0 4px;
-  padding-bottom: env(safe-area-inset-bottom, 0);
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-up);
   transition: background var(--transition), border-color var(--transition);
 }
+@supports (background: color-mix(in srgb, red 50%, transparent)) {
+  .mobile-bottom-nav {
+    background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+    -webkit-backdrop-filter: saturate(160%) blur(16px);
+    backdrop-filter: saturate(160%) blur(16px);
+  }
+}
 
-.mobile-bottom-nav .nav-item {
+.nav-item {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  flex: 1;
-  text-decoration: none;
+  min-width: 0;
+  padding: var(--space-1) 0;
   color: var(--text-muted);
-  font-size: 0.68rem;
-  font-weight: 500;
-  padding: 6px 0;
-  border-radius: 10px;
-  transition: color var(--transition);
+  text-decoration: none;
   -webkit-tap-highlight-color: transparent;
+  transition: color var(--duration-fast) ease;
 }
 
-.mobile-bottom-nav .nav-item mat-icon {
-  font-size: 22px;
-  width: 22px;
-  height: 22px;
-  transition: transform 0.2s;
+/* Material 3 style: the active icon sits on a soft pill */
+.nav-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 30px;
+  border-radius: var(--radius-pill);
+  transition: background var(--duration-base) ease, transform var(--duration-fast) ease;
+}
+.nav-icon .mat-icon {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  font-size: var(--icon-lg);
+}
+.nav-item:active .nav-icon { transform: scale(0.92); }
+
+.nav-label {
+  font-size: var(--font-size-3xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.2;
 }
 
-.mobile-bottom-nav .nav-item:active mat-icon { transform: scale(0.88); }
+.nav-item.active { color: var(--accent-text); }
+.nav-item.active .nav-icon { background: var(--accent-pill-bg); }
+.nav-item.active .nav-label { font-weight: var(--font-weight-semibold); }
 
-.mobile-bottom-nav .nav-item.active,
-.mobile-bottom-nav .nav-item.active mat-icon {
-  color: var(--accent);
+/* Upload is the one create action: always a pink pill */
+.nav-item--create .nav-icon {
+  width: 44px;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: var(--shadow-accent);
+}
+.nav-item--create.active .nav-icon { background: var(--accent-hover); }
+.nav-item--create .nav-icon { position: relative; }
+.nav-item--create.is-busy .nav-label { font-variant-numeric: tabular-nums; }
+.nav-item--create.is-failed .nav-icon { background: var(--danger); box-shadow: none; }
+.nav-item--create.is-failed .nav-label { color: var(--danger-text); }
+
+/* Videos still processing */
+.nav-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-round);
+  background: var(--warning);
+  box-shadow: 0 0 0 2px var(--bg-surface);
 }
 
 @media (max-width: 768px) {

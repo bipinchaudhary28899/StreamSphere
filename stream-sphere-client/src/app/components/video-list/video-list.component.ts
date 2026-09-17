@@ -1,25 +1,23 @@
 import {
   Component, OnInit, OnDestroy, AfterViewInit,
-  ViewChild, ElementRef, ChangeDetectorRef,
+  ViewChild, ElementRef, ChangeDetectorRef, HostListener,
 } from '@angular/core';
 import { VideoService } from '../../services/video.service';
 import { VideoCardComponent } from '../video-card/video-card.component';
 import { MatIcon } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { RouterLink } from '@angular/router';
 import { Subscription, debounceTime, distinctUntilChanged, filter } from 'rxjs';
 import { HeroCarouselComponent } from '../hero-carousel/hero-carousel.component';
 import { UploadStatusService, ProcessingVideo } from '../../services/upload-status.service';
+import { VIDEO_CATEGORIES } from '../../models/categories';
 
 @Component({
   selector: 'app-video-list',
   templateUrl: './video-list.component.html',
   styleUrls: ['./video-list.component.scss'],
   standalone: true,
-  imports: [
-    VideoCardComponent, MatIcon, CommonModule,
-    MatProgressSpinnerModule, HeroCarouselComponent,
-  ],
+  imports: [VideoCardComponent, MatIcon, CommonModule, RouterLink, HeroCarouselComponent],
 })
 export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
 
@@ -40,15 +38,30 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // Active filters
   currentCategory = 'All';
-  private currentSearch = '';
+  currentSearch = '';
+  /** Latest term typed in the header, before the debounce catches up */
+  private pendingSearch = '';
   isSearchMode  = false; // true → server-side search, no infinite scroll (used in template)
+
+  // Category chip bar
+  readonly categories: string[] = ['All', ...VIDEO_CATEGORIES];
+  canScrollLeft  = false;
+  canScrollRight = false;
+
+  /** Placeholder cards shown while the first page loads. */
+  readonly skeletons = Array.from({ length: 12 }, (_, i) => i);
 
   // ── Subscriptions / cleanup ───────────────────────────────────────────────────
   private subs: Subscription[] = [];
   private observer!: IntersectionObserver;
+  /** In-flight first page or search; replaced (and cancelled) by the next one */
+  private listRequest?: Subscription;
+  /** In-flight "load more" page */
+  private pageRequest?: Subscription;
 
   // Sentinel element at the bottom of the grid — triggers next page load
   @ViewChild('sentinel') sentinelRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('chipRow') chipRowRef?: ElementRef<HTMLDivElement>;
 
   constructor(
     private videoService: VideoService,
@@ -80,7 +93,7 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
     this.subs.push(
       this.uploadStatus.ready$.pipe(filter(id => !!id)).subscribe(id => {
         const video = this.processingVideos.find(v => v.id === id);
-        this.readyToast = video ? `"${video.title}" is ready!` : 'Your video is ready!';
+        this.readyToast = video ? `“${video.title}” is ready to watch` : 'Your video is ready to watch';
         this.cdr.detectChanges();
         // Refresh the feed so the video appears in the grid
         this.resetAndLoad();
@@ -93,15 +106,24 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
       }),
     );
 
+    // Track the typed term right away; the debounced handler below runs the search.
+    this.subs.push(
+      this.videoService.search$.subscribe(term => this.pendingSearch = term),
+    );
+
     // React to category changes from the header.
     // If a search is already active, re-run it scoped to the new category
-    // instead of switching back to the paginated feed.
+    // instead of switching back to the paginated feed. Uses the latest typed
+    // term, so clearing the search and the category together doesn't re-run
+    // the old search.
     this.subs.push(
       this.videoService.category$.subscribe(cat => {
         if (cat === this.currentCategory) return;
         this.currentCategory = cat;
-        if (this.currentSearch.trim().length >= 2) {
-          this.runSearch(this.currentSearch.trim());
+        const term = this.pendingSearch.trim();
+        if (term.length >= 2) {
+          this.currentSearch = this.pendingSearch;
+          this.runSearch(term);
         } else {
           this.resetAndLoad();
         }
@@ -129,11 +151,99 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.setupIntersectionObserver();
+    // Measure after layout so the chip-bar arrows reflect real overflow.
+    setTimeout(() => this.updateChipScroll());
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.updateChipScroll();
   }
 
   ngOnDestroy(): void {
     this.subs.forEach(s => s.unsubscribe());
+    this.cancelRequests();
     this.observer?.disconnect();
+    clearTimeout(this.readyToastTimer);
+  }
+
+  // ── Header text ───────────────────────────────────────────────────────────────
+
+  /** The hero only shows on the unfiltered feed. */
+  get showHero(): boolean {
+    return !this.isSearchMode && this.currentCategory === 'All';
+  }
+
+  get isFiltered(): boolean {
+    return this.isSearchMode || this.currentCategory !== 'All';
+  }
+
+  get feedTitle(): string {
+    if (this.isSearchMode) return `Results for “${this.currentSearch.trim()}”`;
+    if (this.currentCategory !== 'All') return this.currentCategory;
+    return 'Latest videos';
+  }
+
+  get emptyTitle(): string {
+    if (this.isSearchMode) return 'No results';
+    if (this.currentCategory !== 'All') return `No ${this.currentCategory} videos yet`;
+    return 'No videos yet';
+  }
+
+  get emptyHint(): string {
+    if (this.isSearchMode) return 'Try different words, or search across all categories.';
+    if (this.currentCategory !== 'All') return 'Pick another category or check back later.';
+    return 'Uploaded videos will appear here.';
+  }
+
+  // ── Category chips ────────────────────────────────────────────────────────────
+
+  selectCategory(cat: string): void {
+    // The category$ subscription reloads the feed (or re-runs the search).
+    this.videoService.setCategory(cat);
+  }
+
+  clearFilters(): void {
+    const categoryWillChange = this.currentCategory !== 'All';
+    this.videoService.setSearchTerm('');
+    // A category change reloads the feed itself; otherwise reload now instead
+    // of waiting for the search debounce
+    this.videoService.setCategory('All');
+    if (!categoryWillChange && this.isSearchMode) {
+      this.currentSearch = '';
+      this.resetAndLoad();
+    }
+  }
+
+  scrollChips(direction: 1 | -1): void {
+    const row = this.chipRowRef?.nativeElement;
+    if (!row) return;
+    row.scrollBy({ left: direction * Math.round(row.clientWidth * 0.7), behavior: 'smooth' });
+  }
+
+  updateChipScroll(): void {
+    const row = this.chipRowRef?.nativeElement;
+    if (!row) return;
+    const left  = row.scrollLeft > 4;
+    const right = row.scrollLeft + row.clientWidth < row.scrollWidth - 4;
+    if (left !== this.canScrollLeft || right !== this.canScrollRight) {
+      this.canScrollLeft = left;
+      this.canScrollRight = right;
+      this.cdr.detectChanges();
+    }
+  }
+
+  dismissToast(): void {
+    clearTimeout(this.readyToastTimer);
+    this.readyToast = null;
+  }
+
+  retry(): void {
+    if (this.isSearchMode && this.currentSearch.trim().length >= 2) {
+      this.runSearch(this.currentSearch.trim());
+    } else {
+      this.loadFirstPage();
+    }
   }
 
   // ── IntersectionObserver ──────────────────────────────────────────────────────
@@ -169,6 +279,7 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** Called on initial load or after filter/category reset */
   loadFirstPage(): void {
+    this.cancelRequests();
     this.isSearchMode    = false;
     this.error           = null;
     this.nextCursor      = null;
@@ -181,7 +292,7 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
       this.isLoading = true;
     }
 
-    this.videoService.getFeed(undefined, this.currentCategory).subscribe({
+    this.listRequest = this.videoService.getFeed(undefined, this.currentCategory).subscribe({
       next: (page) => {
         this.displayedVideos = page.videos;
         this.nextCursor      = page.nextCursor;
@@ -209,7 +320,7 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.isLoadingMore = true;
 
-    this.videoService.getFeed(this.nextCursor, this.currentCategory).subscribe({
+    this.pageRequest = this.videoService.getFeed(this.nextCursor, this.currentCategory).subscribe({
       next: (page) => {
         this.displayedVideos = [...this.displayedVideos, ...page.videos];
         this.nextCursor      = page.nextCursor;
@@ -231,13 +342,14 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** Server-side search — replaces the grid, no infinite scroll */
   private runSearch(term: string): void {
+    this.cancelRequests();
     this.isLoading       = true;
     this.isSearchMode    = true;
     this.error           = null;
     this.displayedVideos = [];
     this.hasMore         = false;
 
-    this.videoService.searchVideos(term, this.currentCategory).subscribe({
+    this.listRequest = this.videoService.searchVideos(term, this.currentCategory).subscribe({
       next: ({ videos }) => {
         this.displayedVideos = videos;
         this.isLoading       = false;
@@ -250,22 +362,18 @@ export class VideoListComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  // ── Processing recovery ───────────────────────────────────────────────────────
-  // On page load/refresh, check if the logged-in user has any videos still in
-  // 'processing' state and register them with UploadStatusService so the banner
-  // and ready-toast work even after a page refresh.
-  private checkOwnProcessingVideos(): void {
-    const userData = localStorage.getItem('user');
-    if (!userData) return;
+  /** Drops responses that would overwrite a newer request's results. */
+  private cancelRequests(): void {
+    this.listRequest?.unsubscribe();
+    this.pageRequest?.unsubscribe();
+    this.isLoadingMore = false;
+  }
 
-    this.videoService.getMyVideos().subscribe({
-      next: (videos: any[]) => {
-        videos
-          .filter((v: any) => v.status === 'processing')
-          .forEach((v: any) => this.uploadStatus.track(v._id, v.title));
-      },
-      error: () => {} // silently ignore — non-critical
-    });
+  // ── Processing recovery ───────────────────────────────────────────────────────
+  // On page load/refresh, register the user's videos that are still processing
+  // so the banner and ready-toast work even after a page refresh.
+  private checkOwnProcessingVideos(): void {
+    this.uploadStatus.recover();
   }
 
   // ── Event handlers ────────────────────────────────────────────────────────────

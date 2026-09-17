@@ -1,166 +1,84 @@
-<ng-container *ngIf="flipEnabled; else normalCard">
-  <div class="flip-card" [class.flipped]="flip">
-    <div class="flip-card-inner">
+<article class="vcard"
+         [class.vcard--compact]="layout === 'compact'"
+         [class.is-faded]="faded"
+         [class.is-flipped]="flip"
+         [class.is-previewing]="isPreviewPlaying">
 
-      <!-- ══ FRONT ════════════════════════════════════════════════════════ -->
-      <div class="flip-card-front">
-        <mat-card (click)="onVideoClick()" class="video-card" [ngClass]="{ faded: faded }">
-          <div class="video-card-inner">
+  <!-- ── Thumbnail ──────────────────────────────────────────────────────── -->
+  <div class="vcard-media" (mouseenter)="onThumbHover($event)" (mouseleave)="onThumbLeave($event)">
 
-            <!-- Thumbnail + overlays -->
-            <div class="thumb-wrap" (mouseenter)="onThumbHover($event)" (mouseleave)="onThumbLeave($event)">
-              <!-- Preview video (lazy-loaded on first hover after 2 s) -->
-              <video class="video-preview" preload="none" muted playsinline loop controlsList="nodownload">
-                <source *ngIf="previewLoaded && safeUrl" [src]="safeUrl" type="video/mp4" />
-              </video>
+    <!-- Duplicate of the title link for pointer users; the title link is the one in tab order -->
+    <a class="vcard-thumb" [routerLink]="link" [state]="linkState" tabindex="-1" aria-hidden="true">
+      <!-- Preview clip, lazy-loaded after a 1 s hover -->
+      <video class="video-preview" preload="none" muted playsinline loop disablepictureinpicture>
+        <source *ngIf="previewLoaded && safeUrl" [src]="safeUrl" type="video/mp4" />
+      </video>
 
-              <!-- Thumbnail cover — shown until preview plays, fades out after 2 s hover -->
-              <img
-                *ngIf="video?.thumbnailUrl"
-                class="thumb-cover"
-                [class.thumb-cover--hidden]="isPreviewPlaying"
-                [src]="video.thumbnailUrl"
-                [alt]="video?.title" />
+      <img *ngIf="video?.thumbnailUrl; else noThumb"
+           class="thumb-cover"
+           [class.thumb-cover--hidden]="isPreviewPlaying"
+           [src]="video.thumbnailUrl"
+           alt=""
+           loading="lazy"
+           decoding="async" />
+      <ng-template #noThumb>
+        <span class="thumb-fallback"><mat-icon>movie</mat-icon></span>
+      </ng-template>
 
-              <!-- Hover overlay with play hint -->
-              <div class="thumb-overlay">
-                <mat-icon class="play-hint">play_circle</mat-icon>
-              </div>
-              <!-- Category badge — bottom-left of thumbnail -->
-              <span class="cat-badge" *ngIf="video?.category; else noCat1">{{ video.category }}</span>
-              <ng-template #noCat1>
-                <span class="cat-badge cat-badge--empty">Uncategorised</span>
-              </ng-template>
-              <!-- Processing badge — owner only -->
-              <span class="processing-badge" *ngIf="video?.status === 'processing' && isOwner">
-                <mat-icon>hourglass_empty</mat-icon> Processing
-              </span>
-              <!-- Flip trigger — top-right of thumbnail -->
-              <button class="flip-trigger" (click)="onFlipClick($event)" title="See description">
-                <mat-icon>info_outline</mat-icon>
-              </button>
-            </div>
+      <span class="thumb-play"><mat-icon>play_arrow</mat-icon></span>
+    </a>
 
-            <!-- Card info area -->
-            <mat-card-content class="card-body">
-              <div class="card-info-row">
-                <ng-container *ngIf="video?.user_profile_image; else initialsAvatar1">
-                  <img class="avatar-img" [src]="video.user_profile_image" [alt]="video?.userName" (error)="onAvatarError($event)" referrerpolicy="no-referrer" />
-                </ng-container>
-                <ng-template #initialsAvatar1>
-                  <span class="avatar-circle">{{ (video?.userName || 'U')[0].toUpperCase() }}</span>
-                </ng-template>
-                <div class="text-block">
-                  <h3 class="video-title">{{ video?.title || "Untitled Video" }}</h3>
-                  <div class="video-meta">
-                    <span class="uploader-name">{{ video?.userName || "Unknown User" }}</span>
-                    <span class="meta-dot">·</span>
-                    <mat-icon class="like-icon">thumb_up</mat-icon>
-                    <span class="like-count">{{ video.likes || 0 }}</span>
-                    <span class="meta-dot">·</span>
-                    <mat-icon class="view-icon">visibility</mat-icon>
-                    <span class="view-count">{{ formatViews(video.views || 0) }}</span>
-                  </div>
-                </div>
-              </div>
-            </mat-card-content>
+    <span class="ss-badge ss-badge--category vcard-cat" *ngIf="video?.category">{{ video.category }}</span>
 
-          </div>
-        </mat-card>
-      </div>
+    <span class="ss-badge ss-badge--media vcard-likes">
+      <mat-icon>thumb_up</mat-icon>{{ formatViews(video?.likes || 0) }}
+    </span>
 
-      <!-- ══ BACK ═════════════════════════════════════════════════════════ -->
-      <div class="flip-card-back">
-        <mat-card class="video-card">
-          <div class="video-card-inner">
-            <div class="flipped-content">
+    <span class="ss-badge ss-badge--media-warning vcard-processing" *ngIf="video?.status === 'processing' && isOwner">
+      <mat-icon class="ss-spin">hourglass_empty</mat-icon>Processing
+    </span>
 
-              <span class="cat-badge cat-badge--back">{{ video?.category || 'Uncategorised' }}</span>
+    <button *ngIf="flipEnabled && layout === 'grid'"
+            type="button"
+            class="vcard-info"
+            (click)="onFlipClick($event)"
+            [attr.aria-expanded]="flip"
+            [attr.aria-label]="flip ? 'Hide description' : 'Show description'">
+      <mat-icon>{{ flip ? 'close' : 'info_outline' }}</mat-icon>
+    </button>
 
-              <h3 class="video-title flip-back-title">{{ video?.title || "Untitled Video" }}</h3>
-              <p class="video-description">{{ video?.description || "No description available." }}</p>
-
-              <div class="flip-back-meta">
-                <ng-container *ngIf="video?.user_profile_image; else initialsBack">
-                  <img class="avatar-img avatar-img--sm" [src]="video.user_profile_image" [alt]="video?.userName" (error)="onAvatarError($event)" />
-                </ng-container>
-                <ng-template #initialsBack>
-                  <span class="avatar-circle avatar-circle--sm">{{ (video?.userName || 'U')[0].toUpperCase() }}</span>
-                </ng-template>
-                <span class="uploader-name">{{ video?.userName || "Unknown User" }}</span>
-                <span class="meta-dot">·</span>
-                <mat-icon class="like-icon">thumb_up</mat-icon>
-                <span class="like-count">{{ video.likes || 0 }}</span>
-                <span class="meta-dot">·</span>
-                <mat-icon class="view-icon">visibility</mat-icon>
-                <span class="view-count">{{ formatViews(video.views || 0) }}</span>
-              </div>
-
-              <button class="flip-trigger flip-trigger--back" (click)="onFlipClick($event)" title="Back to video">
-                <mat-icon>close</mat-icon>
-              </button>
-
-            </div>
-          </div>
-        </mat-card>
-      </div>
-
+    <div class="vcard-about" *ngIf="flip">
+      <p class="vcard-about-title">{{ video?.title || 'Untitled video' }}</p>
+      <p class="vcard-about-text">{{ video?.description || 'No description yet.' }}</p>
     </div>
   </div>
-</ng-container>
 
-<!-- Normal card (profile pages, no flip) -->
-<ng-template #normalCard>
-  <mat-card (click)="onVideoClick()" class="video-card" [ngClass]="{ faded: faded }">
-    <div class="video-card-inner">
-      <div class="thumb-wrap" (mouseenter)="onThumbHover($event)" (mouseleave)="onThumbLeave($event)">
-        <!-- Preview video -->
-        <video class="video-preview" preload="none" muted playsinline loop controlsList="nodownload">
-          <source *ngIf="previewLoaded" [src]="safeUrl" type="video/mp4" />
-        </video>
+  <!-- ── Details ────────────────────────────────────────────────────────── -->
+  <div class="vcard-body">
+    <ng-container *ngIf="layout === 'grid'">
+      <img *ngIf="video?.user_profile_image && !avatarFailed; else initialsAvatar"
+           class="ss-avatar vcard-avatar avatar-img"
+           [src]="video.user_profile_image"
+           alt=""
+           loading="lazy"
+           referrerpolicy="no-referrer"
+           (error)="onAvatarError($event)" />
+      <ng-template #initialsAvatar>
+        <span class="ss-avatar vcard-avatar" aria-hidden="true">{{ initial }}</span>
+      </ng-template>
+    </ng-container>
 
-        <!-- Thumbnail cover -->
-        <img
-          *ngIf="video?.thumbnailUrl"
-          class="thumb-cover"
-          [class.thumb-cover--hidden]="isPreviewPlaying"
-          [src]="video.thumbnailUrl"
-          [alt]="video?.title" />
-
-        <div class="thumb-overlay">
-          <mat-icon class="play-hint">play_circle</mat-icon>
-        </div>
-        <span class="cat-badge" *ngIf="video?.category; else noCat3">{{ video.category }}</span>
-        <ng-template #noCat3>
-          <span class="cat-badge cat-badge--empty">Uncategorised</span>
-        </ng-template>
-        <!-- Processing badge — owner only -->
-        <span class="processing-badge" *ngIf="video?.status === 'processing' && isOwner">
-          <mat-icon>hourglass_empty</mat-icon> Processing
-        </span>
-      </div>
-      <mat-card-content class="card-body">
-        <div class="card-info-row">
-          <ng-container *ngIf="video?.user_profile_image; else initialsNormal">
-            <img class="avatar-img" [src]="video.user_profile_image" [alt]="video?.userName" (error)="onAvatarError($event)" referrerpolicy="no-referrer" />
-          </ng-container>
-          <ng-template #initialsNormal>
-            <span class="avatar-circle">{{ (video?.userName || 'U')[0].toUpperCase() }}</span>
-          </ng-template>
-          <div class="text-block">
-            <h3 class="video-title">{{ video?.title || "Untitled Video" }}</h3>
-            <div class="video-meta">
-              <span class="uploader-name">{{ video?.userName || "Unknown User" }}</span>
-              <span class="meta-dot">·</span>
-              <mat-icon class="like-icon">thumb_up</mat-icon>
-              <span class="like-count">{{ video.likes || 0 }}</span>
-              <span class="meta-dot">·</span>
-              <mat-icon class="view-icon">visibility</mat-icon>
-              <span class="view-count">{{ formatViews(video.views || 0) }}</span>
-            </div>
-          </div>
-        </div>
-      </mat-card-content>
+    <div class="vcard-text">
+      <h3 class="vcard-title">
+        <a [routerLink]="link" [state]="linkState" [attr.title]="video?.title">{{ video?.title || 'Untitled video' }}</a>
+      </h3>
+      <p class="vcard-channel">{{ video?.userName || 'Unknown creator' }}</p>
+      <p class="vcard-meta">
+        <span>{{ formatViews(video?.views || 0) }} {{ (video?.views || 0) === 1 ? 'view' : 'views' }}</span>
+        <ng-container *ngIf="timeAgo(video?.uploadedAt) as ago">
+          <span class="dot" aria-hidden="true">·</span><span>{{ ago }}</span>
+        </ng-container>
+      </p>
     </div>
-  </mat-card>
-</ng-template>
+  </div>
+</article>

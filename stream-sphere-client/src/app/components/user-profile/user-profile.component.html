@@ -1,354 +1,287 @@
-<!-- ══════════════════════════════════════════════════════════ PROFILE HEADER -->
-<div class="profile-header">
-  <div class="background-image">
-    <div class="header-gradient"></div>
+<!-- ── Toast ──────────────────────────────────────────────────────────────── -->
+<div class="ss-toast" *ngIf="toast" [class.ss-toast--error]="toast.error" role="status" aria-live="polite">
+  <mat-icon>{{ toast.error ? 'error_outline' : 'check_circle' }}</mat-icon>
+  <span>{{ toast.message }}</span>
+  <button type="button" class="ss-icon-btn ss-icon-btn--sm" (click)="dismissToast()" aria-label="Dismiss">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
 
-    <div class="profile-info">
-      <div class="profile-pic-wrap">
-        <img
-          class="profile-pic"
-          [src]="profileImage"
-          [alt]="userName + ' profile picture'"
-          (error)="onImageError($event)"
-          referrerpolicy="no-referrer"
-        />
-        <span class="online-dot"></span>
+<div class="profile">
+
+  <!-- ── Channel header ────────────────────────────────────────────────── -->
+  <header class="channel">
+    <div class="channel-banner" aria-hidden="true"></div>
+
+    <div class="channel-row">
+      <img *ngIf="profileImage && !avatarFailed; else avatarInitials"
+           class="channel-avatar"
+           [src]="profileImage"
+           alt=""
+           referrerpolicy="no-referrer"
+           (error)="onAvatarError()" />
+      <ng-template #avatarInitials>
+        <span class="ss-avatar channel-avatar" aria-hidden="true">{{ initials }}</span>
+      </ng-template>
+
+      <div class="channel-info">
+        <h1 class="channel-name">{{ userName }}</h1>
+        <p class="channel-email" *ngIf="userEmail">{{ userEmail }}</p>
+        <p class="channel-stats ss-dot-list" *ngIf="!mine.loading && !mine.failed">
+          <span>{{ plural(mine.items.length, 'video', 'videos') }}</span>
+          <span>{{ plural(totalViews, 'view', 'views') }}</span>
+          <span>{{ plural(totalLikes, 'like', 'likes') }}</span>
+        </p>
+        <p class="channel-stats" *ngIf="mine.loading" aria-hidden="true">
+          <span class="ss-skel ss-skel-line channel-stats-skel"></span>
+        </p>
       </div>
 
-      <div class="user-details">
-        <div class="username">{{ userName }}</div>
-        <div class="user-email">{{ userEmail }}</div>
-
-        <!-- Quick stats chips -->
-        <div class="stat-chips">
-          <span class="chip">
-            <mat-icon class="chip-icon">video_library</mat-icon>
-            {{ myVideos.length }} Videos
-          </span>
-          <span class="chip">
-            <mat-icon class="chip-icon">thumb_up</mat-icon>
-            {{ totalLikes }} Likes
-          </span>
-          <span class="chip">
-            <mat-icon class="chip-icon">visibility</mat-icon>
-            {{ totalViews }} Views
-          </span>
-        </div>
+      <div class="channel-actions">
+        <a class="ss-btn ss-btn--primary" routerLink="/upload">
+          <mat-icon>upload</mat-icon>Upload video
+        </a>
+        <button type="button" class="ss-btn ss-btn--secondary" (click)="logout()">
+          <mat-icon>logout</mat-icon>Sign out
+        </button>
       </div>
     </div>
+  </header>
+
+  <!-- ── Tabs ──────────────────────────────────────────────────────────── -->
+  <div class="tabs-bar">
+    <div class="tabs" role="tablist" aria-label="Channel sections">
+      <button #tabButton
+              *ngFor="let tab of tabs; let i = index"
+              type="button"
+              role="tab"
+              class="tab"
+              [id]="'tab-' + tab.id"
+              [attr.aria-selected]="activeTab === tab.id"
+              [attr.aria-controls]="activeTab === tab.id ? 'panel-' + tab.id : null"
+              [attr.tabindex]="activeTab === tab.id ? 0 : -1"
+              (click)="selectTab(tab.id)"
+              (keydown)="onTabKeydown($event, i)">
+        {{ tab.label }}
+        <span class="tab-count" *ngIf="countFor(tab.id) !== null">{{ countFor(tab.id) }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Active panel ──────────────────────────────────────────────────── -->
+  <div class="panel"
+       role="tabpanel"
+       tabindex="0"
+       [id]="'panel-' + activeTab"
+       [attr.aria-labelledby]="'tab-' + activeTab">
+
+    <ng-container *ngIf="activeTab !== 'manage'; else managePanel">
+      <ng-container *ngTemplateOutlet="videoList; context: { $implicit: activeTab }"></ng-container>
+    </ng-container>
+
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════ BODY -->
-<div class="profile-body">
+<!-- ════════════════════════════════════════════ Videos / Liked / Disliked -->
+<ng-template #videoList let-tab>
+  <ng-container *ngIf="listFor(tab) as list">
 
-  <!-- ── Desktop Layout ───────────────────────────────────────────────── -->
-  <mat-sidenav-container class="sidenav-container" *ngIf="!isMobile">
-    <mat-sidenav mode="side" opened class="upload-sidebar">
-
-      <div class="sidebar-label">MENU</div>
-
-      <button mat-menu-item class="nav-btn" [class.active]="showMyVideosSection" (click)="showMyVideos()">
-        <mat-icon>video_library</mat-icon> My Videos
-      </button>
-      <button mat-menu-item class="nav-btn" [class.active]="showLikedVideosSection" (click)="showLikedVideos()">
-        <mat-icon>thumb_up</mat-icon> Liked Videos
-      </button>
-      <button mat-menu-item class="nav-btn" [class.active]="showDislikedVideosSection" (click)="showDislikedVideos()">
-        <mat-icon>thumb_down</mat-icon> Disliked Videos
-      </button>
-      <button mat-menu-item class="nav-btn" [class.active]="showDashboard" (click)="toggleDashboard()">
-        <mat-icon>dashboard</mat-icon> Dashboard
-      </button>
-
-      <div class="sidebar-divider"></div>
-
-      <button mat-menu-item class="nav-btn nav-btn--upload" (click)="openUploadPage()">
-        <mat-icon>upload</mat-icon> Upload Video
-      </button>
-      <button mat-menu-item class="nav-btn nav-btn--logout" (click)="logout()">
-        <mat-icon>logout</mat-icon> Logout
-      </button>
-
-    </mat-sidenav>
-
-    <mat-sidenav-content class="main-content">
-
-      <!-- Welcome -->
-      <div *ngIf="showWelcome" class="welcome-section">
-        <div class="welcome-avatar">
-          <img
-            [src]="profileImage"
-            [alt]="userName"
-            (error)="onImageError($event)"
-            referrerpolicy="no-referrer"
-            class="welcome-avatar-img"
-          />
-        </div>
-        <h2>Welcome back, {{ userName }}!</h2>
-        <p>Manage your videos and profile here.</p>
-
-        <div class="stat-cards">
-          <div class="stat-card" (click)="showMyVideos()">
-            <mat-icon class="stat-card-icon">video_library</mat-icon>
-            <div class="stat-card-value">{{ myVideos.length }}</div>
-            <div class="stat-card-label">My Videos</div>
-          </div>
-          <div class="stat-card stat-card--green" (click)="showLikedVideos()">
-            <mat-icon class="stat-card-icon">thumb_up</mat-icon>
-            <div class="stat-card-value">{{ totalLikes }}</div>
-            <div class="stat-card-label">Total Likes</div>
-          </div>
-          <div class="stat-card stat-card--blue" (click)="showMyVideos()">
-            <mat-icon class="stat-card-icon">visibility</mat-icon>
-            <div class="stat-card-value">{{ totalViews }}</div>
-            <div class="stat-card-label">Total Views</div>
-          </div>
-          <div class="stat-card stat-card--red" (click)="showDislikedVideos()">
-            <mat-icon class="stat-card-icon">thumb_down</mat-icon>
-            <div class="stat-card-value">{{ likedVideos.length }}</div>
-            <div class="stat-card-label">Liked Videos</div>
+    <ng-container *ngIf="list.loading">
+      <p class="ss-sr-only" role="status">Loading videos</p>
+      <div class="ss-video-grid" aria-hidden="true">
+        <div class="ss-card-skel" *ngFor="let s of skeletons">
+          <div class="ss-card-skel-thumb ss-skel"></div>
+          <div class="ss-card-skel-body">
+            <span class="ss-card-skel-avatar ss-skel"></span>
+            <div class="ss-card-skel-lines">
+              <span class="ss-skel ss-skel-line" style="width: 92%"></span>
+              <span class="ss-skel ss-skel-line" style="width: 58%"></span>
+              <span class="ss-skel ss-skel-line" style="width: 40%"></span>
+            </div>
           </div>
         </div>
       </div>
+    </ng-container>
 
-      <!-- My Videos -->
-      <div *ngIf="showMyVideosSection" class="content-section">
-        <div class="section-header">
-          <mat-icon class="section-icon">video_library</mat-icon>
-          <h3>My Videos</h3>
-          <span class="section-badge">{{ myVideos.length }}</span>
-        </div>
-
-        <div *ngIf="showDashboard; else cardGrid">
-          <div class="dashboard-toolbar">
-            <button mat-raised-button color="warn" (click)="deleteSelected()" [disabled]="selection.size === 0">
-              <mat-icon>delete</mat-icon> Delete Selected ({{ selection.size }})
-            </button>
-          </div>
-          <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z1 ss-table">
-            <ng-container matColumnDef="select">
-              <th mat-header-cell *matHeaderCellDef>
-                <mat-checkbox (change)="masterToggle()" [checked]="isAllSelected()" [indeterminate]="selection.size > 0 && !isAllSelected()"></mat-checkbox>
-              </th>
-              <td mat-cell *matCellDef="let row">
-                <mat-checkbox (click)="$event.stopPropagation()" (change)="toggleSelection(row._id)" [checked]="selection.has(row._id)"></mat-checkbox>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="title">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Title</th>
-              <td mat-cell *matCellDef="let row">{{ row.title }}</td>
-            </ng-container>
-            <ng-container matColumnDef="description">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Description</th>
-              <td mat-cell *matCellDef="let row"><span class="desc-cell">{{ row.description }}</span></td>
-            </ng-container>
-            <ng-container matColumnDef="uploadedAt">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Uploaded On</th>
-              <td mat-cell *matCellDef="let row">{{ row.uploadedAt | date: "mediumDate" }}</td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-          </table>
-          <mat-paginator [pageSize]="5" [pageSizeOptions]="[5, 10, 20]"></mat-paginator>
-        </div>
-
-        <ng-template #cardGrid>
-          <div *ngIf="myVideos.length === 0" class="empty-state">
-            <mat-icon class="empty-icon">cloud_upload</mat-icon>
-            <p>No videos uploaded yet.</p>
-            <button mat-raised-button color="primary" (click)="openUploadPage()">Upload your first video</button>
-          </div>
-          <div class="video-grid">
-            <app-video-card *ngFor="let video of myVideos" [video]="video" [flipEnabled]="false"></app-video-card>
-          </div>
-        </ng-template>
-      </div>
-
-      <!-- Liked Videos -->
-      <div *ngIf="showLikedVideosSection" class="content-section">
-        <div class="section-header">
-          <mat-icon class="section-icon section-icon--green">thumb_up</mat-icon>
-          <h3 class="section-title--green">Liked Videos</h3>
-          <span class="section-badge section-badge--green">{{ likedVideos.length }}</span>
-        </div>
-        <div *ngIf="likedVideos.length === 0" class="empty-state">
-          <mat-icon class="empty-icon">thumb_up_off_alt</mat-icon>
-          <p>No liked videos yet. Explore and like videos!</p>
-        </div>
-        <div *ngIf="likedVideos.length > 0" class="video-grid">
-          <app-video-card *ngFor="let video of likedVideos" [video]="video" [flipEnabled]="false"></app-video-card>
-        </div>
-      </div>
-
-      <!-- Disliked Videos -->
-      <div *ngIf="showDislikedVideosSection" class="content-section">
-        <div class="section-header">
-          <mat-icon class="section-icon section-icon--red">thumb_down</mat-icon>
-          <h3 class="section-title--red">Disliked Videos</h3>
-          <span class="section-badge section-badge--red">{{ dislikedVideos.length }}</span>
-        </div>
-        <div *ngIf="dislikedVideos.length === 0" class="empty-state">
-          <mat-icon class="empty-icon">sentiment_satisfied</mat-icon>
-          <p>No disliked videos — great taste!</p>
-        </div>
-        <div *ngIf="dislikedVideos.length > 0" class="video-grid">
-          <app-video-card *ngFor="let video of dislikedVideos" [video]="video" [flipEnabled]="false"></app-video-card>
-        </div>
-      </div>
-
-      <!-- Dashboard -->
-      <div *ngIf="showDashboard" class="content-section">
-        <div class="section-header">
-          <mat-icon class="section-icon section-icon--accent">dashboard</mat-icon>
-          <h3 class="section-title--accent">Dashboard</h3>
-          <span class="section-badge section-badge--accent">{{ myVideos.length }}</span>
-        </div>
-        <p class="section-subtitle">Manage and delete your uploaded videos.</p>
-        <div class="dashboard-toolbar">
-          <button mat-raised-button color="warn" (click)="deleteSelected()" [disabled]="selection.size === 0">
-            <mat-icon>delete</mat-icon> Delete Selected ({{ selection.size }})
-          </button>
-        </div>
-        <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z1 ss-table">
-          <ng-container matColumnDef="select">
-            <th mat-header-cell *matHeaderCellDef>
-              <mat-checkbox (change)="masterToggle()" [checked]="isAllSelected()" [indeterminate]="selection.size > 0 && !isAllSelected()"></mat-checkbox>
-            </th>
-            <td mat-cell *matCellDef="let row">
-              <mat-checkbox (click)="$event.stopPropagation()" (change)="toggleSelection(row._id)" [checked]="selection.has(row._id)"></mat-checkbox>
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="title">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Title</th>
-            <td mat-cell *matCellDef="let row">{{ row.title }}</td>
-          </ng-container>
-          <ng-container matColumnDef="description">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Description</th>
-            <td mat-cell *matCellDef="let row">{{ row.description }}</td>
-          </ng-container>
-          <ng-container matColumnDef="uploadedAt">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Uploaded On</th>
-            <td mat-cell *matCellDef="let row">{{ row.uploadedAt | date: "mediumDate" }}</td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-        </table>
-        <mat-paginator [pageSize]="5" [pageSizeOptions]="[5, 10, 20]"></mat-paginator>
-      </div>
-
-    </mat-sidenav-content>
-  </mat-sidenav-container>
-
-  <!-- ── Mobile Layout ─────────────────────────────────────────────────── -->
-  <div *ngIf="isMobile" class="mobile-layout">
-
-    <div class="mobile-actions">
-      <button mat-raised-button color="primary" (click)="openUploadPage()" class="mobile-action-btn">
-        <mat-icon>upload</mat-icon> Upload
-      </button>
-      <button mat-raised-button color="warn" (click)="logout()" class="mobile-action-btn">
-        <mat-icon>logout</mat-icon> Logout
+    <div class="ss-state ss-state--error" *ngIf="list.failed" role="alert">
+      <mat-icon>error_outline</mat-icon>
+      <h2>Couldn’t load these videos</h2>
+      <p>Check your connection, then try again.</p>
+      <button type="button" class="ss-btn ss-btn--primary" (click)="retry(tab)">
+        <mat-icon>refresh</mat-icon>Try again
       </button>
     </div>
 
-    <!-- Mobile stat cards -->
-    <div class="mobile-stats">
-      <div class="mobile-stat">
-        <div class="mobile-stat-value">{{ myVideos.length }}</div>
-        <div class="mobile-stat-label">Videos</div>
-      </div>
-      <div class="mobile-stat">
-        <div class="mobile-stat-value">{{ totalLikes }}</div>
-        <div class="mobile-stat-label">Likes</div>
-      </div>
-      <div class="mobile-stat">
-        <div class="mobile-stat-value">{{ totalViews }}</div>
-        <div class="mobile-stat-label">Views</div>
-      </div>
+    <div class="ss-state" *ngIf="!list.loading && !list.failed && list.items.length === 0">
+      <ng-container *ngIf="emptyFor(tab) as copy">
+        <mat-icon>{{ copy.icon }}</mat-icon>
+        <h2>{{ copy.title }}</h2>
+        <p>{{ copy.hint }}</p>
+      </ng-container>
+      <a *ngIf="tab === 'videos'" class="ss-btn ss-btn--primary" routerLink="/upload">
+        <mat-icon>upload</mat-icon>Upload video
+      </a>
+      <a *ngIf="tab !== 'videos'" class="ss-btn ss-btn--secondary" routerLink="/home">
+        <mat-icon>explore</mat-icon>Browse videos
+      </a>
     </div>
 
-    <mat-accordion class="mobile-accordion">
-      <!-- My Videos -->
-      <mat-expansion-panel [expanded]="showMyVideosSection" (opened)="onPanelOpened('myVideos')" class="mobile-panel">
-        <mat-expansion-panel-header>
-          <mat-panel-title><mat-icon>video_library</mat-icon> My Videos</mat-panel-title>
-        </mat-expansion-panel-header>
-        <div class="my-videos-section">
-          <div *ngIf="myVideos.length === 0" class="empty-state">
-            <mat-icon class="empty-icon">cloud_upload</mat-icon>
-            <p>No videos uploaded yet.</p>
-          </div>
-          <div class="video-grid">
-            <app-video-card *ngFor="let video of myVideos" [video]="video" [flipEnabled]="false"></app-video-card>
-          </div>
-        </div>
-      </mat-expansion-panel>
+    <div class="ss-video-grid" *ngIf="!list.loading && !list.failed && list.items.length > 0">
+      <app-video-card
+        *ngFor="let video of list.items; trackBy: trackById"
+        [video]="video"
+        [flipEnabled]="false">
+      </app-video-card>
+    </div>
 
-      <!-- Liked Videos -->
-      <mat-expansion-panel [expanded]="showLikedVideosSection" (opened)="onPanelOpened('likedVideos')" class="mobile-panel">
-        <mat-expansion-panel-header>
-          <mat-panel-title><mat-icon>thumb_up</mat-icon> Liked Videos</mat-panel-title>
-        </mat-expansion-panel-header>
-        <div class="liked-videos-section">
-          <div *ngIf="likedVideos.length === 0" class="empty-state"><p>No liked videos yet.</p></div>
-          <div *ngIf="likedVideos.length > 0" class="video-grid">
-            <app-video-card *ngFor="let video of likedVideos" [video]="video" [flipEnabled]="false"></app-video-card>
-          </div>
-        </div>
-      </mat-expansion-panel>
+  </ng-container>
+</ng-template>
 
-      <!-- Disliked Videos -->
-      <mat-expansion-panel [expanded]="showDislikedVideosSection" (opened)="onPanelOpened('dislikedVideos')" class="mobile-panel">
-        <mat-expansion-panel-header>
-          <mat-panel-title><mat-icon>thumb_down</mat-icon> Disliked Videos</mat-panel-title>
-        </mat-expansion-panel-header>
-        <div class="disliked-videos-section">
-          <div *ngIf="dislikedVideos.length === 0" class="empty-state"><p>No disliked videos yet.</p></div>
-          <div *ngIf="dislikedVideos.length > 0" class="video-grid">
-            <app-video-card *ngFor="let video of dislikedVideos" [video]="video" [flipEnabled]="false"></app-video-card>
-          </div>
-        </div>
-      </mat-expansion-panel>
+<!-- ════════════════════════════════════════════════════════════════ Manage -->
+<ng-template #managePanel>
 
-      <!-- Dashboard -->
-      <mat-expansion-panel [expanded]="showDashboard" (opened)="onPanelOpened('dashboard')" class="mobile-panel">
-        <mat-expansion-panel-header>
-          <mat-panel-title><mat-icon>dashboard</mat-icon> Dashboard</mat-panel-title>
-        </mat-expansion-panel-header>
-        <div class="dashboard-section">
-          <div class="dashboard-toolbar">
-            <button mat-raised-button color="warn" (click)="deleteSelected()" [disabled]="selection.size === 0">
-              <mat-icon>delete</mat-icon> Delete ({{ selection.size }})
-            </button>
-          </div>
-          <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z1 ss-table">
-            <ng-container matColumnDef="select">
-              <th mat-header-cell *matHeaderCellDef>
-                <mat-checkbox (change)="masterToggle()" [checked]="isAllSelected()" [indeterminate]="selection.size > 0 && !isAllSelected()"></mat-checkbox>
-              </th>
-              <td mat-cell *matCellDef="let row">
-                <mat-checkbox (click)="$event.stopPropagation()" (change)="toggleSelection(row._id)" [checked]="selection.has(row._id)"></mat-checkbox>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="title">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Title</th>
-              <td mat-cell *matCellDef="let row">{{ row.title }}</td>
-            </ng-container>
-            <ng-container matColumnDef="description">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Description</th>
-              <td mat-cell *matCellDef="let row"><span class="desc-cell">{{ row.description }}</span></td>
-            </ng-container>
-            <ng-container matColumnDef="uploadedAt">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Uploaded On</th>
-              <td mat-cell *matCellDef="let row">{{ row.uploadedAt | date: "mediumDate" }}</td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-          </table>
-          <mat-paginator [pageSize]="5" [pageSizeOptions]="[5, 10, 20]"></mat-paginator>
-        </div>
-      </mat-expansion-panel>
-    </mat-accordion>
+  <!-- Toolbar: summary, or bulk actions while rows are selected -->
+  <div class="manage-toolbar" [class.has-selection]="selection.size > 0">
+    <ng-container *ngIf="selection.size > 0; else manageSummary">
+      <button type="button" class="ss-icon-btn ss-icon-btn--sm" (click)="clearSelection()" aria-label="Clear selection">
+        <mat-icon>close</mat-icon>
+      </button>
+      <span class="manage-selected" role="status">{{ selection.size }} selected</span>
+      <button type="button" class="ss-btn ss-btn--danger ss-btn--sm manage-action" [disabled]="deleting" (click)="deleteSelected()">
+        <span *ngIf="deleting" class="ss-spinner ss-spinner--sm"></span>
+        <mat-icon *ngIf="!deleting">delete_outline</mat-icon>
+        {{ deleting ? 'Deleting…' : 'Delete' }}
+      </button>
+    </ng-container>
+    <ng-template #manageSummary>
+      <span class="manage-summary" *ngIf="!mine.loading && !mine.failed">
+        {{ plural(mine.items.length, 'video', 'videos') }}<ng-container *ngIf="processingCount > 0"> · {{ processingCount }} processing</ng-container>
+      </span>
+      <a class="ss-btn ss-btn--secondary ss-btn--sm manage-action" routerLink="/upload">
+        <mat-icon>upload</mat-icon>Upload
+      </a>
+    </ng-template>
   </div>
-</div>
+
+  <!-- Loading -->
+  <div class="manage-skel" *ngIf="mine.loading" aria-hidden="true">
+    <div class="manage-skel-row" *ngFor="let s of rowSkeletons">
+      <span class="ss-skel manage-skel-box"></span>
+      <span class="ss-skel manage-skel-thumb"></span>
+      <span class="manage-skel-lines">
+        <span class="ss-skel ss-skel-line" style="width: 60%"></span>
+        <span class="ss-skel ss-skel-line" style="width: 35%"></span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="ss-state ss-state--error" *ngIf="mine.failed" role="alert">
+    <mat-icon>error_outline</mat-icon>
+    <h2>Couldn’t load your videos</h2>
+    <p>Check your connection, then try again.</p>
+    <button type="button" class="ss-btn ss-btn--primary" (click)="retry('manage')">
+      <mat-icon>refresh</mat-icon>Try again
+    </button>
+  </div>
+
+  <!-- Empty -->
+  <div class="ss-state" *ngIf="!mine.loading && !mine.failed && mine.items.length === 0">
+    <mat-icon>video_call</mat-icon>
+    <h2>Nothing to manage yet</h2>
+    <p>Upload a video and you can track its views and likes here.</p>
+    <a class="ss-btn ss-btn--primary" routerLink="/upload">
+      <mat-icon>upload</mat-icon>Upload video
+    </a>
+  </div>
+
+  <!-- Table -->
+  <ng-container *ngIf="!mine.loading && !mine.failed && mine.items.length > 0">
+    <div class="table-wrap">
+      <table mat-table
+             [dataSource]="dataSource"
+             matSort
+             matSortActive="uploadedAt"
+             matSortDirection="desc"
+             matSortDisableClear
+             class="manage-table">
+
+        <ng-container matColumnDef="select">
+          <th mat-header-cell *matHeaderCellDef class="col-select">
+            <mat-checkbox (change)="masterToggle()"
+                          [checked]="isAllSelected()"
+                          [indeterminate]="selection.size > 0 && !isAllSelected()"
+                          aria-label="Select all videos"></mat-checkbox>
+          </th>
+          <td mat-cell *matCellDef="let row" class="col-select">
+            <mat-checkbox (click)="$event.stopPropagation()"
+                          (change)="toggleSelection(row._id)"
+                          [checked]="selection.has(row._id)"
+                          [aria-label]="'Select ' + (row.title || 'video')"></mat-checkbox>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="video">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="title" class="col-video">Video</th>
+          <td mat-cell *matCellDef="let row" class="col-video">
+            <div class="cell-video">
+              <a class="cell-thumb" [routerLink]="['/video', row._id]" [state]="{ video: row }" tabindex="-1" aria-hidden="true">
+                <img *ngIf="row.thumbnailUrl; else thumbFallback" [src]="row.thumbnailUrl" alt="" loading="lazy" decoding="async" />
+                <ng-template #thumbFallback><mat-icon>movie</mat-icon></ng-template>
+              </a>
+              <div class="cell-text">
+                <a class="cell-title" [routerLink]="['/video', row._id]" [state]="{ video: row }">{{ row.title || 'Untitled video' }}</a>
+                <span class="cell-desc">{{ row.description || 'No description' }}</span>
+                <!-- Narrow screens fold the other columns into this line -->
+                <span class="cell-meta ss-dot-list">
+                  <span class="cell-status" [class.is-processing]="row.status === 'processing'">
+                    {{ row.status === 'processing' ? 'Processing' : 'Ready' }}
+                  </span>
+                  <span>{{ plural(row.views || 0, 'view', 'views') }}</span>
+                  <span>{{ row.uploadedAt | date: 'MMM d, y' }}</span>
+                </span>
+              </div>
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header class="col-status">Status</th>
+          <td mat-cell *matCellDef="let row" class="col-status">
+            <span *ngIf="row.status === 'processing'" class="ss-badge ss-badge--warning">
+              <mat-icon class="ss-spin">hourglass_empty</mat-icon>Processing
+            </span>
+            <span *ngIf="row.status !== 'processing'" class="ss-badge ss-badge--success">
+              <mat-icon>check_circle</mat-icon>Ready
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="views">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before" class="col-num">Views</th>
+          <td mat-cell *matCellDef="let row" class="col-num">{{ (row.views || 0) | number }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="likes">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before" class="col-num">Likes</th>
+          <td mat-cell *matCellDef="let row" class="col-num">{{ (row.likes || 0) | number }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="uploadedAt">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header class="col-date">Uploaded</th>
+          <td mat-cell *matCellDef="let row" class="col-date">{{ row.uploadedAt | date: 'MMM d, y' }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row
+            *matRowDef="let row; columns: displayedColumns"
+            [class.is-selected]="selection.has(row._id)"></tr>
+      </table>
+    </div>
+
+    <mat-paginator [pageSize]="10"
+                   [pageSizeOptions]="[10, 25, 50]"
+                   aria-label="Choose a page of videos"></mat-paginator>
+  </ng-container>
+
+</ng-template>

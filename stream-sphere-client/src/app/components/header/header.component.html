@@ -1,60 +1,96 @@
 <!-- ── Main header bar ──────────────────────────────────────────────────── -->
-<header class="app-header" [class.scrolled]="isScrolled" [class.search-active]="searchOpen">
+<header class="app-header"
+        [class.is-overlay]="overlayMode"
+        [class.is-solid]="!overlayMode"
+        [class.search-open]="mobileSearchOpen">
 
   <div class="header-inner">
 
-    <!-- Logo -->
-    <div class="logo" (click)="navigateToHome()">
+    <!-- Brand -->
+    <a class="brand" routerLink="/home" (click)="onBrandClick()" aria-label="StreamSphere home">
       <!-- Spaces in srcset are separators — URL-encode them so the WebP is
            actually picked up by browsers instead of falling back to the 1.4 MB PNG -->
       <picture>
-        <source srcset="assets/thumbs/Stream%20Sphere%20Icon.webp" type="image/webp" />
-        <img src="assets/thumbs/Stream%20Sphere%20Icon.png"
-             alt="StreamSphere"
-             width="64" height="64"
-             fetchpriority="high"
-             class="app-logo desktop-logo" />
-      </picture>
-      <picture>
         <source srcset="assets/thumbs/ss_icon_mobile.webp" type="image/webp" />
         <img src="assets/thumbs/ss_icon_mobile.png"
-             alt="StreamSphere"
-             width="44" height="44"
+             alt=""
+             width="40" height="40"
              fetchpriority="high"
-             class="app-logo mobile-logo" />
+             class="brand-mark" />
       </picture>
-    </div>
+      <span class="brand-word">Stream<span>Sphere</span></span>
+    </a>
 
-    <!-- Spacer -->
-    <div class="header-spacer"></div>
+    <!-- Search: inline on wide screens, a row under the bar on small ones -->
+    <form class="search" role="search" (submit)="onSearchSubmit($event)">
+      <label class="ss-sr-only" for="header-search">Search videos</label>
+      <mat-icon class="search-icon" aria-hidden="true">search</mat-icon>
+      <input #searchInput
+             id="header-search"
+             class="search-input"
+             type="search"
+             placeholder="Search videos"
+             autocomplete="off"
+             enterkeyhint="search"
+             [value]="searchTerm"
+             (input)="onSearchInput($event)"
+             (keydown.escape)="clearSearch()" />
+      <button *ngIf="searchTerm" type="button" class="search-clear" (click)="clearSearch()" aria-label="Clear search">
+        <mat-icon>close</mat-icon>
+      </button>
+      <kbd class="search-kbd" *ngIf="!searchTerm" aria-hidden="true">/</kbd>
+    </form>
 
     <!-- Right actions -->
     <div class="header-actions">
 
-      <!-- Search toggle -->
-      <button class="action-btn" (click)="toggleSearch()"
-              [attr.aria-label]="searchOpen ? 'Close search' : 'Open search'">
-        <mat-icon>{{ searchOpen ? 'close' : 'search' }}</mat-icon>
+      <button type="button"
+              class="action-btn search-toggle"
+              (click)="toggleSearch()"
+              [attr.aria-expanded]="mobileSearchOpen"
+              [attr.aria-label]="mobileSearchOpen ? 'Close search' : 'Open search'">
+        <mat-icon>{{ mobileSearchOpen ? 'close' : 'search' }}</mat-icon>
       </button>
 
-      <!-- Dark mode toggle -->
-      <button class="action-btn theme-btn"
+      <a *ngIf="isLoggedIn"
+         class="upload-btn"
+         [class.is-busy]="uploads.isTransferring"
+         [class.is-failed]="uploads.hasFailed"
+         routerLink="/upload"
+         routerLinkActive="is-active"
+         ariaCurrentWhenActive="page"
+         [attr.aria-label]="uploadButtonLabel"
+         (click)="closeSearch()">
+        <span *ngIf="uploads.isTransferring; else uploadIcon" class="ss-spinner ss-spinner--sm" aria-hidden="true"></span>
+        <ng-template #uploadIcon>
+          <mat-icon>{{ uploads.hasFailed ? 'error_outline' : 'add' }}</mat-icon>
+        </ng-template>
+        <span class="upload-btn-text">{{ uploadButtonText }}</span>
+        <span *ngIf="!uploads.isTransferring && uploads.processingCount > 0" class="upload-btn-dot" aria-hidden="true"></span>
+      </a>
+
+      <button type="button"
+              class="action-btn theme-btn"
+              [class.theme-btn--in-menu]="isLoggedIn"
               (click)="themeService.toggle()"
               [attr.aria-label]="themeService.isDark() ? 'Switch to light mode' : 'Switch to dark mode'"
-              [matTooltip]="themeService.isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
+              [matTooltip]="themeService.isDark() ? 'Light mode' : 'Dark mode'">
         <mat-icon>{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
       </button>
 
       <!-- Avatar / user menu (logged in) -->
       <button *ngIf="isLoggedIn"
+              type="button"
               class="avatar-btn"
-              [attr.aria-label]="'Open menu for ' + user?.name"
+              [attr.aria-label]="'Account menu for ' + (user?.name || 'your account')"
               [matMenuTriggerFor]="userMenu">
-        <img [src]="profileImage"
-             [alt]="user?.name"
+        <img *ngIf="profileImage && !avatarFailed; else headerInitials"
+             [src]="profileImage"
+             alt=""
              (error)="onImageError($event)"
              referrerpolicy="no-referrer"
              class="avatar-img" />
+        <ng-template #headerInitials><span class="avatar-initials">{{ initials }}</span></ng-template>
       </button>
 
       <!-- Login button (not logged in) -->
@@ -62,80 +98,49 @@
 
     </div><!-- /header-actions -->
   </div><!-- /header-inner -->
-
-  <!-- ── Search overlay panel ─────────────────────────────────────────── -->
-  <div class="search-panel" [class.open]="searchOpen" (click)="$event.stopPropagation()">
-
-    <div class="search-input-row">
-      <mat-icon class="search-lead-icon">search</mat-icon>
-      <input #searchInput
-             class="search-input"
-             type="text"
-             placeholder="Search videos, channels…"
-             [value]="searchTerm"
-             (input)="onSearchInput($event)" />
-      <button *ngIf="searchTerm" class="search-clear-btn" (click)="clearSearch()" aria-label="Clear search">
-        <mat-icon>close</mat-icon>
-      </button>
-    </div>
-
-    <!-- Category chips -->
-    <div class="search-categories">
-      <button class="cat-chip" [class.active]="selectedCategory === 'All'"
-              (click)="selectCategory('All')">All</button>
-      <button *ngFor="let cat of categories"
-              class="cat-chip"
-              [class.active]="selectedCategory === cat"
-              (click)="selectCategory(cat)">{{ cat }}</button>
-    </div>
-
-  </div><!-- /search-panel -->
-
 </header>
 
-<!-- Backdrop — closes search when clicking outside -->
-<div class="search-backdrop"
-     [class.visible]="searchOpen"
-     (click)="closeSearch()">
-</div>
-
 <!-- ── User dropdown menu ───────────────────────────────────────────────── -->
-<mat-menu #userMenu="matMenu" class="ss-user-menu">
+<mat-menu #userMenu="matMenu" class="ss-user-menu" xPosition="before">
 
   <!-- Profile card -->
   <div class="menu-profile-card" (click)="$event.stopPropagation()">
-    <img [src]="profileImage" (error)="onImageError($event)" referrerpolicy="no-referrer" class="menu-avatar" />
+    <img *ngIf="profileImage && !avatarFailed; else menuInitials"
+         [src]="profileImage" (error)="onImageError($event)" referrerpolicy="no-referrer" alt="" class="menu-avatar" />
+    <ng-template #menuInitials><span class="menu-avatar menu-avatar--initials">{{ initials }}</span></ng-template>
     <div class="menu-user-info">
       <div class="menu-name">{{ user?.name }}</div>
       <div class="menu-email">{{ user?.email }}</div>
     </div>
   </div>
 
-  <mat-divider></mat-divider>
+  <div class="menu-list">
+    <button mat-menu-item (click)="navigateToProfile()">
+      <mat-icon>account_circle</mat-icon><span>Your profile</span>
+    </button>
+    <button mat-menu-item (click)="navigateToHistory()">
+      <mat-icon>history</mat-icon><span>Watch history</span>
+    </button>
+    <button mat-menu-item (click)="navigateToUpload()">
+      <mat-icon>cloud_upload</mat-icon><span>Upload video</span>
+    </button>
 
-  <button mat-menu-item (click)="navigateToHome()">
-    <mat-icon>home</mat-icon><span>Home</span>
-  </button>
-  <button mat-menu-item (click)="navigateToUpload()">
-    <mat-icon>cloud_upload</mat-icon><span>Upload Video</span>
-  </button>
-  <button mat-menu-item (click)="navigateToProfile()">
-    <mat-icon>person</mat-icon><span>My Profile</span>
-  </button>
-  <button mat-menu-item (click)="navigateToHistory()">
-    <mat-icon>history</mat-icon><span>Watch History</span>
-  </button>
+    <ng-container *ngIf="isAdmin">
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="navigateToAdmin()">
+        <mat-icon>developer_board</mat-icon><span>Dev dashboard</span>
+      </button>
+    </ng-container>
 
-  <mat-divider></mat-divider>
+    <mat-divider></mat-divider>
 
-  <button mat-menu-item *ngIf="isAdmin" (click)="navigateToAdmin()" class="admin-item">
-    <mat-icon>developer_board</mat-icon><span>Dev Dashboard</span>
-  </button>
-
-  <mat-divider *ngIf="isAdmin"></mat-divider>
-
-  <button mat-menu-item class="sign-out-item" (click)="logout()">
-    <mat-icon>logout</mat-icon><span>Sign Out</span>
-  </button>
+    <button mat-menu-item (click)="themeService.toggle()">
+      <mat-icon>{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+      <span>{{ themeService.isDark() ? 'Light mode' : 'Dark mode' }}</span>
+    </button>
+    <button mat-menu-item class="sign-out-item" (click)="logout()">
+      <mat-icon>logout</mat-icon><span>Sign out</span>
+    </button>
+  </div>
 
 </mat-menu>

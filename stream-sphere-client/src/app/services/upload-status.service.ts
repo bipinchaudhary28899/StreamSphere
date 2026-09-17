@@ -24,8 +24,27 @@ export class UploadStatusService implements OnDestroy {
   readonly ready$ = this._ready$.asObservable();
 
   private pollSub: Subscription | null = null;
+  /** recover() runs once per app session */
+  private recovered = false;
 
   constructor(private videoService: VideoService) {}
+
+  /**
+   * Picks up the signed-in user's videos that are still processing, so the
+   * banner and status views work after a page refresh too.
+   */
+  recover(): void {
+    if (this.recovered || !localStorage.getItem('user')) return;
+    this.recovered = true;
+    this.videoService.getMyVideos().subscribe({
+      next: (videos: any[]) => {
+        (videos || [])
+          .filter((v: any) => v.status === 'processing')
+          .forEach((v: any) => this.track(v._id, v.title));
+      },
+      error: () => { this.recovered = false; } // let a later page try again
+    });
+  }
 
   /** Call this right after save-video succeeds */
   track(id: string, title: string): void {
