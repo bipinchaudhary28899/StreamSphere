@@ -27,7 +27,7 @@
       <div class="channel-info">
         <h1 class="channel-name">{{ userName }}</h1>
         <p class="channel-email" *ngIf="userEmail">{{ userEmail }}</p>
-        <p class="channel-stats dot-list" *ngIf="!mine.loading && !mine.failed">
+        <p class="channel-stats ss-dot-list" *ngIf="!mine.loading && !mine.failed">
           <span>{{ plural(mine.items.length, 'video', 'videos') }}</span>
           <span>{{ plural(totalViews, 'view', 'views') }}</span>
           <span>{{ plural(totalLikes, 'like', 'likes') }}</span>
@@ -38,9 +38,9 @@
       </div>
 
       <div class="channel-actions">
-        <button type="button" class="ss-btn ss-btn--primary" (click)="openUploadPage()">
+        <a class="ss-btn ss-btn--primary" routerLink="/upload">
           <mat-icon>upload</mat-icon>Upload video
-        </button>
+        </a>
         <button type="button" class="ss-btn ss-btn--secondary" (click)="logout()">
           <mat-icon>logout</mat-icon>Sign out
         </button>
@@ -118,9 +118,9 @@
         <h2>{{ copy.title }}</h2>
         <p>{{ copy.hint }}</p>
       </ng-container>
-      <button *ngIf="tab === 'videos'" type="button" class="ss-btn ss-btn--primary" (click)="openUploadPage()">
+      <a *ngIf="tab === 'videos'" class="ss-btn ss-btn--primary" routerLink="/upload">
         <mat-icon>upload</mat-icon>Upload video
-      </button>
+      </a>
       <a *ngIf="tab !== 'videos'" class="ss-btn ss-btn--secondary" routerLink="/home">
         <mat-icon>explore</mat-icon>Browse videos
       </a>
@@ -157,9 +157,9 @@
       <span class="manage-summary" *ngIf="!mine.loading && !mine.failed">
         {{ plural(mine.items.length, 'video', 'videos') }}<ng-container *ngIf="processingCount > 0"> · {{ processingCount }} processing</ng-container>
       </span>
-      <button type="button" class="ss-btn ss-btn--secondary ss-btn--sm manage-action" (click)="openUploadPage()">
+      <a class="ss-btn ss-btn--secondary ss-btn--sm manage-action" routerLink="/upload">
         <mat-icon>upload</mat-icon>Upload
-      </button>
+      </a>
     </ng-template>
   </div>
 
@@ -190,9 +190,9 @@
     <mat-icon>video_call</mat-icon>
     <h2>Nothing to manage yet</h2>
     <p>Upload a video and you can track its views and likes here.</p>
-    <button type="button" class="ss-btn ss-btn--primary" (click)="openUploadPage()">
+    <a class="ss-btn ss-btn--primary" routerLink="/upload">
       <mat-icon>upload</mat-icon>Upload video
-    </button>
+    </a>
   </div>
 
   <!-- Table -->
@@ -233,7 +233,7 @@
                 <a class="cell-title" [routerLink]="['/video', row._id]" [state]="{ video: row }">{{ row.title || 'Untitled video' }}</a>
                 <span class="cell-desc">{{ row.description || 'No description' }}</span>
                 <!-- Narrow screens fold the other columns into this line -->
-                <span class="cell-meta dot-list">
+                <span class="cell-meta ss-dot-list">
                   <span class="cell-status" [class.is-processing]="row.status === 'processing'">
                     {{ row.status === 'processing' ? 'Processing' : 'Ready' }}
                   </span>

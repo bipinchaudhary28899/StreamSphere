@@ -52,10 +52,22 @@
         <mat-icon>{{ mobileSearchOpen ? 'close' : 'search' }}</mat-icon>
       </button>
 
-      <button *ngIf="isLoggedIn" type="button" class="upload-btn" (click)="navigateToUpload()">
-        <mat-icon>add</mat-icon>
-        <span>Upload</span>
-      </button>
+      <a *ngIf="isLoggedIn"
+         class="upload-btn"
+         [class.is-busy]="uploads.isTransferring"
+         [class.is-failed]="uploads.hasFailed"
+         routerLink="/upload"
+         routerLinkActive="is-active"
+         ariaCurrentWhenActive="page"
+         [attr.aria-label]="uploadButtonLabel"
+         (click)="closeSearch()">
+        <span *ngIf="uploads.isTransferring; else uploadIcon" class="ss-spinner ss-spinner--sm" aria-hidden="true"></span>
+        <ng-template #uploadIcon>
+          <mat-icon>{{ uploads.hasFailed ? 'error_outline' : 'add' }}</mat-icon>
+        </ng-template>
+        <span class="upload-btn-text">{{ uploadButtonText }}</span>
+        <span *ngIf="!uploads.isTransferring && uploads.processingCount > 0" class="upload-btn-dot" aria-hidden="true"></span>
+      </a>
 
       <button type="button"
               class="action-btn theme-btn"

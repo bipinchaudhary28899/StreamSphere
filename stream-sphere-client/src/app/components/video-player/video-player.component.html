@@ -159,7 +159,7 @@
                   <button
                     type="button"
                     class="vp-ctrl-btn vp-quality-btn"
-                    (click)="showSettingsMenu = !showSettingsMenu; $event.stopPropagation()"
+                    (click)="toggleSettingsMenu($event)"
                     [attr.aria-expanded]="showSettingsMenu"
                     aria-haspopup="menu"
                     [attr.aria-label]="'Quality: ' + qualityLabel">
@@ -176,7 +176,7 @@
                       class="vp-settings-item"
                       [attr.aria-checked]="hlsCurrentLevel === lvl.index"
                       [class.active]="hlsCurrentLevel === lvl.index"
-                      (click)="setQuality(lvl.index); showSettingsMenu = false; $event.stopPropagation()">
+                      (click)="chooseQuality(lvl.index, $event)">
                       <mat-icon class="vp-check">check</mat-icon>
                       <span class="vp-settings-label">
                         {{ lvl.name }}
@@ -292,7 +292,7 @@
                   type="button"
                   class="vp-about-toggle"
                   [attr.aria-expanded]="descOpen"
-                  (click)="descOpen = !descOpen">
+                  (click)="toggleDescription()">
             {{ descOpen ? 'Show less' : 'Show more' }}
           </button>
         </section>
@@ -308,7 +308,7 @@
                   type="button"
                   class="vp-about-toggle vp-about-toggle--ai"
                   [attr.aria-expanded]="aiSummaryOpen"
-                  (click)="aiSummaryOpen = !aiSummaryOpen">
+                  (click)="toggleAiSummary()">
             {{ aiSummaryOpen ? 'Show less' : 'Show more' }}
           </button>
         </section>

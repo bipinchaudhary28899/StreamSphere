@@ -72,12 +72,6 @@ img.channel-avatar { background: var(--bg-surface-2); }
 }
 .channel-stats-skel { width: 220px; margin-top: var(--space-1); }
 
-/* "a · b · c" that wraps without leaving a dot at the end of a line */
-.dot-list > * + *::before {
-  content: '·';
-  content: '·' / '';
-  margin-right: var(--space-1-5);
-}
 
 .channel-actions {
   grid-area: actions;

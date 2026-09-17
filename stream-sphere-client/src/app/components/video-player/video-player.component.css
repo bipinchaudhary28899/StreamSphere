@@ -26,6 +26,8 @@
   max-height: calc(100vh - var(--header-height) - 160px);
   min-height: 200px;
   overflow: hidden;
+  /* Lets the quality menu size itself to the frame (cqh units) */
+  container-type: size;
   border-radius: var(--radius-lg);
   background: var(--media-bg);
 }
@@ -342,6 +344,10 @@
   bottom: calc(100% + var(--space-2));
   z-index: var(--z-media-ui);
   min-width: 180px;
+  /* Small players: stay inside the frame and scroll */
+  max-height: calc(100cqh - 80px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--space-1) 0;
   border: 1px solid var(--media-menu-border);
   border-radius: var(--radius-md);

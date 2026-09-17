@@ -100,6 +100,22 @@
   box-shadow: var(--shadow-accent);
 }
 .nav-item--create.active .nav-icon { background: var(--accent-hover); }
+.nav-item--create .nav-icon { position: relative; }
+.nav-item--create.is-busy .nav-label { font-variant-numeric: tabular-nums; }
+.nav-item--create.is-failed .nav-icon { background: var(--danger); box-shadow: none; }
+.nav-item--create.is-failed .nav-label { color: var(--danger-text); }
+
+/* Videos still processing */
+.nav-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-round);
+  background: var(--warning);
+  box-shadow: 0 0 0 2px var(--bg-surface);
+}
 
 @media (max-width: 768px) {
   .mobile-bottom-nav { display: flex; }

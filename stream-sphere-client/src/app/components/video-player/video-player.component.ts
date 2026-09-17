@@ -107,7 +107,8 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   /** Big centre button: while paused, or on touch screens whenever controls show. */
   get showCenterButton(): boolean {
-    if (this.isBuffering) return false;
+    // Not while buffering, or while the quality menu is open over it
+    if (this.isBuffering || this.showSettingsMenu) return false;
     return !this.isPlaying || (this.isTouch && this.controlsVisible);
   }
 
@@ -127,6 +128,8 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Late responses check this id, so they stop once the page is gone
+    this.currentVideoId = null;
     this.subs.unsubscribe();
     this.destroyHls();
     clearTimeout(this.controlsTimer);
@@ -193,7 +196,9 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   @HostListener('document:click')
   onDocumentClick(): void {
-    if (this.showSettingsMenu) this.showSettingsMenu = false;
+    if (!this.showSettingsMenu) return;
+    this.showSettingsMenu = false;
+    this.revealControls(); // restart the auto-hide that was paused for the menu
   }
 
   @HostListener('document:fullscreenchange')
@@ -209,6 +214,8 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     if (!v || event.ctrlKey || event.metaKey || event.altKey) return;
     const target = event.target as HTMLElement | null;
     if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+    // Not while a menu or dialog is open (they render in the overlay container)
+    if (target?.closest('.cdk-overlay-container') || document.querySelector('.cdk-overlay-backdrop')) return;
     // Buttons handle Space/Enter themselves.
     if ((event.key === ' ' || event.key === 'Enter') && target?.tagName === 'BUTTON') return;
 
@@ -311,7 +318,14 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       this.cdr.detectChanges();
     };
 
-    this.videoRef?.nativeElement.addEventListener('canplay', run, { once: true });
+    const el = this.videoRef?.nativeElement;
+    // canplay may already have fired (e.g. playback started from router state
+    // before this metadata response arrived); don't wait for the backstop then.
+    if (el && el.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+      run();
+      return;
+    }
+    el?.addEventListener('canplay', run, { once: true });
     this.sideEffectsTimer = setTimeout(run, 3000);
   }
 
@@ -472,11 +486,26 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     clearTimeout(this.controlsTimer);
     if (this.isPlaying) {
       this.controlsTimer = setTimeout(() => {
+        // Keep the controls up while a quality is being chosen
+        if (this.showSettingsMenu) return;
         this.controlsVisible = false;
-        this.showSettingsMenu = false;
         this.cdr.detectChanges();
       }, 3000);
     }
+  }
+
+  toggleSettingsMenu(event: Event): void {
+    event.stopPropagation();
+    this.showSettingsMenu = !this.showSettingsMenu;
+    // Opening keeps the controls up (the auto-hide skips while the menu is open)
+    this.revealControls();
+  }
+
+  chooseQuality(levelIndex: number, event: Event): void {
+    event.stopPropagation();
+    this.setQuality(levelIndex);
+    this.showSettingsMenu = false;
+    this.revealControls();
   }
 
   onTouchZone(event: TouchEvent): void {
@@ -487,13 +516,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     clearTimeout(this.controlsTimer);
 
     if (!this.controlsVisible) {
-      this.controlsVisible = true;
-      if (this.isPlaying) {
-        this.controlsTimer = setTimeout(() => {
-          this.controlsVisible = false;
-          this.cdr.detectChanges();
-        }, 3000);
-      }
+      this.revealControls();
     } else {
       this.controlsVisible = false;
       this.showSettingsMenu = false;
@@ -507,7 +530,11 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   /** Mouse click on the picture plays or pauses, as on other video sites. */
   onClickZone(): void {
     if (this._touchHandled) return; // touch already toggled visibility
-    if (this.showSettingsMenu) { this.showSettingsMenu = false; return; }
+    if (this.showSettingsMenu) {
+      this.showSettingsMenu = false;
+      this.revealControls();
+      return;
+    }
     this.togglePlay(true);
     this.revealControls();
   }
@@ -678,10 +705,16 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
             this.upNext = [...sameCategory, ...keep(latest.videos).filter(v => !seen.has(v._id))].slice(0, 12);
             this.upNextLoading = false;
           },
-          error: () => { this.upNext = sameCategory; this.upNextLoading = false; },
+          error: () => {
+            if (videoId !== this.currentVideoId) return;
+            this.upNext = sameCategory;
+            this.upNextLoading = false;
+          },
         });
       },
-      error: () => { this.upNextLoading = false; },
+      error: () => {
+        if (videoId === this.currentVideoId) this.upNextLoading = false;
+      },
     });
   }
 
@@ -696,21 +729,26 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       next: (response) => {
         if (videoId === this.currentVideoId) this.userReaction = response.reaction as 'liked' | 'disliked' | 'none';
       },
-      error: () => { this.userReaction = 'none'; },
+      error: () => {
+        if (videoId === this.currentVideoId) this.userReaction = 'none';
+      },
     });
   }
 
   onLikeClick(): void {
     if (!this.currentUserId || !this.video._id || this.isLiking) return;
+    const videoId = this.video._id;
     this.isLiking = true;
-    this.videoService.likeVideo(this.video._id).subscribe({
+    this.videoService.likeVideo(videoId).subscribe({
       next: (updatedVideo) => {
+        if (videoId !== this.currentVideoId) return; // user switched videos
         this.video.likes = updatedVideo.likes;
         this.video.dislikes = updatedVideo.dislikes;
         this.userReaction = this.userReaction === 'liked' ? 'none' : 'liked';
         this.isLiking = false;
       },
       error: () => {
+        if (videoId !== this.currentVideoId) return;
         this.isLiking = false;
         this.showToast('Couldn’t save your like. Try again.', true);
       },
@@ -719,15 +757,18 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   onDislikeClick(): void {
     if (!this.currentUserId || !this.video._id || this.isDisliking) return;
+    const videoId = this.video._id;
     this.isDisliking = true;
-    this.videoService.dislikeVideo(this.video._id).subscribe({
+    this.videoService.dislikeVideo(videoId).subscribe({
       next: (updatedVideo) => {
+        if (videoId !== this.currentVideoId) return; // user switched videos
         this.video.likes = updatedVideo.likes;
         this.video.dislikes = updatedVideo.dislikes;
         this.userReaction = this.userReaction === 'disliked' ? 'none' : 'disliked';
         this.isDisliking = false;
       },
       error: () => {
+        if (videoId !== this.currentVideoId) return;
         this.isDisliking = false;
         this.showToast('Couldn’t save your rating. Try again.', true);
       },
@@ -785,24 +826,41 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   // ── Description ────────────────────────────────────────────────────────────
 
-  /** Checks whether the collapsed description / AI summary are cut off. */
+  toggleDescription(): void {
+    this.descOpen = !this.descOpen;
+    if (!this.descOpen) this.measureOverflow();
+  }
+
+  toggleAiSummary(): void {
+    this.aiSummaryOpen = !this.aiSummaryOpen;
+    if (!this.aiSummaryOpen) this.measureOverflow();
+  }
+
+  /**
+   * Checks whether the collapsed description / AI summary are cut off.
+   * An expanded panel isn't measured: it never overflows, and measuring it
+   * would hide its "Show less" button.
+   */
   private measureOverflow(): void {
     setTimeout(() => {
+      let changed = false;
       const d = this.descBodyRef?.nativeElement;
-      const a = this.aiBodyRef?.nativeElement;
-      const desc = !!d && d.scrollHeight > d.clientHeight + 2;
-      const ai = !!a && a.scrollHeight > a.clientHeight + 2;
-      if (desc !== this.descOverflows || ai !== this.aiOverflows) {
-        this.descOverflows = desc;
-        this.aiOverflows = ai;
-        this.cdr.detectChanges();
+      if (!this.descOpen) {
+        const desc = !!d && d.scrollHeight > d.clientHeight + 2;
+        if (desc !== this.descOverflows) { this.descOverflows = desc; changed = true; }
       }
+      const a = this.aiBodyRef?.nativeElement;
+      if (!this.aiSummaryOpen) {
+        const ai = !!a && a.scrollHeight > a.clientHeight + 2;
+        if (ai !== this.aiOverflows) { this.aiOverflows = ai; changed = true; }
+      }
+      if (changed) this.cdr.detectChanges();
     });
   }
 
   @HostListener('window:resize')
   onResize(): void {
-    if (!this.descOpen || !this.aiSummaryOpen) this.measureOverflow();
+    this.measureOverflow();
   }
 
   formatDate(dateString: string): string {

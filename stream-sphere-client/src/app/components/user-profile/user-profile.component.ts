@@ -1,7 +1,6 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
@@ -9,7 +8,6 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { forkJoin, of, Subscription } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { UploadVideoComponent, UPLOAD_DIALOG_CONFIG } from '../upload-video/upload-video.component';
 import { VideoService } from '../../services/video.service';
 import { VideoCardComponent } from '../video-card/video-card.component';
 import { AuthService } from '../../services/auth.service';
@@ -47,7 +45,6 @@ interface EmptyCopy {
     MatSortModule,
     MatCheckboxModule,
     MatIconModule,
-    MatDialogModule,
   ],
   templateUrl: './user-profile.component.html',
   styleUrl: './user-profile.component.css',
@@ -122,7 +119,6 @@ export class UserProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     private location: Location,
     private videoService: VideoService,
     private authService: AuthService,
-    private dialog: MatDialog,
   ) {
     this.dataSource.sortingDataAccessor = (row: any, column: string) => {
       switch (column) {
@@ -390,10 +386,6 @@ export class UserProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   // ── Actions ────────────────────────────────────────────────────────────────
-
-  openUploadPage(): void {
-    this.dialog.open(UploadVideoComponent, UPLOAD_DIALOG_CONFIG);
-  }
 
   logout(): void {
     this.authService.logout();

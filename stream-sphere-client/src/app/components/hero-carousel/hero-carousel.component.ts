@@ -18,6 +18,8 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('videoElement', { static: false }) videoElement!: ElementRef<HTMLVideoElement>;
 
   videos: Video[] = [];
+  /** The API objects behind `videos`, handed to the player as-is */
+  private sourceVideos = new Map<string, any>();
   currentIndex = 0;
   isLoading = true;
   error = '';
@@ -167,10 +169,11 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.videoService.getTopLikedVideos().subscribe({
       next: (backendVideos) => {
+        this.sourceVideos = new Map(backendVideos.map((v: any): [string, any] => [v._id, v]));
         this.videos = backendVideos.map((backendVideo: any) => ({
           _id: backendVideo._id,
           title: backendVideo.title,
-          description: backendVideo.description || 'Watch this amazing video on StreamSphere',
+          description: backendVideo.description || '',
           S3_url: backendVideo.S3_url,
           hlsUrl: backendVideo.hlsUrl || null,
           previewUrl: backendVideo.previewUrl || null,
@@ -347,8 +350,10 @@ export class HeroCarouselComponent implements OnInit, AfterViewInit, OnDestroy {
   onPlayNowClick(): void {
     const video = this.videos[this.currentIndex];
     if (!video) return;
-    // In-app navigation keeps the SPA loaded; the player can start from router state.
-    this.router.navigate(['/video', video._id], { state: { video } });
+    // In-app navigation keeps the SPA loaded; the player can start from router
+    // state. Hand over the API object, not the carousel's display copy.
+    const source = this.sourceVideos.get(video._id) ?? video;
+    this.router.navigate(['/video', video._id], { state: { video: source } });
   }
 
   get currentVideo(): Video | null {

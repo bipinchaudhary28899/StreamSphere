@@ -112,6 +112,21 @@
   strong { font-weight: var(--font-weight-semibold); }
 }
 
+.processing-link {
+  flex: none;
+  margin-left: auto;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--warning-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+
+  &:hover { background: var(--warning-soft); }
+}
+
 /* ── Heading ──────────────────────────────────────────────────────────── */
 .feed-head {
   display: flex;

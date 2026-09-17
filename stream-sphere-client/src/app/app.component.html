@@ -28,9 +28,17 @@
      #uploadLink="routerLinkActive"
      [attr.aria-current]="uploadLink.isActive ? 'page' : null"
      class="nav-item nav-item--create"
-     aria-label="Upload a video">
-    <span class="nav-icon"><mat-icon>add</mat-icon></span>
-    <span class="nav-label">Upload</span>
+     [class.is-busy]="uploads.isTransferring"
+     [class.is-failed]="uploads.hasFailed"
+     [attr.aria-label]="uploadNavAriaLabel">
+    <span class="nav-icon">
+      <span *ngIf="uploads.isTransferring; else createIcon" class="ss-spinner ss-spinner--sm ss-spinner--media"></span>
+      <ng-template #createIcon>
+        <mat-icon>{{ uploads.hasFailed ? 'priority_high' : 'add' }}</mat-icon>
+      </ng-template>
+      <span *ngIf="!uploads.isTransferring && uploads.processingCount > 0" class="nav-dot" aria-hidden="true"></span>
+    </span>
+    <span class="nav-label">{{ uploadNavLabel }}</span>
   </a>
   <a routerLink="/user-profile"
      routerLinkActive="active"
@@ -41,3 +49,6 @@
     <span class="nav-label">You</span>
   </a>
 </nav>
+
+<!-- Follows an upload while the user browses -->
+<app-upload-indicator></app-upload-indicator>

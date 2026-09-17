@@ -51,7 +51,7 @@
         <span *ngIf="formatTimestamp(createDate(currentVideo?.uploadedAt || '')) as ago">{{ ago }}</span>
       </p>
 
-      <p class="hero-description" [class.expanded]="descriptionExpanded">
+      <p class="hero-description" *ngIf="currentVideo?.description" [class.expanded]="descriptionExpanded">
         {{ currentVideo?.description }}
       </p>
 

@@ -266,6 +266,7 @@
   --z-backdrop:   490;    /* search backdrop */
   --z-header:     500;
   --z-bottom-nav: 900;
+  --z-float:      950;    /* floating upload card */
   --z-toast:      1100;
 
   /* Layout */
@@ -277,6 +278,7 @@
   --player-max:        980px;
   --reading-max:       780px;
   --dialog-width:      560px;
+  --upload-card-space: 104px;  /* floating upload card height + gap */
 
   /* Sizes */
   --control-sm: 32px;
@@ -426,13 +428,6 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0,0,0,0.2);
-}
-
-/* ── Upload dialog panel ────────────────────────────────────────────────── */
-.ss-upload-dialog .mat-mdc-dialog-container .mdc-dialog__surface {
-  border-radius: 20px !important;
-  overflow: hidden;
-  padding: 0 !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -635,6 +630,15 @@ img.ss-avatar { background: var(--bg-surface-2); }
 .ss-spinner--warning { border-color: var(--warning-soft); border-top-color: var(--warning); }
 .ss-spin { animation: ss-spin 1.2s linear infinite; }
 
+/* ── Inline lists ────────────────────────────────────────────────────────── */
+/* "a · b · c" that wraps without leaving a dot at the end of a line.
+   The container sets its own display (usually flex + flex-wrap). */
+.ss-dot-list > * + *::before {
+  content: '·';
+  content: '·' / '';
+  margin-right: var(--space-1-5);
+}
+
 /* ── Video grid + card placeholder ───────────────────────────────────────── */
 /* Home, history and profile share one grid so cards line up the same way. */
 .ss-video-grid {
@@ -695,4 +699,11 @@ img.ss-avatar { background: var(--bg-surface-2); }
 .ss-toast > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 768px) {
   .ss-toast { bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + var(--space-3)); }
+}
+/* The floating upload card sits along the bottom edge; lift toasts above it */
+body.ss-has-upload-card .ss-toast { bottom: calc(var(--space-6) + var(--upload-card-space)); }
+@media (max-width: 768px) {
+  body.ss-has-upload-card .ss-toast {
+    bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + var(--space-3) + var(--upload-card-space));
+  }
 }

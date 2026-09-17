@@ -225,7 +225,9 @@
     color var(--duration-fast) ease;
 }
 .upload-btn .mat-icon { width: var(--icon-md); height: var(--icon-md); font-size: var(--icon-md); }
-.upload-btn:hover {
+.upload-btn { text-decoration: none; }
+.upload-btn:hover,
+.upload-btn.is-active {
   border-color: var(--accent-pill-border);
   background: var(--accent-pill-bg);
   color: var(--accent-text);
@@ -238,6 +240,33 @@
   backdrop-filter: blur(var(--blur-sm));
 }
 .is-overlay .upload-btn:hover { background: var(--media-glass-hover); }
+
+/* Upload running / failed / videos processing */
+.upload-btn { position: relative; }
+.upload-btn .ss-spinner { margin: 0 2px; }
+.upload-btn.is-busy,
+.is-overlay .upload-btn.is-busy {
+  border-color: var(--accent-pill-border);
+  background: var(--accent-pill-bg);
+  color: var(--accent-text);
+}
+.upload-btn.is-busy .upload-btn-text { font-variant-numeric: tabular-nums; }
+.upload-btn.is-failed,
+.is-overlay .upload-btn.is-failed {
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+.upload-btn-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-round);
+  background: var(--warning);
+  box-shadow: 0 0 0 2px var(--bg-surface);
+}
 
 /* ── Avatar ────────────────────────────────────────────────────────────── */
 .avatar-btn {
