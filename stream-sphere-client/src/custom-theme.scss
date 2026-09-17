@@ -1,13 +1,40 @@
 @use '@angular/material' as mat;
 
+// Material follows the app theme: styles.css sets `color-scheme` on <html>
+// (light by default, dark under [data-theme="dark"]), and with
+// `theme-type: color-scheme` Material's system colors resolve through
+// light-dark(), so Material components switch with ThemeService.
 html {
   @include mat.theme((
     color: (
-      theme-type: light,
-      primary: mat.$azure-palette,
-      tertiary: mat.$blue-palette,
+      theme-type: color-scheme,
+      primary: mat.$rose-palette,
+      tertiary: mat.$violet-palette,
     ),
     typography: Roboto,
     density: 0,
+  ));
+
+  // Point Material's system colors at the design tokens in styles.css.
+  // `outline` stays Material's own: checkbox borders need 3:1 contrast.
+  @include mat.theme-overrides((
+    primary: var(--accent),
+    on-primary: var(--on-accent),
+    background: var(--bg-base),
+    on-background: var(--text-primary),
+    surface: var(--bg-surface),
+    surface-variant: var(--bg-surface-2),
+    surface-container-low: var(--bg-surface),
+    surface-container: var(--bg-elevated),
+    surface-container-high: var(--bg-elevated),
+    on-surface: var(--text-primary),
+    on-surface-variant: var(--text-secondary),
+    outline-variant: var(--border),
+  ));
+
+  // Raised-button labels are text, so they use the text-safe pink
+  // (--accent on white is 3.77:1).
+  @include mat.button-overrides((
+    protected-label-text-color: var(--accent-text),
   ));
 }

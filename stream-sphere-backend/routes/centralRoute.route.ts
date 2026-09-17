@@ -12,26 +12,8 @@ import { VideoController }        from '../controllers/getVideo.controller';
 import { CommentController }      from '../controllers/comment.controller';
 import { authenticateJWT }        from '../services/auth.service';
 import { WatchHistoryController } from '../controllers/watchHistory.controller';
-import {
-  adminStatsController,
-  getGenabrStatusController,
-  toggleGenabrController,
-}                                  from '../controllers/admin.controller';
+import { adminStatsController }   from '../controllers/admin.controller';
 import { hlsWebhookController }   from '../controllers/hlsWebhook.controller';
-import {
-  startSessionController,
-  pingController,
-  batchPingController,
-  stallController,
-  bitrateSwitchController,
-  endSessionController,
-} from '../controllers/telemetry.controller';
-import {
-  queryCoverageController,
-  ingestDeadZoneController,
-} from '../controllers/shadowMap.controller';
-import { bufferTargetController } from '../controllers/predictionCone.controller';
-import { genabrDecisionController, testOracleController } from '../controllers/genabr.controller';
 import { Video }                  from '../models/video';
 
 import { validate }        from '../middleware/validate.middleware';
@@ -275,39 +257,5 @@ router.get('/admin/stats',
   requireAdmin,
   wrap(adminStatsController),
 );
-
-// GET /api/admin/genabr-status  — authenticated (any user); returns { enabled: boolean }
-router.get('/admin/genabr-status',
-  authenticateJWT,
-  wrap(getGenabrStatusController),
-);
-
-// POST /api/admin/genabr-toggle  — admin only; body: { enabled: boolean }
-router.post('/admin/genabr-toggle',
-  authenticateJWT,
-  requireAdmin,
-  wrap(toggleGenabrController),
-);
-
-
-// Telemetry — auth optional (anon sessions are allowed)
-router.post('/telemetry/session',                 wrap(startSessionController));
-router.post('/telemetry/pings',                   wrap(batchPingController));        // ← batch (primary)
-router.post('/telemetry/ping',                    wrap(pingController));              // ← single (deprecated, kept for compat)
-router.post('/telemetry/stall',                   wrap(stallController));
-router.post('/telemetry/bitrate-switch',          wrap(bitrateSwitchController));
-router.patch('/telemetry/session/:sessionId/end', wrap(endSessionController));
-
-// Shadow Network Map — auth optional
-router.post('/shadow-map/query',     wrap(queryCoverageController));
-router.post('/shadow-map/dead-zone', wrap(ingestDeadZoneController));
-
-// Prediction Cone (raw Phase 4, for debugging/research)
-router.post('/prediction/buffer-target', wrap(bufferTargetController));
-
-// GenABR unified decision — Phase 5 Tiered Inference Engine
-router.post('/genabr/decision',     wrap(genabrDecisionController));
-// Force Oracle call for testing LLM connectivity (admin only)
-router.post('/genabr/test-oracle',  authenticateJWT, requireAdmin, wrap(testOracleController));
 
 export default router;
