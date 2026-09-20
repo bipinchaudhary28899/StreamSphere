@@ -318,56 +318,74 @@
   padding: 0;
 }
 
-.menu-profile-card {
+/* The channel banner, at full strength: the name sits below it, not on it */
+.menu-banner-strip {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-4);
+  height: 72px;
   overflow: hidden;
-  /* Darkened so white text clears 4.5:1 across the gradient */
-  background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), var(--spotlight-gradient);
-  color: #ffffff;
+  background: var(--banner-gradient);
 }
-.menu-profile-card::before {
+.menu-banner-strip::after {
   content: '';
   position: absolute;
-  top: -40px;
-  right: -30px;
-  width: 120px;
-  height: 120px;
-  border-radius: var(--radius-round);
-  background: rgba(255, 255, 255, 0.08);
+  inset: 0;
+  box-shadow: inset 0 -1px 0 var(--border);
   pointer-events: none;
 }
 
-.menu-avatar {
-  position: relative;
+.menu-banner {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.menu-profile-card {
+  position: relative; /* above the banner strip */
   z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4) var(--space-3);
+}
+
+.menu-avatar {
   flex: none;
-  width: 48px;
-  height: 48px;
-  border: 2px solid rgba(255, 255, 255, 0.85);
+  /* Overlaps the banner, as on the channel page */
+  margin-top: -30px;
+  width: 56px;
+  height: 56px;
+  border: 3px solid var(--bg-elevated);
   border-radius: var(--radius-round);
+  background: var(--bg-surface-2);
   object-fit: cover;
 }
 .menu-avatar--initials {
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.2);
-  font-size: var(--font-size-base);
+  background: var(--tag-gradient);
+  color: #ffffff;
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
 }
 
-.menu-user-info { position: relative; z-index: 1; min-width: 0; }
+.menu-user-info { min-width: 0; padding-bottom: var(--space-0-5); }
 .menu-name,
 .menu-email {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.menu-name { font-size: var(--font-size-md); font-weight: var(--font-weight-bold); }
-.menu-email { margin-top: 2px; font-size: var(--font-size-2xs); color: rgba(255, 255, 255, 0.88); }
+.menu-name {
+  color: var(--text-primary);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+.menu-email {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-2xs);
+}
 
 .menu-list { padding: var(--space-1-5); }
 

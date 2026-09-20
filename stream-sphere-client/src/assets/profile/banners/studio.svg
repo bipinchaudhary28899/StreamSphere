@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 400" width="2400" height="400" role="img" aria-label="Studio">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f1f33"/><stop offset="1" stop-color="#0d0d15"/></linearGradient>
+<radialGradient id="spot" cx=".5" cy="0" r=".9" gradientTransform="translate(0.5 0) scale(0.35 1) translate(-0.5 0)"><stop offset="0" stop-color="#ffffff" stop-opacity=".28"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
+<radialGradient id="floor" cx=".5" cy="1" r=".5" gradientTransform="translate(0.5 1) scale(1 0.35) translate(-0.5 -1)"><stop offset="0" stop-color="#a78bfa" stop-opacity=".35"/><stop offset="1" stop-color="#a78bfa" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="2400" height="400" fill="url(#bg)"/>
+<rect width="2400" height="400" fill="url(#spot)"/>
+<rect width="2400" height="400" fill="url(#floor)"/>
+</svg>

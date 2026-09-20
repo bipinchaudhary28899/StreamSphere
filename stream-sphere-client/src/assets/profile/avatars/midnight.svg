@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Midnight">
+<defs>
+<radialGradient id="bg" cx=".5" cy=".42" r=".75"><stop offset="0" stop-color="#23233a"/><stop offset="1" stop-color="#0d0d15"/></radialGradient>
+<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+</defs>
+<rect width="512" height="512" fill="url(#bg)"/>
+<circle cx="256" cy="256" r="132" fill="none" stroke="#ff1963" stroke-width="26" filter="url(#glow)"/>
+<circle cx="256" cy="256" r="132" fill="none" stroke="#ff4f8b" stroke-width="14"/>
+<path d="M360 116 Q367.48 142.52 394 150 Q367.48 157.48 360 184 Q352.52 157.48 326 150 Q352.52 142.52 360 116 Z" fill="#c4b5fd" fill-opacity="1"/>
+</svg>

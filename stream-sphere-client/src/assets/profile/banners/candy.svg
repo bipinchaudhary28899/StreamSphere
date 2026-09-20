@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 400" width="2400" height="400" role="img" aria-label="Candy">
+<defs><filter id="b" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="80"/></filter></defs>
+<rect width="2400" height="400" fill="#fdf2f8"/>
+<g filter="url(#b)">
+<circle cx="300" cy="120" r="260" fill="#f9a8d4"/>
+<circle cx="980" cy="330" r="280" fill="#a5b4fc"/>
+<circle cx="1600" cy="80" r="260" fill="#fde68a"/>
+<circle cx="2200" cy="300" r="280" fill="#99f6e4"/>
+</g>
+</svg>

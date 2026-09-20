@@ -1,7 +1,8 @@
 // services/auth.service.ts
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
-import { User } from '../models/user';
+import { User, IUser } from '../models/user';
+import { toProfile } from './profile.service';
 import { IUserResponse } from '../interfaces/userResponse.interface';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -23,18 +24,38 @@ export const handleGoogleLogin = async (token: string): Promise<IUserResponse> =
       name: name || 'Unknown User',
       email: email || '',
       profileImage: picture || '',
+      googlePicture: picture || '',
+      avatarSource: 'google',
       isVerified: true,
       role: 'user'
     });
     await user.save();
     isNewUser = true;
   } else {
-    // Refresh profile image and name from Google on every login
-    user.profileImage = picture || user.profileImage;
+    // Keep the Google photo and name current, but only show the Google photo
+    // while the user hasn't chosen their own avatar.
+    if (picture) user.googlePicture = picture;
+    if ((user.avatarSource ?? 'google') === 'google') {
+      user.profileImage = picture || user.profileImage;
+    }
     user.name = name || user.name;
     await user.save();
   }
 
+  return {
+    token: signUserToken(user),
+    user: {
+      ...toProfile(user),
+      role: user.role,
+      userName: user.name,
+      isVerified: user.isVerified,
+    },
+    isNewUser
+  };
+};
+
+/** Signs the session token. It carries profileImage, which new comments use. */
+export function signUserToken(user: IUser): string {
   const jwtPayload = {
     userId: user._id,
     email: user.email,
@@ -42,22 +63,8 @@ export const handleGoogleLogin = async (token: string): Promise<IUserResponse> =
     profileImage: user.profileImage,
     subject: user._id
   };
-  const jwtToken = jwt.sign(jwtPayload, process.env.JWT_SECRET!);
-
-  return {
-    token: jwtToken,
-    user: {
-      role: user.role,
-      email: user.email,
-      userName: user.name,
-      name: user.name,
-      profileImage: user.profileImage || '',
-      isVerified: user.isVerified,
-      userId: user._id as string,
-    },
-    isNewUser
-  };
-};
+  return jwt.sign(jwtPayload, process.env.JWT_SECRET!);
+}
 
 // JWT authentication middleware
 export function authenticateJWT(req: any, res: any, next: any) {

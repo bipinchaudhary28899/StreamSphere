@@ -9,13 +9,51 @@
 /* ══════════════════════════════════════════════════════════════════════════
    Channel header
    ══════════════════════════════════════════════════════════════════════════ */
+/* The banner's width sets its height (cqi = % of .channel's width): 8:1 on wide
+   screens, while phones hit the 88px minimum and show about 4:1. The editor's
+   previews and safe area (profile-editor) assume these shapes. Not aspect-ratio:
+   with a min-height it would widen the banner past the screen instead. */
+.channel { container-type: inline-size; }
+
 .channel-banner {
-  height: clamp(88px, 13vw, 180px);
+  position: relative;
+  overflow: hidden;
+  height: clamp(88px, 12.5cqi, 240px);
   border-radius: var(--radius-lg);
   background: var(--banner-gradient);
-  /* Keeps the dark end of the banner defined on the dark page */
-  box-shadow: inset 0 0 0 1px var(--border);
 }
+/* Keeps the banner's edge defined on the page, over images too */
+.channel-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--border);
+  pointer-events: none;
+}
+.channel-banner.has-image { background: var(--bg-surface-2); }
+
+.channel-banner-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Readable on any banner, light or dark */
+.banner-edit {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  z-index: var(--z-raised);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--media-chip);
+  color: var(--on-media);
+  -webkit-backdrop-filter: blur(var(--blur-sm));
+  backdrop-filter: blur(var(--blur-sm));
+}
+.banner-edit:hover:not(:disabled) { background: var(--media-chip-hover); }
 
 .channel-row {
   display: grid;
@@ -26,15 +64,60 @@
   padding: var(--space-6) 0 var(--space-5);
 }
 
-.channel-avatar {
+.channel-avatar-btn {
   grid-area: avatar;
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-round);
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.channel-avatar-btn:disabled { cursor: progress; }
+/* Darkens the picture on hover so the camera badge reads as "change" */
+.channel-avatar-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity var(--duration-fast) ease;
+  pointer-events: none;
+}
+.channel-avatar-btn:hover::after { opacity: 1; }
+
+.channel-avatar {
+  display: block;
   width: 128px;
   height: 128px;
   border-radius: var(--radius-round);
   object-fit: cover;
   font-size: var(--font-size-5xl);
 }
+.ss-avatar.channel-avatar { display: grid; }
 img.channel-avatar { background: var(--bg-surface-2); }
+
+.avatar-edit-badge {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  z-index: var(--z-raised);
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-round);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+.avatar-edit-badge .mat-icon { width: var(--icon-sm); height: var(--icon-sm); font-size: var(--icon-sm); }
+.channel-avatar-btn:hover .avatar-edit-badge { transform: scale(1.08); }
 
 .channel-info {
   grid-area: info;
@@ -377,6 +460,7 @@ img.channel-avatar { background: var(--bg-surface-2); }
       "actions actions";
   }
   .channel-avatar { width: 96px; height: 96px; font-size: var(--font-size-4xl); }
+  .avatar-edit-badge { width: 32px; height: 32px; right: 0; bottom: 0; }
   .channel-name { font-size: var(--font-size-3xl); }
 }
 
@@ -392,10 +476,15 @@ img.channel-avatar { background: var(--bg-surface-2); }
 @media (max-width: 600px) {
   .profile { padding-top: var(--space-3); }
   .channel-banner { border-radius: var(--radius-md); }
+  .banner-edit { right: var(--space-2); bottom: var(--space-2); padding: 0; width: var(--control-sm); }
+  .banner-edit-label { display: none; }
   .channel-row { gap: var(--space-4); padding: var(--space-4) 0; }
   .channel-avatar { width: 72px; height: 72px; font-size: var(--font-size-2xl); }
+  .avatar-edit-badge { width: 28px; height: 28px; }
+  .avatar-edit-badge .mat-icon { width: var(--icon-xs); height: var(--icon-xs); font-size: var(--icon-xs); }
   .channel-name { font-size: var(--font-size-2xl); }
-  .channel-actions .ss-btn { flex: 1; }
+  .channel-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .channel-signout { grid-column: 1 / -1; }
 
   .tabs { gap: 0; }
   .tab { --tab-pad: var(--space-2); }

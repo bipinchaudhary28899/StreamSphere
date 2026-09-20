@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 400" width="2400" height="400" role="img" aria-label="Noir">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0d0d15"/><stop offset="1" stop-color="#1c1c2a"/></linearGradient>
+<pattern id="l" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><path d="M0 0 V28" stroke="#fff" stroke-opacity=".05" stroke-width="2"/></pattern>
+<radialGradient id="glow" gradientUnits="userSpaceOnUse" cx="2000" cy="20" r="720"><stop offset="0" stop-color="#ff1963" stop-opacity=".38"/><stop offset=".5" stop-color="#ff1963" stop-opacity=".12"/><stop offset="1" stop-color="#ff1963" stop-opacity="0"/></radialGradient>
+<radialGradient id="glow2" gradientUnits="userSpaceOnUse" cx="300" cy="420" r="620"><stop offset="0" stop-color="#7c3aed" stop-opacity=".22"/><stop offset="1" stop-color="#7c3aed" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="2400" height="400" fill="url(#bg)"/>
+<rect width="2400" height="400" fill="url(#l)"/>
+<rect width="2400" height="400" fill="url(#glow)"/>
+<rect width="2400" height="400" fill="url(#glow2)"/>
+</svg>

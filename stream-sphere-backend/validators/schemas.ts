@@ -187,3 +187,47 @@ export const watchHistorySchema = z.object({
     videoId: mongoId,
   }),
 });
+
+// ── Profile ───────────────────────────────────────────────────────────────────
+
+const presetId = z
+  .string({ error: 'presetId is required' })
+  .regex(/^[a-z0-9-]{1,40}$/, 'Invalid preset');
+
+/**
+ * POST /api/profile/image-upload
+ * Body: { kind, contentType, size } — the cropped image the client will PUT
+ */
+export const profileImageUploadSchema = z.object({
+  body: z.object({
+    kind: z.enum(['avatar', 'banner'], { error: 'kind must be avatar or banner' }),
+    contentType: z.enum(['image/webp', 'image/jpeg'], { error: 'Only WebP or JPEG images are accepted' }),
+    size: z.number({ error: 'size is required' }).int().positive().max(2 * 1024 * 1024, 'The image is too large'),
+  }),
+});
+
+/**
+ * PATCH /api/profile
+ * Body: { avatar?, banner? } — at least one
+ */
+export const updateProfileSchema = z.object({
+  body: z
+    .object({
+      avatar: z
+        .discriminatedUnion('source', [
+          z.object({ source: z.literal('upload'), key: s3Key }),
+          z.object({ source: z.literal('preset'), presetId }),
+          z.object({ source: z.literal('google') }),
+          z.object({ source: z.literal('initials') }),
+        ])
+        .optional(),
+      banner: z
+        .discriminatedUnion('source', [
+          z.object({ source: z.literal('upload'), key: s3Key }),
+          z.object({ source: z.literal('preset'), presetId }),
+          z.object({ source: z.literal('default') }),
+        ])
+        .optional(),
+    })
+    .refine(body => body.avatar || body.banner, { message: 'Nothing to update' }),
+});

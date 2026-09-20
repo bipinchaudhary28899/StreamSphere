@@ -1,12 +1,31 @@
 import { Comment, IComment } from '../models/comment';
+import { User } from '../models/user';
+
+/**
+ * Comments keep the avatar from when they were written. Swap in each author's
+ * current one, so a changed profile picture shows on old comments too.
+ */
+async function withCurrentAvatars<T extends { user_id?: unknown; user_profile_image?: string | null }>(
+  comments: T[],
+): Promise<T[]> {
+  const ids = [...new Set(comments.map(c => String(c.user_id)))].filter(id => /^[a-f\d]{24}$/i.test(id));
+  if (!ids.length) return comments;
+  const users = await User.find({ _id: { $in: ids } }, { profileImage: 1 }).lean().exec();
+  const avatars = new Map(users.map(u => [String(u._id), u.profileImage || null]));
+  return comments.map(c => {
+    const id = String(c.user_id);
+    return avatars.has(id) ? { ...c, user_profile_image: avatars.get(id) } : c;
+  });
+}
 
 export class CommentService {
   async getCommentsByVideoId(videoId: string): Promise<IComment[]> {
     try {
       const comments = await Comment.find({ video_id: videoId, parent_id: null })
         .sort({ created_at: -1 })
+        .lean()
         .exec();
-      return comments;
+      return (await withCurrentAvatars(comments)) as IComment[];
     } catch (error) {
       console.error('Error fetching comments:', error);
       throw new Error('Failed to fetch comments');
@@ -17,8 +36,9 @@ export class CommentService {
     try {
       const replies = await Comment.find({ parent_id: parentCommentId })
         .sort({ created_at: 1 })
+        .lean()
         .exec();
-      return replies;
+      return (await withCurrentAvatars(replies)) as IComment[];
     } catch (error) {
       console.error('Error fetching replies:', error);
       throw new Error('Failed to fetch replies');
@@ -107,8 +127,9 @@ export class CommentService {
     try {
       const comments = await Comment.find({ user_id: userId })
         .sort({ created_at: -1 })
+        .lean()
         .exec();
-      return comments;
+      return (await withCurrentAvatars(comments)) as IComment[];
     } catch (error) {
       console.error('Error fetching user comments:', error);
       throw new Error('Failed to fetch user comments');

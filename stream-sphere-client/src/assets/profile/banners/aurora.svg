@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 400" width="2400" height="400" role="img" aria-label="Aurora">
+<defs><filter id="b" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="70"/></filter>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1030"/><stop offset="1" stop-color="#1b2556"/></linearGradient></defs>
+<rect width="2400" height="400" fill="url(#bg)"/>
+<g filter="url(#b)">
+<ellipse cx="420" cy="220" rx="520" ry="130" fill="#2dd4bf" fill-opacity=".9"/>
+<ellipse cx="1080" cy="150" rx="560" ry="120" fill="#4ade80" fill-opacity=".75"/>
+<ellipse cx="1680" cy="230" rx="560" ry="140" fill="#8b5cf6" fill-opacity=".9"/>
+<ellipse cx="2240" cy="140" rx="420" ry="120" fill="#f472b6" fill-opacity=".75"/>
+</g>
+</svg>

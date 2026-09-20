@@ -26,6 +26,14 @@ export const writeLimiter = rateLimit({
   message: jsonMessage('Too many requests — please slow down and try again shortly.'),
 });
 
+export const profileImageLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: jsonMessage('Too many image uploads — please wait a few minutes and try again.'),
+});
+
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 300,
