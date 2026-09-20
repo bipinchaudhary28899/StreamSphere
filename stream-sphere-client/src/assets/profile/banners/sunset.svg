@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 400" width="2400" height="400" role="img" aria-label="Sunset">
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#312e81"/><stop offset=".55" stop-color="#db2777"/><stop offset="1" stop-color="#f59e0b"/></linearGradient></defs>
+<rect width="2400" height="400" fill="url(#sky)"/>
+<circle cx="1640" cy="250" r="110" fill="#fde68a" fill-opacity=".95"/>
+<path d="M-1200 270 Q-900 230 -600 270 T0 270 T600 270 T1200 270 T1800 270 T2400 270 T3000 270 T3600 270 V400 H-1200 Z" fill="#9d174d" fill-opacity=".75"/>
+<path d="M-600 310 Q-375 276 -150 310 T300 310 T750 310 T1200 310 T1650 310 T2100 310 T2550 310 T3000 310 T3450 310 V400 H-600 Z" fill="#6b21a8" fill-opacity=".85"/>
+<path d="M-550 352 Q-375 326 -200 352 T150 352 T500 352 T850 352 T1200 352 T1550 352 T1900 352 T2250 352 T2600 352 T2950 352 T3300 352 V400 H-550 Z" fill="#3b0764"/>
+</svg>

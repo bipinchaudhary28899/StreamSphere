@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Injector, OnDestroy, OnInit, QueryList, ViewChild, ViewChildren, inject } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
@@ -11,6 +11,7 @@ import { catchError, map } from 'rxjs/operators';
 import { VideoService } from '../../services/video.service';
 import { VideoCardComponent } from '../video-card/video-card.component';
 import { AuthService } from '../../services/auth.service';
+import { ProfileImageKind, ProfileService } from '../../services/profile.service';
 import { User } from '../../models/user';
 
 export type ProfileTab = 'videos' | 'liked' | 'disliked' | 'manage';
@@ -55,6 +56,11 @@ export class UserProfileComponent implements OnInit, AfterViewInit, OnDestroy {
   userEmail = '';
   profileImage = '';
   avatarFailed = false;
+  /** Empty shows the theme's default banner */
+  bannerImage = '';
+  bannerFailed = false;
+  /** The editor's code is loading */
+  openingEditor = false;
 
   readonly tabs: ProfileTabDef[] = [
     { id: 'videos', label: 'Videos' },
@@ -103,6 +109,8 @@ export class UserProfileComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private subscriptions = new Subscription();
   private toastTimer?: ReturnType<typeof setTimeout>;
+  private readonly injector = inject(Injector);
+  private readonly profileService = inject(ProfileService);
 
   /** Attached whenever the Manage tab renders the table */
   @ViewChild(MatPaginator) set paginator(paginator: MatPaginator | undefined) {
@@ -146,6 +154,13 @@ export class UserProfileComponent implements OnInit, AfterViewInit, OnDestroy {
     this.subscriptions.add(
       this.videoService.feedRefresh$.subscribe(() => this.loadMyVideos()),
     );
+
+    // Picture and banner follow saves from the editor
+    this.subscriptions.add(
+      this.profileService.user$.subscribe(user => { if (user) this.applyProfile(user); }),
+    );
+    // Another device may have changed them since sign-in
+    this.profileService.refresh().subscribe({ error: () => { /* keep what's stored */ } });
   }
 
   ngAfterViewInit(): void {
@@ -166,9 +181,8 @@ export class UserProfileComponent implements OnInit, AfterViewInit, OnDestroy {
         return;
       }
       this.user = JSON.parse(userData);
-      this.userName = this.user?.name || 'Your channel';
       this.userEmail = this.user?.email || '';
-      this.profileImage = this.user?.profileImage || '';
+      if (this.user) this.applyProfile(this.user);
     } catch (error) {
       console.error('UserProfile: Error loading user data:', error);
       this.router.navigate(['/login']);
@@ -394,6 +408,68 @@ export class UserProfileComponent implements OnInit, AfterViewInit, OnDestroy {
 
   onAvatarError(): void {
     this.avatarFailed = true;
+  }
+
+  onBannerError(): void {
+    this.bannerFailed = true;
+  }
+
+  /** Opens the picture and banner editor, loading its code on first use. */
+  async openEditor(tab: ProfileImageKind): Promise<void> {
+    if (this.openingEditor) return;
+    this.openingEditor = true;
+    try {
+      const [{ MatDialog }, { ProfileEditorComponent }] = await Promise.all([
+        import('@angular/material/dialog'),
+        import('../profile-editor/profile-editor.component'),
+      ]);
+      const ref = this.injector.get(MatDialog).open(ProfileEditorComponent, {
+        data: { tab },
+        panelClass: 'ss-dialog',
+        maxWidth: '100vw',
+        maxHeight: 'calc(100dvh - 32px)',
+        autoFocus: 'first-tabbable',
+        restoreFocus: true,
+        disableClose: true, // the editor asks before discarding changes
+      });
+      ref.afterClosed().subscribe(result => { if (result?.message) this.showToast(result.message); });
+    } catch (error) {
+      console.error('Couldn’t open the profile editor:', error);
+      this.showToast('Couldn’t open the editor. Check your connection and try again.', true);
+    } finally {
+      this.openingEditor = false;
+    }
+  }
+
+  private applyProfile(user: User): void {
+    this.userName = user.name || 'Your channel';
+    const image = user.profileImage || '';
+    if (image !== this.profileImage) {
+      this.profileImage = image;
+      this.avatarFailed = false;
+      this.showAvatarOnOwnVideos(image);
+    }
+    const banner = user.bannerImage || '';
+    if (banner !== this.bannerImage) {
+      this.bannerImage = banner;
+      this.bannerFailed = false;
+    }
+  }
+
+  /** Your own cards carry your avatar: update them in place instead of reloading. */
+  private showAvatarOnOwnVideos(image: string): void {
+    const userId = this.user?.userId;
+    if (!userId) return;
+    const patch = (list: VideoList): VideoList => ({
+      ...list,
+      items: list.items.map(video => video.user_id === userId && video.user_profile_image !== image
+        ? { ...video, user_profile_image: image || null }
+        : video),
+    });
+    this.mine = patch(this.mine);
+    this.liked = patch(this.liked);
+    this.disliked = patch(this.disliked);
+    this.dataSource.data = this.mine.items;
   }
 
   // ── View helpers ───────────────────────────────────────────────────────────

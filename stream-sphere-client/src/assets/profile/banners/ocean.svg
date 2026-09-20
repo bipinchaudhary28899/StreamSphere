@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 400" width="2400" height="400" role="img" aria-label="Ocean">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#1e3a8a"/></linearGradient></defs>
+<rect width="2400" height="400" fill="url(#bg)"/>
+<path d="M-600 190 Q-450 162 -300 190 T0 190 T300 190 T600 190 T900 190 T1200 190 T1500 190 T1800 190 T2100 190 T2400 190 T2700 190 T3000 190 V400 H-600 Z" fill="#fff" fill-opacity=".14"/>
+<path d="M-500 240 Q-325 210 -150 240 T200 240 T550 240 T900 240 T1250 240 T1600 240 T1950 240 T2300 240 T2650 240 T3000 240 T3350 240 V400 H-500 Z" fill="#fff" fill-opacity=".18"/>
+<path d="M-470 292 Q-330 266 -190 292 T90 292 T370 292 T650 292 T930 292 T1210 292 T1490 292 T1770 292 T2050 292 T2330 292 T2610 292 T2890 292 T3170 292 V400 H-470 Z" fill="#1d4ed8" fill-opacity=".55"/>
+<path d="M-220 342 Q-100 320 20 342 T260 342 T500 342 T740 342 T980 342 T1220 342 T1460 342 T1700 342 T1940 342 T2180 342 T2420 342 T2660 342 T2900 342 V400 H-220 Z" fill="#172554" fill-opacity=".7"/>
+</svg>

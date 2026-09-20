@@ -103,14 +103,25 @@
 <!-- ── User dropdown menu ───────────────────────────────────────────────── -->
 <mat-menu #userMenu="matMenu" class="ss-user-menu" xPosition="before">
 
-  <!-- Profile card -->
-  <div class="menu-profile-card" (click)="$event.stopPropagation()">
-    <img *ngIf="profileImage && !avatarFailed; else menuInitials"
-         [src]="profileImage" (error)="onImageError($event)" referrerpolicy="no-referrer" alt="" class="menu-avatar" />
-    <ng-template #menuInitials><span class="menu-avatar menu-avatar--initials">{{ initials }}</span></ng-template>
-    <div class="menu-user-info">
-      <div class="menu-name">{{ user?.name }}</div>
-      <div class="menu-email">{{ user?.email }}</div>
+  <!-- Profile card: the channel banner, then the avatar over it -->
+  <div class="menu-profile" (click)="$event.stopPropagation()">
+    <div class="menu-banner-strip" [class.has-image]="bannerImage && !bannerFailed">
+      <img *ngIf="bannerImage && !bannerFailed"
+           class="menu-banner"
+           [src]="bannerImage"
+           alt=""
+           decoding="async"
+           (error)="onBannerError()" />
+    </div>
+
+    <div class="menu-profile-card">
+      <img *ngIf="profileImage && !avatarFailed; else menuInitials"
+           [src]="profileImage" (error)="onImageError($event)" referrerpolicy="no-referrer" alt="" class="menu-avatar" />
+      <ng-template #menuInitials><span class="menu-avatar menu-avatar--initials">{{ initials }}</span></ng-template>
+      <div class="menu-user-info">
+        <div class="menu-name">{{ user?.name }}</div>
+        <div class="menu-email">{{ user?.email }}</div>
+      </div>
     </div>
   </div>
 

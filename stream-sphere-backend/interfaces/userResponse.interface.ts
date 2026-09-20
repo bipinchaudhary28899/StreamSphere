@@ -1,6 +1,6 @@
 export interface IUserResponse {
     token: string;
-    user:{
+    user: {
       role: string;
       email: string;
       userName: string;
@@ -8,6 +8,10 @@ export interface IUserResponse {
       profileImage: string;
       isVerified: boolean;
       userId: string;
+      avatarSource: string;
+      googlePicture: string;
+      bannerSource: string;
+      bannerImage: string;
     };
     isNewUser: boolean;
   }

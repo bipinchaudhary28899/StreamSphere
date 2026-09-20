@@ -11,18 +11,39 @@
 
   <!-- ── Channel header ────────────────────────────────────────────────── -->
   <header class="channel">
-    <div class="channel-banner" aria-hidden="true"></div>
+    <div class="channel-banner" [class.has-image]="bannerImage && !bannerFailed">
+      <img *ngIf="bannerImage && !bannerFailed"
+           class="channel-banner-img"
+           [src]="bannerImage"
+           alt=""
+           decoding="async"
+           (error)="onBannerError()" />
+      <button type="button"
+              class="ss-btn ss-btn--sm banner-edit"
+              [disabled]="openingEditor"
+              (click)="openEditor('banner')"
+              aria-label="Edit banner">
+        <mat-icon>photo_camera</mat-icon><span class="banner-edit-label">Edit banner</span>
+      </button>
+    </div>
 
     <div class="channel-row">
-      <img *ngIf="profileImage && !avatarFailed; else avatarInitials"
-           class="channel-avatar"
-           [src]="profileImage"
-           alt=""
-           referrerpolicy="no-referrer"
-           (error)="onAvatarError()" />
-      <ng-template #avatarInitials>
-        <span class="ss-avatar channel-avatar" aria-hidden="true">{{ initials }}</span>
-      </ng-template>
+      <button type="button"
+              class="channel-avatar-btn"
+              [disabled]="openingEditor"
+              (click)="openEditor('avatar')"
+              aria-label="Change profile picture">
+        <img *ngIf="profileImage && !avatarFailed; else avatarInitials"
+             class="channel-avatar"
+             [src]="profileImage"
+             alt=""
+             referrerpolicy="no-referrer"
+             (error)="onAvatarError()" />
+        <ng-template #avatarInitials>
+          <span class="ss-avatar channel-avatar" aria-hidden="true">{{ initials }}</span>
+        </ng-template>
+        <span class="avatar-edit-badge" aria-hidden="true"><mat-icon>photo_camera</mat-icon></span>
+      </button>
 
       <div class="channel-info">
         <h1 class="channel-name">{{ userName }}</h1>
@@ -41,7 +62,10 @@
         <a class="ss-btn ss-btn--primary" routerLink="/upload">
           <mat-icon>upload</mat-icon>Upload video
         </a>
-        <button type="button" class="ss-btn ss-btn--secondary" (click)="logout()">
+        <button type="button" class="ss-btn ss-btn--secondary" [disabled]="openingEditor" (click)="openEditor('avatar')">
+          <mat-icon>palette</mat-icon>Customize
+        </button>
+        <button type="button" class="ss-btn ss-btn--secondary channel-signout" (click)="logout()">
           <mat-icon>logout</mat-icon>Sign out
         </button>
       </div>

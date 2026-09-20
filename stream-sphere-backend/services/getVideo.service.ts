@@ -138,8 +138,11 @@ export class VideoService {
     if (cached) return cached;
 
     const video = await Video.findById(id).lean().exec();
-    if (video) void redisService.set(CK.singleVideo(id), video, TTL.video).catch(() => {});
-    return video;
+    if (!video) return null;
+    // The uploader's current avatar, not the one saved at upload time
+    const [withAvatar] = await populateUserImages([video]);
+    void redisService.set(CK.singleVideo(id), withAvatar, TTL.video).catch(() => {});
+    return withAvatar;
   }
 
   async getVideoByUrl(S3_url: string) {
@@ -148,15 +151,15 @@ export class VideoService {
 
 
   async getLikedVideos(userId: string) {
-    return await Video.find({ likedBy: userId }).sort({ _id: -1 }).lean().exec();
+    return populateUserImages(await Video.find({ likedBy: userId }).sort({ _id: -1 }).lean().exec());
   }
 
   async getDislikedVideos(userId: string) {
-    return await Video.find({ dislikedBy: userId }).sort({ _id: -1 }).lean().exec();
+    return populateUserImages(await Video.find({ dislikedBy: userId }).sort({ _id: -1 }).lean().exec());
   }
 
   async getMyVideos(userId: string) {
-    return await Video.find({ user_id: userId }).sort({ _id: -1 }).lean().exec();
+    return populateUserImages(await Video.find({ user_id: userId }).sort({ _id: -1 }).lean().exec());
   }
 
 

@@ -14,6 +14,7 @@ import { AuthService }         from '../../services/auth.service';
 import { ThemeService }        from '../../services/theme.service';
 import { VideoService }        from '../../services/video.service';
 import { UploadManagerService } from '../../services/upload-manager.service';
+import { ProfileService }      from '../../services/profile.service';
 import { Subscription, filter } from 'rxjs';
 import { User }                from '../../models/user';
 
@@ -39,6 +40,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
   isLoggedIn   = false;
   user: User | null = null;
   profileImage = '';
+  /** The channel banner, shown behind the user menu's profile card */
+  bannerImage = '';
+  bannerFailed = false;
   avatarFailed = false;
 
   /** True on the home feed, where the bar sits over the hero. */
@@ -53,6 +57,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
 
   private readonly hostEl = inject(ElementRef<HTMLElement>);
+  private readonly profileService = inject(ProfileService);
 
   constructor(
     private router:       Router,
@@ -84,6 +89,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
           }
           this.navigatingForSearch = false;
         }),
+      // A new profile picture shows at once
+      this.profileService.user$.subscribe(() => this.loadUserData()),
       this.videoService.category$.subscribe(cat => this.activeCategory = cat),
       this.videoService.search$.subscribe(term => {
         // Keep the field in sync when another view clears the search.
@@ -159,6 +166,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
         this.isLoggedIn   = true;
         this.profileImage = this.user?.profileImage || '';
         this.avatarFailed = false;
+        const banner      = (this.user as any)?.bannerImage || '';
+        if (banner !== this.bannerImage) {
+          this.bannerImage  = banner;
+          this.bannerFailed = false;
+        }
       } else {
         this.resetUser();
       }
@@ -171,6 +183,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.isLoggedIn   = false;
     this.user         = null;
     this.profileImage = this.DEFAULT_AVATAR;
+    this.bannerImage  = '';
+    this.bannerFailed = false;
   }
 
   get initials(): string {
@@ -178,6 +192,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
     if (!name) return 'U';
     const parts = name.split(/\s+/);
     return ((parts[0][0] || '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+  }
+
+  onBannerError(): void {
+    this.bannerFailed = true;
   }
 
   onImageError(event: any): void {

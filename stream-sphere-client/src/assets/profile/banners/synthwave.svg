@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 400" width="2400" height="400" role="img" aria-label="Synthwave">
+<defs>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f0c29"/><stop offset="1" stop-color="#3b1d6e"/></linearGradient>
+<linearGradient id="sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde047"/><stop offset="1" stop-color="#ff1963"/></linearGradient>
+<mask id="m"><rect width="2400" height="400" fill="#fff"/><rect y="190" width="2400" height="6" fill="#000"/><rect y="208" width="2400" height="8" fill="#000"/><rect y="228" width="2400" height="10" fill="#000"/></mask>
+</defs>
+<rect width="2400" height="400" fill="url(#sky)"/>
+<circle cx="1200" cy="200" r="120" fill="url(#sun)" mask="url(#m)"/>
+<rect y="250" width="2400" height="150" fill="#12051f"/>
+<g stroke="#ff1963" stroke-opacity=".75" stroke-width="3" fill="none"><path d="M0 253.6 H2400"/><path d="M0 262.4 H2400"/><path d="M0 275.7 H2400"/><path d="M0 293.1 H2400"/><path d="M0 314.4 H2400"/><path d="M0 339.4 H2400"/><path d="M0 368.0 H2400"/><path d="M0 400.0 H2400"/><path d="M948 250 L-2440 400"/><path d="M966 250 L-2180 400"/><path d="M984 250 L-1920 400"/><path d="M1002 250 L-1660 400"/><path d="M1020 250 L-1400 400"/><path d="M1038 250 L-1140 400"/><path d="M1056 250 L-880 400"/><path d="M1074 250 L-620 400"/><path d="M1092 250 L-360 400"/><path d="M1110 250 L-100 400"/><path d="M1128 250 L160 400"/><path d="M1146 250 L420 400"/><path d="M1164 250 L680 400"/><path d="M1182 250 L940 400"/><path d="M1200 250 L1200 400"/><path d="M1218 250 L1460 400"/><path d="M1236 250 L1720 400"/><path d="M1254 250 L1980 400"/><path d="M1272 250 L2240 400"/><path d="M1290 250 L2500 400"/><path d="M1308 250 L2760 400"/><path d="M1326 250 L3020 400"/><path d="M1344 250 L3280 400"/><path d="M1362 250 L3540 400"/><path d="M1380 250 L3800 400"/><path d="M1398 250 L4060 400"/><path d="M1416 250 L4320 400"/><path d="M1434 250 L4580 400"/><path d="M1452 250 L4840 400"/></g>
+<path d="M0 250 H2400" stroke="#ff7ab0" stroke-width="4"/>
+</svg>

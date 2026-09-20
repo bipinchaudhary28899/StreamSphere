@@ -14,10 +14,15 @@ import { authenticateJWT }        from '../services/auth.service';
 import { WatchHistoryController } from '../controllers/watchHistory.controller';
 import { adminStatsController }   from '../controllers/admin.controller';
 import { hlsWebhookController }   from '../controllers/hlsWebhook.controller';
+import {
+  getProfileController,
+  createProfileImageUploadController,
+  updateProfileController,
+}                                  from '../controllers/profile.controller';
 import { Video }                  from '../models/video';
 
 import { validate }        from '../middleware/validate.middleware';
-import { authLimiter, uploadLimiter, writeLimiter } from '../middleware/rateLimiter.middleware';
+import { authLimiter, uploadLimiter, writeLimiter, profileImageLimiter } from '../middleware/rateLimiter.middleware';
 import { statsMiddleware } from '../middleware/stats.middleware';
 
 import {
@@ -33,6 +38,8 @@ import {
   partUrlsSchema,
   completeMultipartSchema,
   abortMultipartSchema,
+  profileImageUploadSchema,
+  updateProfileSchema,
 } from '../validators/schemas';
 
 const router: Router          = express.Router();
@@ -223,6 +230,26 @@ router.get('/history',
   wrap((req, res) => watchHistoryController.getWatchHistory(req, res)),
 );
 
+
+// ── Profile customization (avatar + banner) ─────────────────────────────────
+router.get('/profile',
+  authenticateJWT,
+  wrap(getProfileController),
+);
+
+router.post('/profile/image-upload',
+  authenticateJWT,
+  profileImageLimiter,
+  validate(profileImageUploadSchema),
+  wrap(createProfileImageUploadController),
+);
+
+router.patch('/profile',
+  authenticateJWT,
+  writeLimiter,
+  validate(updateProfileSchema),
+  wrap(updateProfileController),
+);
 
 // POST /api/internal/hls-complete — called by Lambda after transcoding + AI
 router.post('/internal/hls-complete', wrap(hlsWebhookController));
